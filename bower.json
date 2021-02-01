@@ -1,0 +1,25 @@
+{
+  "name": "plivowebsdk",
+  "version": "1.0.0",
+  "description": "Plivo WebRTC sdk for use in chrome/firefox ",
+  "license": "ISC",
+  "authors": [],
+  "main": "dist/plivo-web.min.js",
+  "keywords": [],
+  "moduleType": [
+    "amd",
+    "globals",
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "*.json",
+    "*.md",
+    "bower_components",
+    "lib",
+    "node_modules",
+    "src",
+    "test",
+    "tests"
+  ]
+}

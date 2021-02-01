@@ -1,0 +1,12 @@
+node_modules
+src/*
+lib/*
+sipLib/*
+test/*
+build/*
+types/*
+Jenkinsfile
+karma.conf.js
+webpack.config.js
+bower.json
+.env
