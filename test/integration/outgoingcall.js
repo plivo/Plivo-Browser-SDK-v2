@@ -1,175 +1,175 @@
-"use strict";
+import { Client1, Client2 } from './clients';
 
-const Client = require("../../types/lib/client").Client;
+const masterUser = process.env.PLIVO_MASTER_USERNAME;
+const masterPass = process.env.PLIVO_MASTER_PASSWORD;
 
-var options = {
-  debug: "ALL",
-  permOnClick: true,
-  codecs: ["OPUS", "PCMU"],
-  enableIPV6: false,
-  audioConstraints: { optional: [{ googAutoGainControl: false }] },
-  dscp: true,
-  enableTracking: true,
-  dialType: "conference",
-};
-
-const Client1 = new Client(options);
-const Client2 = new Client(options);
-
-var master_user = process.env.PLIVO_MASTER_USERNAME,
-  master_pass = process.env.PLIVO_MASTER_PASSWORD;
-
-var slave_user = process.env.PLIVO_SLAVE_USERNAME,
-  slave_pass = process.env.PLIVO_SLAVE_PASSWORD;
+const slaveUser = process.env.PLIVO_SLAVE_USERNAME;
+const slavePass = process.env.PLIVO_SLAVE_PASSWORD;
 
 function waitUntil(boolObj, callback, delay) {
   // if delay is undefined or is not an integer
-  delay =
-    typeof delay === "undefined" || isNaN(parseInt(delay, 10)) ? 100 : delay;
-  setTimeout(function () {
-    boolObj.status ? callback() : waitUntil(boolObj, callback, delay);
-  }, delay);
+  const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10)) ? 100 : delay;
+  setTimeout(() => {
+    if (boolObj.status) {
+      callback();
+    } else {
+      waitUntil(boolObj, callback, newDelay);
+    }
+  }, newDelay);
 }
 
-describe("plivoWebSdk", function () {
-  var GLOBAL_TIMEOUT = 240000;
+// eslint-disable-next-line no-undef
+describe('plivoWebSdk', function () {
+  const GLOBAL_TIMEOUT = 240000;
   this.timeout(GLOBAL_TIMEOUT);
-  var TIMEOUT = 20000;
+  const TIMEOUT = 20000;
   let bailTimer;
 
-  describe("outgoing call", function () {
-    this.timeout(GLOBAL_TIMEOUT);
+  // eslint-disable-next-line no-undef
+  before(() => {
+    Client1.login(masterUser, masterPass);
+    Client2.login(slaveUser, slavePass);
+  });
 
-    var events = {};
+  // eslint-disable-next-line no-undef
+  describe('outgoing call', () => {
+    const events = {};
 
-    var client_events = [
-      "onCallRemoteRinging",
-      "onCallFailed",
-      "onCallAnswered",
-      "onCallTerminated",
-      "onCalling",
+    const clientEvents = [
+      'onCallRemoteRinging',
+      'onCallFailed',
+      'onCallAnswered',
+      'onCallTerminated',
+      'onCalling',
     ];
 
-    for (var i in client_events) {
-      events[client_events[i]] = { status: false };
-    }
+    clientEvents.forEach((i) => {
+      events[i] = { status: false };
+    });
 
-    var bail = false;
+    let bail = false;
 
-    before(function () {
-      Client1.login(master_user, master_pass);
-      Client2.login(slave_user, slave_pass);
-      Client1.on("onCallRemoteRinging", function () {
-        events["onCallRemoteRinging"].status = true;
+    // eslint-disable-next-line no-undef
+    before(() => {
+      Client1.on('onCallRemoteRinging', () => {
+        events.onCallRemoteRinging.status = true;
       }); // done
-      Client1.on("onCallFailed", function () {
-        events["onCallFailed"].status = true;
+      Client1.on('onCallFailed', () => {
+        events.onCallFailed.status = true;
       }); // done
-      Client1.on("onCallAnswered", function () {
-        events["onCallAnswered"].status = true;
+      Client1.on('onCallAnswered', () => {
+        events.onCallAnswered.status = true;
       }); // done
-      Client1.on("onCallTerminated", function () {
-        events["onCallTerminated"].status = true;
+      Client1.on('onCallTerminated', () => {
+        events.onCallTerminated.status = true;
       }); // done
-      Client1.on("onCalling", function () {
-        events["onCalling"].status = true;
+      Client1.on('onCalling', () => {
+        events.onCalling.status = true;
       }); // done
     });
 
-    beforeEach(function (done) {
+    // eslint-disable-next-line no-undef
+    beforeEach(() => {
+      const keys = Object.keys(events);
       // reset all the flags
-      for (var key in events) {
+      keys.forEach((key) => {
         events[key].status = false;
-      }
-      done();
+      });
       clearTimeout(bailTimer);
     });
 
-    after(function () {
-      Client1.logout();
-      Client2.logout();
-    });
+    // eslint-disable-next-line no-undef
+    // after(() => {
+    //   Client1.logout();
+    //   Client2.logout();
+    // });
 
-    afterEach(function (done) {
+    // eslint-disable-next-line no-undef
+    afterEach((done) => {
       done();
     });
 
-    it("outbound call should go through", function (done) {
+    // eslint-disable-next-line no-undef
+    it('outbound call should go through', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
-      var extraHeaders = {};
-      extraHeaders["X-PH-conference"] = "true";
+      const extraHeaders = {};
+      extraHeaders['X-PH-conference'] = 'true';
       Client2.on(
-        "onIncomingCall",
-        function (callerName, extraHeaders, callInfo) {
+        'onIncomingCall',
+        (callerName, extraHeaders2, callInfo) => {
           setTimeout(() => {
             Client2.answer(callInfo.callUUID);
           }, 500);
-        }
+        },
       );
-      if (Client1.isLoggedIn){
-        Client1.call(slave_user, extraHeaders);
+      if (Client1.isLoggedIn) {
+        Client1.call(slaveUser, extraHeaders);
       } else {
-        Client1.on("onLogin", function(){
-          Client1.call(slave_user, extraHeaders);
-        })
+        Client1.on('onLogin', () => {
+          Client1.call(slaveUser, extraHeaders);
+        });
       }
-      waitUntil(events["onCalling"], done, 500);
-      bailTimer = setTimeout(function () {
+      waitUntil(events.onCalling, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("outgoing call failed"));
+        done(new Error('outgoing call failed'));
       }, TIMEOUT);
     });
 
-    it("outbound call should ring", function (done) {
+    // eslint-disable-next-line no-undef
+    it('outbound call should ring', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
-      waitUntil(events["onCallRemoteRinging"], done, 500);
-      bailTimer = setTimeout(function () {
+      waitUntil(events.onCallRemoteRinging, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("outgoing call ring failed"));
+        done(new Error('outgoing call ring failed'));
       }, TIMEOUT);
     });
 
-    it("outbound call should be answered", function (done) {
+    // eslint-disable-next-line no-undef
+    it('outbound call should be answered', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
 
-      waitUntil(events["onCallAnswered"], done, 500);
-      bailTimer = setTimeout(function () {
+      waitUntil(events.onCallAnswered, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("outgoing call answer failed"));
+        done(new Error('outgoing call answer failed'));
       }, TIMEOUT);
     });
 
-    it("outbound call should be hungup", function (done) {
+    // eslint-disable-next-line no-undef
+    it('outbound call should be hungup', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
       Client1.hangup();
-      waitUntil(events["onCallTerminated"], done, 500);
-      bailTimer = setTimeout(function () {
+      waitUntil(events.onCallTerminated, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("outgoing call hangup failed"));
+        done(new Error('outgoing call hangup failed'));
       }, TIMEOUT);
     });
 
-    it("outbound call should be ended without answer", function (done) {
+    // eslint-disable-next-line no-undef
+    it('outbound call should be ended without answer', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
       Client2.reject();
-      Client1.call(slave_user, {});
-      bailTimer = setTimeout(function () {
+      Client1.call(slaveUser, {});
+      bailTimer = setTimeout(() => {
         Client1.hangup();
       }, 2000);
-      waitUntil(events["onCallFailed"], done, 500);
-      bailTimer = setTimeout(function () {
+      waitUntil(events.onCallFailed, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("outgoing call end failed"));
+        done(new Error('outgoing call end failed'));
       }, TIMEOUT);
     });
   });

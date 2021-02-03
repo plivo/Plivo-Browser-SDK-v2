@@ -1,135 +1,136 @@
-"use strict";
+import { Client1, Client2 } from './clients';
 
-const Client = require("../../types/lib/client").Client;
+const masterUser = process.env.PLIVO_MASTER_USERNAME;
+const masterPass = process.env.PLIVO_MASTER_PASSWORD;
 
-var options = {
-  debug: "ALL",
-  permOnClick: true,
-  codecs: ["OPUS", "PCMU"],
-  enableIPV6: false,
-  audioConstraints: { optional: [{ googAutoGainControl: false }] },
-  dscp: true,
-  enableTracking: true,
-  dialType: "conference",
-};
-
-const Client1 = new Client(options);
-const Client2 = new Client(options);
-
-var master_user = process.env.PLIVO_MASTER_USERNAME,
-  master_pass = process.env.PLIVO_MASTER_PASSWORD;
-
-var slave_user = process.env.PLIVO_SLAVE_USERNAME,
-  slave_pass = process.env.PLIVO_SLAVE_PASSWORD;
-
-
-Client2.login(slave_user,slave_pass);
+const slaveUser = process.env.PLIVO_SLAVE_USERNAME;
+const slavePass = process.env.PLIVO_SLAVE_PASSWORD;
 
 function waitUntil(boolObj, callback, delay) {
   // if delay is undefined or is not an integer
-  delay =
-    typeof delay === "undefined" || isNaN(parseInt(delay, 10)) ? 100 : delay;
-  setTimeout(function () {
-    boolObj.status ? callback() : waitUntil(boolObj, callback, delay);
-  }, delay);
+  const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10)) ? 100 : delay;
+  setTimeout(() => {
+    if (boolObj.status) {
+      callback();
+    } else {
+      waitUntil(boolObj, callback, newDelay);
+    }
+  }, newDelay);
 }
 
-describe("plivoWebSdk", function () {
-  var GLOBAL_TIMEOUT = 240000;
+// eslint-disable-next-line no-undef
+describe('event emitter', function () {
+  const GLOBAL_TIMEOUT = 240000;
   this.timeout(GLOBAL_TIMEOUT);
-  var TIMEOUT = 20000;
+  const TIMEOUT = 20000;
   let bailTimer;
+  // eslint-disable-next-line no-undef
+  before(() => {
+    // console.log('********** triggered');
+    // Client2.on('onLogin', () => {
+    //   done();
+    // });
+    Client2.login(slaveUser, slavePass);
+  });
 
-  describe("event emitters", function () {
-    this.timeout(GLOBAL_TIMEOUT);
+  // eslint-disable-next-line no-undef
+  describe('check events', () => {
+    const events = {};
 
-    var events = {};
-
-    var client_events = [
-      "onConnectionChange",
-      "onConnectionChangeConnected",
-      "onConnectionChangeDisconnected",
-      "onMediaConnected",
+    const clientEvents = [
+      'onConnectionChange',
+      'onConnectionChangeConnected',
+      'onConnectionChangeDisconnected',
+      'onMediaConnected',
     ];
+    clientEvents.forEach((i) => {
+      events[i] = { status: false };
+    });
 
-    for (var i in client_events) {
-      events[client_events[i]] = { status: false };
-    }
+    let bail = false;
 
-    var bail = false;
-
-    before(function () {
-      Client1.on("onMediaConnected", function () {
-        events["onMediaConnected"].status = true;
+    // eslint-disable-next-line no-undef
+    before(() => {
+      console.log('********** triggered 2');
+      Client1.on('onMediaConnected', () => {
+        console.log('********** events1', events);
+        events.onMediaConnected.status = true;
       });
-      Client1.on("onConnectionChange", function (obj) {
-        events["onConnectionChange"].status = true;
-        if (obj.state === "connected") {
-          events["onConnectionChangeConnected"].status = true;
+      Client1.on('onConnectionChange', (obj) => {
+        console.log('********** events2', events);
+        events.onConnectionChange.status = true;
+        if (obj.state === 'connected') {
+          events.onConnectionChangeConnected.status = true;
         }
-        if (obj.state === "disconnected") {
-          events["onConnectionChangeDisconnected"].status = true;
+        if (obj.state === 'disconnected') {
+          events.onConnectionChangeDisconnected.status = true;
         }
       });
     });
 
-    beforeEach(function (done) {
+    // eslint-disable-next-line no-undef
+    beforeEach(() => {
+      const keys = Object.keys(events);
       // reset all the flags
-      for (var key in events) {
+      keys.forEach((key) => {
         events[key].status = false;
-      }
-      done();
+      });
       clearTimeout(bailTimer);
     });
 
-    after(function () {
+    // eslint-disable-next-line no-undef
+    after(() => {
       Client1.logout();
-      Client2.logout()
+      Client2.logout();
     });
 
-    afterEach(function (done) {
+    // eslint-disable-next-line no-undef
+    afterEach((done) => {
       done();
     });
 
-    it("should be able to emit onConnectionChange connected on login", function (done) {
+    // eslint-disable-next-line no-undef
+    it('should be able to emit onConnectionChange connected on login', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
-      Client1.login(master_user, master_pass);
-      Client1.on("onLogin", function(){
-        waitUntil(events["onConnectionChangeConnected"], done, 500);
-      })
-      bailTimer = setTimeout(function () {
-        throw new Error("failed to emit onConnectionChange connected");
+      Client1.login(masterUser, masterPass);
+      Client1.on('onLogin', () => {
+        waitUntil(events.onConnectionChangeConnected, done, 500);
+      });
+      bailTimer = setTimeout(() => {
+        throw new Error('failed to emit onConnectionChange connected');
       }, TIMEOUT);
     });
 
-    it("should be able to emit onConnectionChange disconnected on logout", function (done) {
+    // eslint-disable-next-line no-undef
+    it('should be able to emit onConnectionChange disconnected on logout', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
       Client1.logout();
-      waitUntil(events["onConnectionChangeDisconnected"], done, 500);
-      bailTimer = setTimeout(function () {
-        throw new Error("failed to emit onConnectionChange disconnected");
+      waitUntil(events.onConnectionChangeDisconnected, done, 500);
+      bailTimer = setTimeout(() => {
+        throw new Error('failed to emit onConnectionChange disconnected');
       }, TIMEOUT);
     });
 
-    it("outbound call should emit onMediaConnected", function (done) {
+    // eslint-disable-next-line no-undef
+    it('outbound call should emit onMediaConnected', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
-      Client1.login(master_user, master_pass);
-      Client1.on("onLogin", function(){
-        var extraHeaders = {};
-        extraHeaders["X-PH-conference"] = "true";
-        Client1.call(slave_user, extraHeaders);
-        waitUntil(events["onMediaConnected"], done, 500);
-        bailTimer = setTimeout(function () {
+      Client1.login(masterUser, masterPass);
+      Client1.on('onLogin', () => {
+        const extraHeaders = {};
+        extraHeaders['X-PH-conference'] = 'true';
+        Client1.call(slaveUser, extraHeaders);
+        waitUntil(events.onMediaConnected, done, 500);
+        bailTimer = setTimeout(() => {
           bail = true;
-          done(new Error("outgoing call failed"));
+          done(new Error('outgoing call failed'));
         }, TIMEOUT);
-      })
+      });
     });
   });
 });
