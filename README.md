@@ -1,4 +1,4 @@
-# Plivo BrowserSDK v2
+# Plivo-BrowserSDK-v2
 
 ## Introduction
 
@@ -38,7 +38,7 @@ You can also include the Plivo JavaScript file shown below directly on your webp
 
 ## TypeScript Support
 
-This BrowserSDK package includes TypeScript declarations for Plivo BrowserSDK. We support projects using TypeScript versions \&gt;= 4.0.3. Read more about the benefits of TypeScript support in [this FAQ](https://support.plivo.com/hc/en-us/articles/360055776291).
+This BrowserSDK package includes TypeScript declarations for Plivo BrowserSDK. We support projects using TypeScript versions &gt;= 4.0.3. Read more about the benefits of TypeScript support in [this FAQ](https://support.plivo.com/hc/en-us/articles/360055776291).
 
 ## Set Up Development Environment
 
@@ -105,4 +105,4 @@ npm run test:integration
 
 ## License
 
-See [LICENSE](https://github.com/plivo/plivo-websdk-2.0/blob/sdk_refactoring_typescript/LICENSE)
+See [LICENSE](https://github.com/plivo/Plivo-Browser-SDK-v2/blob/master/LICENSE)
