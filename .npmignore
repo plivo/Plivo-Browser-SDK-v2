@@ -10,3 +10,11 @@ karma.conf.js
 webpack.config.js
 bower.json
 .env
+.babelrc          
+CHANGELOG.md      
+README.md            
+env.js
+types
+.eslintrc.json
+tsconfig.json
+coverage
