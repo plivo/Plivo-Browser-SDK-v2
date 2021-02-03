@@ -15,8 +15,8 @@ var options = {
 
 const Client1 = new Client(options);
 
-var master_user = process.env.PLIVO_MASTER_USERNAME,
-  master_pass = process.env.PLIVO_MASTER_PASSWORD;
+var primary_user = process.env.PLIVO_PRIMARY_USERNAME,
+  primary_pass = process.env.PLIVO_PRIMARY_PASSWORD;
 
 function waitUntil(boolObj, callback, delay) {
   // if delay is undefined or is not an integer
@@ -72,7 +72,7 @@ describe("plivoWebSdk", function () {
     });
 
     it("login should fail", (done) => {
-      Client1.login(master_user, "wrong_password");
+      Client1.login(primary_user, "wrong_password");
       waitUntil(events["onLoginFailed"], done, 500);
       Client1.on("onLoginFailed", () => {
         done();
@@ -86,7 +86,7 @@ describe("plivoWebSdk", function () {
       if (bail) {
         done(new Error("bailing"));
       }
-      Client1.login(master_user, master_pass);
+      Client1.login(primary_user, primary_pass);
       waitUntil(events["onLogin"], done, 500);
       bailTimer = setTimeout(function () {
         bail = true;

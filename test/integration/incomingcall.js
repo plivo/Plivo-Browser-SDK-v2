@@ -16,11 +16,11 @@ var options = {
 const Client1 = new Client(options);
 const Client2 = new Client(options);
 
-var master_user = process.env.PLIVO_MASTER_USERNAME,
-  master_pass = process.env.PLIVO_MASTER_PASSWORD;
+var primary_user = process.env.PLIVO_PRIMARY_USERNAME,
+  primary_pass = process.env.PLIVO_PRIMARY_PASSWORD;
 
-var slave_user = process.env.PLIVO_SLAVE_USERNAME,
-  slave_pass = process.env.PLIVO_SLAVE_PASSWORD;
+var secondary_user = process.env.PLIVO_SECONDARY_USERNAME,
+  secondary_pass = process.env.PLIVO_SECONDARY_PASSWORD;
 
 function waitUntil(boolObj, callback, delay) {
   // if delay is undefined or is not an integer
@@ -57,8 +57,8 @@ describe("plivoWebSdk", function () {
     var bail = false;
 
     before(function () {
-      Client1.login(master_user, master_pass);
-      Client2.login(slave_user, slave_pass);
+      Client1.login(primary_user, primary_pass);
+      Client2.login(secondary_user, secondary_pass);
       Client1.on("onCallRemoteRinging", function () {
         events["onCallRemoteRinging"].status = true;
       });
@@ -102,10 +102,10 @@ describe("plivoWebSdk", function () {
         done(new Error("bailing"));
       }
       if (Client2.isLoggedIn && Client1.isLoggedIn){
-        Client2.call(master_user, {});
+        Client2.call(primary_user, {});
       } else {
         Client2.on("onLogin",function() {
-          Client2.call(master_user, {});
+          Client2.call(primary_user, {});
         })
       }
       waitUntil(events["onIncomingCall"], done, 500);
@@ -146,7 +146,7 @@ describe("plivoWebSdk", function () {
         done(new Error("bailing"));
       }
       setTimeout(() => {
-        Client2.call(master_user, {});
+        Client2.call(primary_user, {});
         setTimeout(() => {
           Client1.reject();
           waitUntil(events["onCallFailed"], done, 500);

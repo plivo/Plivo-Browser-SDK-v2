@@ -17,14 +17,15 @@ var options = {
 const Client1 = new Client(options);
 const Client2 = new Client(options);
 
-var master_user = process.env.PLIVO_MASTER_USERNAME,
-  master_pass = process.env.PLIVO_MASTER_PASSWORD;
+var primary_user = process.env.PLIVO_PRIMARY_USERNAME,
+  primary_pass = process.env.PLIVO_PRIMARY_PASSWORD;
 
-var slave_user = process.env.PLIVO_SLAVE_USERNAME,
-  slave_pass = process.env.PLIVO_SLAVE_PASSWORD;
+var secondary_user = process.env.PLIVO_SECONDARY_USERNAME,
+  secondary_pass = process.env.PLIVO_SECONDARY_PASSWORD;
 
-Client1.login(master_user, master_pass);
-Client2.login(slave_user, slave_pass);
+
+Client1.login(primary_user, primary_pass);
+Client2.login(secondary_user, secondary_pass);
 
 function waitUntil(boolObj, callback, delay) {
   // if delay is undefined or is not an integer
@@ -144,7 +145,7 @@ describe("plivoWebSdk", function () {
       }
 
       // trigger logic
-      Client1.call(slave_user, {});
+      Client1.call(secondary_user, {});
       setTimeout(function(){
         Client1.phone.transport.disconnect();
         waitUntil(
