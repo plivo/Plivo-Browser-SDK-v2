@@ -91,10 +91,10 @@ Running integration tests requires some setup:
 - To perform test calls, you need two users. Create a .env file in the root directory of this repository and update it with primary and secondary user details as below:
 
 ```shell
-PLIVO_PRIMARY_USERNAME=<Primary Endpoint Username>
-PLIVO_PRIMARY_PASSWORD=<Primary Endpoint Password>
-PLIVO_SECONDARY_USERNAME=<Secondary Endpoint Username>
-PLIVO_SECONDARY_PASSWORD=<Secondary Endpoint Password>
+PLIVO_ENDPOINT1_USERNAME=<Endpoint-1 Username>
+PLIVO_ENDPOINT1_PASSWORD=<Endpoint-1 Password>
+PLIVO_ENDPOINT2_USERNAME=<Endpoint-2 Username>
+PLIVO_ENDPOINT2_PASSWORD=<Endpoint-2 Password>
 ```
 
 - After the setup, you can run integration tests by running the command
