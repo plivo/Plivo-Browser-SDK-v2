@@ -16,11 +16,11 @@ const options = {
 const Client1 = new Client(options);
 const Client2 = new Client(options);
 
-const primary_user = process.env.PLIVO_PRIMARY_USERNAME;
-const primary_pass = process.env.PLIVO_PRIMARY_PASSWORD;
+const primary_user = process.env.PLIVO_ENDPOINT1_USERNAME;
+const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 
-const secondary_user = process.env.PLIVO_SECONDARY_USERNAME;
-const secondary_pass = process.env.PLIVO_SECONDARY_PASSWORD;
+const secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME;
+const secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
 
 Client1.login(primary_user, primary_pass);
 Client2.login(secondary_user, secondary_pass);
