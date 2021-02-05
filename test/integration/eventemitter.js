@@ -1,63 +1,77 @@
-import { Client1, Client2 } from './clients';
+/* eslint-disable @typescript-eslint/naming-convention */
+import { Client } from '../../lib/client';
+import { Logger as plivo_log } from "../../lib/logger";
 
-const masterUser = process.env.PLIVO_MASTER_USERNAME;
-const masterPass = process.env.PLIVO_MASTER_PASSWORD;
+const options = {
+  debug: "ALL",
+  permOnClick: true,
+  codecs: ["OPUS", "PCMU"],
+  enableIPV6: false,
+  audioConstraints: { optional: [{ googAutoGainControl: false }] },
+  dscp: true,
+  enableTracking: true,
+  dialType: "conference",
+};
 
-const slaveUser = process.env.PLIVO_SLAVE_USERNAME;
-const slavePass = process.env.PLIVO_SLAVE_PASSWORD;
+const Client1 = new Client(options);
+const Client2 = new Client(options);
 
-function waitUntil(boolObj, callback, delay) {
-  // if delay is undefined or is not an integer
-  const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10)) ? 100 : delay;
-  setTimeout(() => {
-    if (boolObj.status) {
-      callback();
-    } else {
-      waitUntil(boolObj, callback, newDelay);
-    }
-  }, newDelay);
-}
+const primary_user = process.env.PLIVO_PRIMARY_USERNAME;
+const primary_pass = process.env.PLIVO_PRIMARY_PASSWORD;
+
+const secondary_user = process.env.PLIVO_SECONDARY_USERNAME;
+const secondary_pass = process.env.PLIVO_SECONDARY_PASSWORD;
+
+Client2.login(secondary_user, secondary_pass);
 
 // eslint-disable-next-line no-undef
-describe('event emitter', function () {
+describe('plivoWebSdk', function () {
   const GLOBAL_TIMEOUT = 240000;
   this.timeout(GLOBAL_TIMEOUT);
   const TIMEOUT = 20000;
   let bailTimer;
-  // eslint-disable-next-line no-undef
-  before(() => {
-    // console.log('********** triggered');
-    // Client2.on('onLogin', () => {
-    //   done();
-    // });
-    Client2.login(slaveUser, slavePass);
-  });
 
   // eslint-disable-next-line no-undef
-  describe('check events', () => {
+  describe('event emitters', function () {
+    this.timeout(GLOBAL_TIMEOUT);
+
     const events = {};
-
+    let spy;
     const clientEvents = [
       'onConnectionChange',
       'onConnectionChangeConnected',
       'onConnectionChangeDisconnected',
       'onMediaConnected',
     ];
+
     clientEvents.forEach((i) => {
       events[i] = { status: false };
     });
 
     let bail = false;
 
+    function waitUntilEmitter(boolObj, callback, delay) {
+      // if delay is undefined or is not an integer
+      const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10))
+        ? 100
+        : delay;
+
+      const check = typeof boolObj === "boolean" ? boolObj : boolObj.status;
+      setTimeout(() => {
+        if (check) {
+          callback();
+        } else {
+          waitUntilEmitter(boolObj, callback, newDelay);
+        }
+      }, newDelay);
+    }
+
     // eslint-disable-next-line no-undef
     before(() => {
-      console.log('********** triggered 2');
       Client1.on('onMediaConnected', () => {
-        console.log('********** events1', events);
         events.onMediaConnected.status = true;
       });
       Client1.on('onConnectionChange', (obj) => {
-        console.log('********** events2', events);
         events.onConnectionChange.status = true;
         if (obj.state === 'connected') {
           events.onConnectionChangeConnected.status = true;
@@ -69,19 +83,19 @@ describe('event emitter', function () {
     });
 
     // eslint-disable-next-line no-undef
-    beforeEach(() => {
+    beforeEach((done) => {
       const keys = Object.keys(events);
       // reset all the flags
       keys.forEach((key) => {
         events[key].status = false;
       });
+      done();
       clearTimeout(bailTimer);
     });
 
     // eslint-disable-next-line no-undef
     after(() => {
-      Client1.logout();
-      Client2.logout();
+      spy.restore();
     });
 
     // eslint-disable-next-line no-undef
@@ -94,9 +108,9 @@ describe('event emitter', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-      Client1.login(masterUser, masterPass);
+      Client1.login(primary_user, primary_pass);
       Client1.on('onLogin', () => {
-        waitUntil(events.onConnectionChangeConnected, done, 500);
+        waitUntilEmitter(events.onConnectionChangeConnected, done, 500);
       });
       bailTimer = setTimeout(() => {
         throw new Error('failed to emit onConnectionChange connected');
@@ -109,7 +123,7 @@ describe('event emitter', function () {
         done(new Error('bailing'));
       }
       Client1.logout();
-      waitUntil(events.onConnectionChangeDisconnected, done, 500);
+      waitUntilEmitter(events.onConnectionChangeDisconnected, done, 500);
       bailTimer = setTimeout(() => {
         throw new Error('failed to emit onConnectionChange disconnected');
       }, TIMEOUT);
@@ -120,17 +134,36 @@ describe('event emitter', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-      Client1.login(masterUser, masterPass);
+      Client1.login(primary_user, primary_pass);
       Client1.on('onLogin', () => {
         const extraHeaders = {};
         extraHeaders['X-PH-conference'] = 'true';
-        Client1.call(slaveUser, extraHeaders);
-        waitUntil(events.onMediaConnected, done, 500);
+        Client1.call(secondary_user, extraHeaders);
+        waitUntilEmitter(events.onMediaConnected, done, 500);
         bailTimer = setTimeout(() => {
           bail = true;
           done(new Error('outgoing call failed'));
         }, TIMEOUT);
       });
+    });
+
+    // eslint-disable-next-line no-undef
+    it('send a dtmf digit', (done) => {
+      if (bail) {
+        done(new Error('bailing'));
+      }
+      // eslint-disable-next-line no-undef
+      spy = sinon.spy(plivo_log, "debug");
+      spy.resetHistory();
+
+      Client2.answer();
+      Client1.sendDtmf("2");
+
+      waitUntilEmitter(spy.calledWith("sending dtmf digit 2"), done, 500);
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error('send dtmf failed'));
+      }, TIMEOUT);
     });
   });
 });

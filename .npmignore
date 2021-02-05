@@ -12,11 +12,9 @@ bower.json
 .env
 .babelrc          
 CHANGELOG.md      
-README.md         
-deploybeta.sh     
+README.md            
 env.js
 types
 .eslintrc.json
-deployConfig.json
 tsconfig.json
 coverage
