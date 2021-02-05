@@ -115,11 +115,6 @@ export class Client extends EventEmitter {
             */
         reconnectInterval: null | ReturnType<typeof setInterval>;
         /**
-            * Timer for sending heartbeat event to stats socket for keeping the socket alive
-            * @private
-            */
-        heartbeatTimer: null | ReturnType<typeof setInterval>;
-        /**
             * Controls the number of times media reconnection happens
             * @private
             */

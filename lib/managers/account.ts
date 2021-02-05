@@ -290,7 +290,6 @@ class Account {
         .then((responsebody: CallStatsValidationResponse) => {
           this.cs.callstatskey = responsebody.data;
           this.cs.rtp_enabled = responsebody.is_rtp_enabled;
-          createStatsSocket.call(this.cs);
         }).catch(() => {
           this.cs.callstatskey = null;
         });
@@ -360,6 +359,8 @@ class Account {
    */
   private _onNewRTCSession = (evt: SipLib.UserAgentNewRtcSessionEvent): void => {
     Plivo.log.debug('new rtc session');
+    // create stats socket
+    createStatsSocket.call(this.cs);
     if (!this._validateRTCSession(evt)) return;
 
     if (evt.originator === 'remote') {

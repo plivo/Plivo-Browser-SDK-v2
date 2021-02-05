@@ -14,13 +14,7 @@ interface PingPong {
 const Plivo = { log: Logger };
 
 export const restartStatSocket = (client: Client) => {
-  if (client.callstatskey && navigator.onLine) {
-    // stop socket
-    if (client.heartbeatTimer) {
-      clearInterval(client.heartbeatTimer);
-    }
-    // eslint-disable-next-line no-param-reassign
-    client.heartbeatTimer = null;
+  if (client.callstatskey && navigator.onLine && client._currentSession) {
     if (client.statsSocket) {
       client.statsSocket.disconnect();
     }

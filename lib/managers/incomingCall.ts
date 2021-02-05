@@ -36,6 +36,7 @@ import {
 } from './util';
 import { Client } from '../client';
 import { resetPingPong } from '../utils/networkManager';
+import { destroyStatsSocket } from '../stats/setup';
 
 const Plivo = { log: Logger };
 let cs: Client;
@@ -218,6 +219,9 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
       stopAudio(RINGTONE_ELEMENT_ID);
     }
   }
+
+  // destroy stats socket
+  destroyStatsSocket.call(cs);
 };
 
 /**
@@ -235,6 +239,9 @@ const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void =>
     messageCheckTimeout: MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
     networkChangeInterval: NETWORK_CHANGE_INTERVAL_IDLE_STATE,
   });
+
+  // destroy stats socket
+  destroyStatsSocket.call(cs);
 };
 
 /**
