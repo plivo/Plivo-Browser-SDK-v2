@@ -1,8 +1,8 @@
-# Plivo-BrowserSDK-v2
+# Plivo-Browser SDK-v2
 
 ## Introduction
 
-The Plivo BrowserSDK codebase wraps the functions of BrowserSDK as an ES module. To get started, see the [SDK overview](https://www.plivo.com/docs/sdk/client/browser/overview) and [SDK reference](https://www.plivo.com/docs/sdk/client/browser/reference/) docs. For release notes, see the [Changelog](https://www.plivo.com/docs/sdk/client/browser/changelog/).
+The Plivo Browser SDK codebase wraps the functions of Browser SDK as an ES module. To get started, see the [SDK overview](https://www.plivo.com/docs/sdk/client/browser/overview) and [SDK reference](https://www.plivo.com/docs/sdk/client/browser/reference/) docs. For release notes, see the [Changelog](https://www.plivo.com/docs/sdk/client/browser/changelog/).
 
 ## Installation
 
@@ -16,7 +16,7 @@ npm install plivo-browser-sdk --save
 
 ### Usage
 
-You can import BrowserSDK using ES module or TypeScript syntax
+You can import Browser SDK using ES module or TypeScript syntax
 
 ```javascript
 import Plivo from 'plivo-browser-sdk'
@@ -38,7 +38,7 @@ You can also include the Plivo JavaScript file shown below directly on your webp
 
 ## TypeScript Support
 
-This BrowserSDK package includes TypeScript declarations for Plivo BrowserSDK. We support projects using TypeScript versions &gt;= 4.0.3. Read more about the benefits of TypeScript support in [this FAQ](https://support.plivo.com/hc/en-us/articles/360055776291).
+This Browser SDK package includes TypeScript declarations for Plivo Browser SDK. We support projects using TypeScript versions &gt;= 4.0.3. Read more about the benefits of TypeScript support in [this FAQ](https://support.plivo.com/hc/en-us/articles/360055776291).
 
 ## Set Up Development Environment
 
