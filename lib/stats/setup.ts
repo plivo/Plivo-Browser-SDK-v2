@@ -1,7 +1,6 @@
 /* eslint-disable import/no-cycle */
 /* eslint func-names: ["error", "as-needed"] */
 import { StatsSocket } from './ws';
-import { GETSTATS_HEARTBEATINTERVAL } from '../constants';
 import { Logger } from '../logger';
 import { Client } from '../client';
 import getBrowserDetails from '../utils/browserDetection';
@@ -16,11 +15,14 @@ export const createStatsSocket = function (): void {
   if (!client.statsSocket && client.callstatskey) {
     client.statsSocket = new StatsSocket();
     client.statsSocket.connect();
-    client.heartbeatTimer = setInterval(() => {
-      if (client.statsSocket) {
-        client.statsSocket.heartbeat(client);
-      }
-    }, GETSTATS_HEARTBEATINTERVAL);
+  }
+};
+
+export const destroyStatsSocket = function (): void {
+  const client: Client = this;
+  if (client.statsSocket) {
+    client.statsSocket.disconnect();
+    client.statsSocket = null;
   }
 };
 
