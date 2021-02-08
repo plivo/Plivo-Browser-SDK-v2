@@ -1,0 +1,11 @@
+---
+parent: plivosdk
+serviceName: websdk
+dockerOnly: false
+language: nodejs
+sonar:
+  exclusions: node_modules/
+build:
+  nodejs:
+    command: npm install && npm run build
+    outputDistDir: dist
