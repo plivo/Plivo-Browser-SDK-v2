@@ -1,9 +1,8 @@
-"use strict";
+/* eslint-disable @typescript-eslint/naming-convention */
+import { Client } from '../../lib/client';
+import { Logger as plivo_log } from "../../lib/logger";
 
-const Client = require("../../types/lib/client").Client;
-const plivo_log = require("../../types/lib/logger").Logger;
-
-var options = {
+const options = {
   debug: "ALL",
   permOnClick: true,
   codecs: ["OPUS", "PCMU"],
@@ -17,144 +16,148 @@ var options = {
 const Client1 = new Client(options);
 const Client2 = new Client(options);
 
-var primary_user = process.env.PLIVO_ENDPOINT1_USERNAME,
-  primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
+const primary_user = process.env.PLIVO_ENDPOINT1_USERNAME;
+const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 
-var secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME,
-  secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
-
+const secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME;
+const secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
 
 Client1.login(primary_user, primary_pass);
 Client2.login(secondary_user, secondary_pass);
 
-function waitUntil(boolObj, callback, delay) {
-  // if delay is undefined or is not an integer
-  delay =
-    typeof delay === "undefined" || isNaN(parseInt(delay, 10)) ? 100 : delay;
-
-  let check = typeof boolObj === "boolean" ? boolObj : boolObj.status;
-  setTimeout(function () {
-    check ? callback() : waitUntil(boolObj, callback, delay);
-  }, delay);
-}
-
+// eslint-disable-next-line no-undef
 describe("plivoWebSdk", function () {
-  var GLOBAL_TIMEOUT = 240000;
+  const GLOBAL_TIMEOUT = 240000;
   this.timeout(GLOBAL_TIMEOUT);
-  var TIMEOUT = 20000;
+  const TIMEOUT = 20000;
   let bailTimer;
 
+  // eslint-disable-next-line no-undef
   describe("network change", function () {
     this.timeout(GLOBAL_TIMEOUT);
 
-    var events = {};
-
-    var client_events = [
+    const events = {};
+    let spy;
+    const clientEvents = [
       "onConnectionChange",
       "onConnectionChangeConnected",
       "onConnectionChangeDisconnected",
     ];
 
-    for (var i in client_events) {
-      events[client_events[i]] = { status: false };
+    clientEvents.forEach((i) => {
+      events[i] = { status: false };
+    });
+
+    let bail = false;
+
+    function waitUntilNetworkChange(boolObj, callback, delay) {
+      // if delay is undefined or is not an integer
+      const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
+        ? 100
+        : delay;
+
+      const check = typeof boolObj === "boolean" ? boolObj : boolObj.status;
+      setTimeout(() => {
+        if (check) {
+          callback();
+        } else {
+          waitUntilNetworkChange(boolObj, callback, newDelay);
+        }
+      }, newDelay);
     }
 
-    var bail = false;
-
-    before(function () {
-      Client1.on("onConnectionChange", function (obj) {
-        events["onConnectionChange"].status = true;
+    // eslint-disable-next-line no-undef
+    before(() => {
+      Client1.on("onConnectionChange", (obj) => {
+        events.onConnectionChange.status = true;
         if (obj.state === "connected") {
-          events["onConnectionChangeConnected"].status = true;
+          events.onConnectionChangeConnected.status = true;
         }
         if (obj.state === "disconnected") {
-          events["onConnectionChangeDisconnected"].status = true;
+          events.onConnectionChangeDisconnected.status = true;
         }
       });
     });
 
-    beforeEach(function (done) {
+    // eslint-disable-next-line no-undef
+    beforeEach((done) => {
+      const keys = Object.keys(events);
       // reset all the flags
-      for (var key in events) {
+      keys.forEach((key) => {
         events[key].status = false;
-      }
+      });
       done();
       clearTimeout(bailTimer);
     });
 
-    // after(function () {
-    //   Client1.logout();
-    // });
+    // eslint-disable-next-line no-undef
+    after(() => {
+      spy.restore();
+    });
 
-    afterEach(function (done) {
+    // eslint-disable-next-line no-undef
+    afterEach((done) => {
       done();
     });
 
-    it("socket disconnection should trigger a re-connection", function (done) {
+    // eslint-disable-next-line no-undef
+    it("socket disconnection should trigger a re-connection", (done) => {
       if (bail) {
         done(new Error("bailing"));
       }
       function checkReconnection() {
-        waitUntil(events["onConnectionChangeConnected"], done, 500);
+        waitUntilNetworkChange(events.onConnectionChangeConnected, done, 500);
       }
       function triggerDisconnection() {
         Client1.phone.transport.disconnect();
-        waitUntil(
-          events["onConnectionChangeDisconnected"],
+        waitUntilNetworkChange(
+          events.onConnectionChangeDisconnected,
           checkReconnection,
-          500
+          500,
         );
       }
       if (Client1.isLoggedIn) {
         triggerDisconnection();
       } else {
-        Client1.on("onLogin", function () {
+        Client1.on("onLogin", () => {
           triggerDisconnection();
         });
       }
-      bailTimer = setTimeout(function () {
+      bailTimer = setTimeout(() => {
         bail = true;
         done(new Error("reconnection failed"));
       }, TIMEOUT);
     });
 
-    it("hangup after re-connection should send call summary", function (done) {
+    // eslint-disable-next-line no-undef
+    it("hangup after re-connection should send call summary", (done) => {
       if (bail) {
         done(new Error("bailing"));
       }
       // initialize spies
-      const spy = sinon.spy(plivo_log, "debug");
+      // eslint-disable-next-line no-undef
+      spy = sinon.spy(plivo_log, "debug");
       spy.resetHistory();
-      // const spy2 = sinon.spy(Client1.statsSocket.ws, "send");
-      // spy2.resetHistory();
-
-      // declare essential functions
-      // function checkArguments() {
-      //   const call = spy2.getCall(-1);
-      //   if (JSON.parse(call.args[0]).msg === "CALL_SUMMARY") {
-      //     done();
-      //   }
-      // }
 
       function checkCallSumary() {
         Client1.hangup();
-        waitUntil(spy.calledWith("stats send success"), done, 500);
+        waitUntilNetworkChange(spy.calledWith("stats send success"), done, 500);
       }
       function checkReconnection() {
-        waitUntil(events["onConnectionChangeConnected"], checkCallSumary, 500);
+        waitUntilNetworkChange(events.onConnectionChangeConnected, checkCallSumary, 500);
       }
 
       // trigger logic
       Client1.call(secondary_user, {});
-      setTimeout(function(){
+      setTimeout(() => {
         Client1.phone.transport.disconnect();
-        waitUntil(
-          events["onConnectionChangeDisconnected"],
+        waitUntilNetworkChange(
+          events.onConnectionChangeDisconnected,
           checkReconnection,
-          500
+          500,
         );
-      },3000)
-      bailTimer = setTimeout(function () {
+      }, 3000);
+      bailTimer = setTimeout(() => {
         bail = true;
         done(new Error("reconnection failed"));
       }, TIMEOUT);

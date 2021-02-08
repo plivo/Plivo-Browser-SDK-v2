@@ -10,5 +10,8 @@
     "project": "./tsconfig.json"
   },
   "plugins": ["@typescript-eslint"],
-  "rules": {}
+  "rules": {
+    "quotes": "off",
+    "@typescript-eslint/quotes": ["off"]
+  }
 }

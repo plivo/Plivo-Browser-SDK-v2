@@ -3,14 +3,16 @@ module.exports = function (config) {
     config.set({
         frameworks: ['mocha', 'browserify', 'sinon'],
         files: [
-            'dist/plivobrowsersdk.min.js',
-            'test/**/*.js'
+            'lib/**',
+            'test/integration/*.js'
         ],
         preprocessors: {
-            'test/**/*.js': [ 'browserify' ]
+            'test/integration/*.js': [ 'browserify' ],
+            'lib/**': [ 'browserify' ],
         },
         browserify: {
-            transform: [ ["envify", env] ]
+            transform: [ ["envify", env], [["babelify", { extensions: [ '.ts', '.js' ]}]] ],
+            plugin: [ ["tsify",{target: 'es6'}] ]
         },
         reporters: ['progress', 'mocha'],
         port: 9876,
