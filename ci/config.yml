@@ -3,11 +3,6 @@ parent: plivosdk
 serviceName: websdk
 dockerOnly: false
 language: nodejs
-robotbuildContainer: plivo/jenkins-ci/robot:18.06.22.515
-robots_git_branch: automation_webrtc
-robot_files_to_run: UITests/webrtc/tests/webrtc_login.robot,UITests/webrtc/tests/webrtc_change_setup_options.robot
-robot_tags_to_run: jenkins
-robots_env: plivostats
 sonar:
   exclusions: node_modules/
 build:
