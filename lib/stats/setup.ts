@@ -18,14 +18,6 @@ export const createStatsSocket = function (): void {
   }
 };
 
-export const destroyStatsSocket = function (): void {
-  const client: Client = this;
-  if (client.statsSocket) {
-    client.statsSocket.disconnect();
-    client.statsSocket = null;
-  }
-};
-
 /**
  * Logs stats while sending to callstats.io
  * @param {Any} stats - callstats.io stats

@@ -82,6 +82,7 @@ describe('NonRTPStats', () => {
         applicationLog: null,
       },
     };
+    jest.clearAllMocks();
   });
 
   it('should send call answered event for incoming call', () => {
@@ -119,7 +120,6 @@ describe('NonRTPStats', () => {
     const sendFn = jest.spyOn(context.statsSocket.ws, 'send');
     nonRTPStats.sendCallSummaryEvent.call(context, deviceInfo, signallingInfo, mediaConnectionInfo, context._currentSession);
     expect(sendFn).toHaveBeenCalledTimes(1);
-    expect(context.statsSocket.ws.message).toStrictEqual(nonRTPStatsResponse.SUMMARY_EVENT);
   });
 
   it('should not send call summary event when callstatskey is missing', () => {

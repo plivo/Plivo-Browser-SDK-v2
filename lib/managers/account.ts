@@ -14,6 +14,7 @@ import { getCurrentTime, addMidAttribute } from './util';
 import { stopAudio } from '../media/document';
 import { Client } from '../client';
 import { startPingPong } from '../utils/networkManager';
+import { StatsSocket } from '../stats/ws';
 
 const Plivo = { log: Logger };
 let urlIndex: number = 0;
@@ -210,6 +211,12 @@ class Account {
         messageCheckTimeout: this.cs._currentSession
           ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
       });
+      if (this.cs.statsSocket) {
+        this.cs.statsSocket.disconnect();
+        this.cs.statsSocket = null;
+      }
+      this.cs.statsSocket = new StatsSocket();
+      this.cs.statsSocket.connect();
     });
   };
 

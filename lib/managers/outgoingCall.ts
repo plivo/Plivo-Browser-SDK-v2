@@ -43,7 +43,6 @@ import {
 } from './util';
 import { Client, ExtraHeaders } from '../client';
 import { resetPingPong } from '../utils/networkManager';
-import { destroyStatsSocket } from '../stats/setup';
 
 const Plivo = {
   log: Logger,
@@ -329,9 +328,6 @@ const onFailed = (evt: SessionFailedEvent): void => {
     stopAudio(CONNECT_TONE_ELEMENT_ID);
   }
   cs.shouldMuteCall = false;
-
-  // destroy stats socket
-  destroyStatsSocket.call(cs);
 };
 
 /**
@@ -355,9 +351,6 @@ const onEnded = (evt: SessionEndedEvent): void => {
       reason: evt.cause,
     });
     cs.shouldMuteCall = false;
-
-    // destroy stats socket
-    destroyStatsSocket.call(cs);
   }
 };
 

@@ -17,6 +17,8 @@ export const restartStatSocket = (client: Client) => {
   if (client.callstatskey && navigator.onLine && client._currentSession) {
     if (client.statsSocket) {
       client.statsSocket.disconnect();
+      // eslint-disable-next-line no-param-reassign
+      client.statsSocket = null;
     }
     // start socket
     createStatsSocket.call(client);
