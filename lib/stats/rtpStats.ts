@@ -382,7 +382,7 @@ const sendStats = function (statMsg: StatsObject): void {
       || (this.options.enableQualityTracking === C.REMOTEONLY)
     )
   ) {
-    client.statsSocket.send(statMsg);
+    client.statsSocket.send(statMsg, client);
     if ((window as any)._PlivoDevLogging) {
       Plivo.log.info(statMsg);
     }

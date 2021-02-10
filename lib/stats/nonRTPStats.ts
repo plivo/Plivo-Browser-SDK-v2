@@ -118,7 +118,7 @@ export const sendEvents = function (statMsg: any, session: CallSession): void {
     && session.sipCallID
   ) {
     const obj = addCallInfo(session, statMsg, client.callstatskey, client.userName as string);
-    client.statsSocket.send(obj);
+    client.statsSocket.send(obj, client);
   } else {
     Plivo.log.debug(
       'Cannot send Event ',
