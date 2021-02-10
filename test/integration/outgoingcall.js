@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Client } from "../../lib/client";
 import { Logger as plivo_log } from "../../lib/logger";
@@ -204,10 +205,9 @@ describe("plivoWebSdk", function () {
       spyOnDebug.resetHistory();
 
       function checkArguments() {
-        const call = spyOnSocket.getCall(-1);
         if (
-          call.args[0].msg === "TOGGLE_MUTE"
-          && call.args[0].action === "mute"
+          // eslint-disable-next-line no-undef
+          spyOnSocket.calledWith(sinon.match.has("msg", "TOGGLE_MUTE"))
         ) {
           done();
         } else {
@@ -290,8 +290,9 @@ describe("plivoWebSdk", function () {
           spyOnDebug.resetHistory();
           setTimeout(() => {
             Client1.submitCallQualityFeedback(
-              // eslint-disable-next-line no-underscore-dangle
-              Client1._currentSession ? Client1._currentSession.callUUID : Client1.lastCallUUID,
+              Client1._currentSession
+                ? Client1._currentSession.callUUID
+                : Client1.lastCallUUID,
               "5",
               [],
               "",

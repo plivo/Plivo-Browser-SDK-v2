@@ -157,13 +157,14 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-      setTimeout(() => {
-        Client2.call(primary_user, {});
-        setTimeout(() => {
-          Client1.reject();
-          waitUntilIncoming(events.onCallFailed, done, 500);
-        }, 3000);
-      }, 1000);
+      // eslint-disable-next-line no-underscore-dangle
+      Client2._currentSession = null;
+      Client2.call(primary_user, {});
+      function reject() {
+        Client1.reject();
+        waitUntilIncoming(events.onCallFailed, done, 500);
+      }
+      waitUntilIncoming(events.onIncomingCall, reject, 500);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('incoming call end failed'));
