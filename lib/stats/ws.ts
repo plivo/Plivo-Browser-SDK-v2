@@ -5,6 +5,9 @@ import { Client } from '../client';
 import { Logger } from '../logger';
 import * as C from '../constants';
 
+let retrySecondsCount = C.SOCKET_SEND_STATS_RETRY_SECONDS_COUNT;
+let retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
+
 const Plivo = { log: Logger };
 
 /**
@@ -157,18 +160,39 @@ export class StatsSocket {
    * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
    */
   send(message: object): boolean {
-    this.messageBuffer.push(JSON.stringify(message));
+    if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
+      this.messageBuffer.push(JSON.stringify(message));
+    }
     if (this.isConnected() && navigator.onLine) {
       Plivo.log.debug('stats : ', message);
-      this.messageBuffer.forEach((item, index) => {
+      while (this.messageBuffer.length) {
         if (this.ws) {
-          this.ws.send(item);
+          const item = this.messageBuffer.shift();
+          this.ws.send(item as string);
+          Plivo.log.debug('sent stat : ', item);
         }
-        this.messageBuffer.splice(index, 1);
-        Plivo.log.debug('stats send success');
-      });
+      }
+      if (retryAttempts !== C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
+        retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
+        retrySecondsCount = C.SOCKET_SEND_STATS_RETRY_SECONDS_COUNT;
+      }
       return true;
     }
+    if (message['msg'] === 'CALL_SUMMARY') {
+      Plivo.log.debug('retrying to send call summary event');
+      if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
+        retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
+        retrySecondsCount = C.SOCKET_SEND_STATS_RETRY_SECONDS_COUNT;
+        Plivo.log.error('Error in sending call summary event');
+        return false;
+      }
+    }
+    setTimeout(() => {
+      retrySecondsCount += 1;
+      retryAttempts -= 1;
+      this.send(message);
+    }, retrySecondsCount * 900);
+
     Plivo.log.error('unable to send message, statsSocket is not open');
     this.reconnect();
     return false;
