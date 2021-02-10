@@ -159,7 +159,7 @@ export class StatsSocket {
    * Send messages to the socket.
    * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
    */
-  send(message: object): boolean {
+  send(message: {[key:string]: any}, client: Client): boolean {
     if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
       this.messageBuffer.push(JSON.stringify(message));
     }
@@ -170,6 +170,11 @@ export class StatsSocket {
           const item = this.messageBuffer.shift();
           this.ws.send(item as string);
           Plivo.log.debug('sent stat : ', item);
+          if (message.msg === 'CALL_SUMMARY') {
+            // destroying stats socket since call has ended
+            this.disconnect();
+            client.statsSocket = null;
+          }
         }
       }
       if (retryAttempts !== C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
