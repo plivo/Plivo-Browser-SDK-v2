@@ -754,7 +754,9 @@ export class StatsSocket {
             * Send messages to the socket.
             * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
             */
-        send(message: object): boolean;
+        send(message: {
+                [key: string]: any;
+        }, client: Client): boolean;
         /**
             * Reconnect to the socket
             */
