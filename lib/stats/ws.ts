@@ -183,7 +183,7 @@ export class StatsSocket {
       }
       return true;
     }
-    if (message['msg'] === 'CALL_SUMMARY') {
+    if (message.msg === 'CALL_SUMMARY') {
       Plivo.log.debug('retrying to send call summary event');
       if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
         retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
@@ -195,7 +195,7 @@ export class StatsSocket {
     setTimeout(() => {
       retrySecondsCount += 1;
       retryAttempts -= 1;
-      this.send(message);
+      this.send(message, client);
     }, retrySecondsCount * 900);
 
     Plivo.log.error('unable to send message, statsSocket is not open');
