@@ -51,6 +51,7 @@ describe('plivoWebSdk', function () {
     let bail = false;
 
     function waitUntilEmitter(boolObj, callback, delay) {
+      console.log('******** waituntill emitter', boolObj);
       // if delay is undefined or is not an integer
       const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10))
         ? 100
@@ -103,6 +104,7 @@ describe('plivoWebSdk', function () {
       done();
     });
 
+    // #1
     // eslint-disable-next-line no-undef
     it('should be able to emit onConnectionChange connected on login', (done) => {
       if (bail) {
@@ -117,6 +119,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // #2
     // eslint-disable-next-line no-undef
     it('should be able to emit onConnectionChange disconnected on logout', (done) => {
       if (bail) {
@@ -128,7 +131,7 @@ describe('plivoWebSdk', function () {
         throw new Error('failed to emit onConnectionChange disconnected');
       }, TIMEOUT);
     });
-
+    // #3
     // eslint-disable-next-line no-undef
     it('outbound call should emit onMediaConnected', (done) => {
       if (bail) {
@@ -147,6 +150,7 @@ describe('plivoWebSdk', function () {
       });
     });
 
+    // #4
     // eslint-disable-next-line no-undef
     it('send a dtmf digit', (done) => {
       if (bail) {

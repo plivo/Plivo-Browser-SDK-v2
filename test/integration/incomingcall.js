@@ -49,6 +49,7 @@ describe('plivoWebSdk', function () {
     let bail = false;
 
     function waitUntilIncoming(boolObj, callback, delay) {
+      console.log('******** waituntill incomingcall', boolObj);
       // if delay is undefined or is not an integer
       const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10))
         ? 100
@@ -105,6 +106,7 @@ describe('plivoWebSdk', function () {
       done();
     });
 
+    // #5
     // eslint-disable-next-line no-undef
     it('inbound call should come through', (done) => {
       if (bail) {
@@ -124,6 +126,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // #6
     // eslint-disable-next-line no-undef
     it('inbound call should be answered', (done) => {
       if (bail) {
@@ -137,6 +140,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // #7
     // eslint-disable-next-line no-undef
     it('inbound call should be hungup', (done) => {
       if (bail) {
@@ -150,6 +154,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // #8
     // eslint-disable-next-line no-undef
     it('inbound call should be ended without answer', (done) => {
       // terminate any ongoing calls
@@ -159,22 +164,25 @@ describe('plivoWebSdk', function () {
       }
       // eslint-disable-next-line no-underscore-dangle
       Client2._currentSession = null;
-      Client2.call(primary_user, {});
       function reject() {
         Client1.reject();
         waitUntilIncoming(events.onCallFailed, done, 500);
       }
       waitUntilIncoming(events.onIncomingCall, reject, 500);
+      Client2.call(primary_user, {});
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('incoming call end failed'));
       }, TIMEOUT);
     });
 
+    // #9
     // eslint-disable-next-line no-undef
     it('inbound call should receive extra headers', (done) => {
       // terminate any ongoing calls
       Client2.hangup();
+      // eslint-disable-next-line no-underscore-dangle
+      Client2._currentSession = null;
       if (bail) {
         done(new Error('bailing'));
       }
