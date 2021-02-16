@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { Client } from "../../lib/client";
+import { Client } from '../../lib/client';
 import { Logger as plivo_log } from "../../lib/logger";
 
 const options = {
@@ -21,6 +21,9 @@ const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 
 const secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME;
 const secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
+
+Client1.login(primary_user, primary_pass);
+Client2.login(secondary_user, secondary_pass);
 
 // eslint-disable-next-line no-undef
 describe("plivoWebSdk", function () {
@@ -48,7 +51,6 @@ describe("plivoWebSdk", function () {
     let bail = false;
 
     function waitUntilNetworkChange(boolObj, callback, delay) {
-      console.log('******** waituntill network change', boolObj);
       // if delay is undefined or is not an integer
       const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
         ? 100
@@ -65,12 +67,7 @@ describe("plivoWebSdk", function () {
     }
 
     // eslint-disable-next-line no-undef
-    before((done) => {
-      Client1.login(primary_user, primary_pass);
-      Client2.login(secondary_user, secondary_pass);
-      Client1.on("onLogin", () => {
-        done();
-      });
+    before(() => {
       Client1.on("onConnectionChange", (obj) => {
         events.onConnectionChange.status = true;
         if (obj.state === "connected") {
@@ -103,7 +100,6 @@ describe("plivoWebSdk", function () {
       done();
     });
 
-    // #13
     // eslint-disable-next-line no-undef
     it("socket disconnection should trigger a re-connection", (done) => {
       if (bail) {
@@ -133,7 +129,6 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #14
     // eslint-disable-next-line no-undef
     it("hangup after re-connection should send call summary", (done) => {
       if (bail) {
@@ -149,37 +144,19 @@ describe("plivoWebSdk", function () {
         waitUntilNetworkChange(spy.calledWith("stats send success"), done, 500);
       }
       function checkReconnection() {
-        console.log('******** reconnection triggered');
+        waitUntilNetworkChange(events.onConnectionChangeConnected, checkCallSumary, 500);
+      }
+
+      // trigger logic
+      Client1.call(secondary_user, {});
+      setTimeout(() => {
+        Client1.phone.transport.disconnect();
         waitUntilNetworkChange(
-          events.onConnectionChangeConnected,
-          checkCallSumary,
+          events.onConnectionChangeDisconnected,
+          checkReconnection,
           500,
         );
-      }
-      function makeCall() {
-        // trigger logic
-        Client1.call(secondary_user, {});
-        Client2.on("onIncomingCall", (callerName, extraHeaders2, callInfo) => {
-          Client2.answer(callInfo.callUUID);
-          setTimeout(() => {
-            console.log('******** disconnection triggered');
-            Client1.phone.transport.disconnect();
-            waitUntilNetworkChange(
-              events.onConnectionChangeDisconnected,
-              checkReconnection,
-              500,
-            );
-          }, 3000);
-        });
-      }
-      if (Client1.isLoggedIn) {
-        makeCall();
-      } else {
-        Client1.login(primary_user, primary_pass);
-        Client1.on("onLogin", () => {
-          makeCall();
-        });
-      }
+      }, 3000);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error("reconnection failed"));
