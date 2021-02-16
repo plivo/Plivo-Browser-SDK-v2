@@ -37,7 +37,6 @@ describe("plivoWebSdk", function () {
 
     const events = {};
     let spyOnSocket;
-    let spyOnDebug;
 
     const clientEvents = [
       "onCallRemoteRinging",
@@ -104,8 +103,8 @@ describe("plivoWebSdk", function () {
 
     // eslint-disable-next-line no-undef
     after(() => {
-      Client1.logout();
-      Client2.logout();
+      // Client1.logout();
+      // Client2.logout();
       spyOnSocket.restore();
     });
 
@@ -202,9 +201,6 @@ describe("plivoWebSdk", function () {
       if (bail) {
         done(new Error("bailing"));
       }
-      Client1.call(secondary_user, {});
-      // eslint-disable-next-line no-undef
-      spyOnSocket = sinon.spy(Client1.statsSocket, "send");
 
       function mute() {
         Client1.mute();
@@ -214,7 +210,14 @@ describe("plivoWebSdk", function () {
           500,
         );
       }
-      waitUntilOutgoingCall(events.onCalling, mute, 500);
+
+      Client1.call(secondary_user, {});
+      Client2.on("onIncomingCall", (callerName, extraHeaders2, callInfo) => {
+        spyOnSocket = sinon.spy(Client1.statsSocket, "send");
+        Client2.answer(callInfo.callUUID);
+        mute();
+      });
+      // waitUntilOutgoingCall(events.onCalling, mute, 500);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error("outgoing call mute failed"));
@@ -259,35 +262,24 @@ describe("plivoWebSdk", function () {
       //     done(new Error("outgoing call end failed"));
       //   }
       // }
-
-      Client1.call(secondary_user, {});
-      Client2.on("onIncomingCall", (callerName, extraHeaders2, callInfo) => {
-        Client2.answer(callInfo.callUUID);
-        setTimeout(() => {
-          Client1.hangup();
-          spyOnSocket.resetHistory();
-          setTimeout(() => {
-            Client1.submitCallQualityFeedback(
-              Client1._currentSession
-                ? Client1._currentSession.callUUID
-                : Client1.lastCallUUID,
-              "5",
-              [],
-              "",
-              false,
-            ).then(() => {
-              waitUntilOutgoingCall(spyOnSocket.calledWith(sinon.match.has("msg", "FEEDBACK")), done, 500);
-            }).catch(() => {
-              waitUntilOutgoingCall(spyOnSocket.calledWith(sinon.match.has("msg", "FEEDBACK")), done, 500);
-            });
-          }, 1000);
-        }, 5000);
+      spyOnSocket.resetHistory();
+      spyOnSocket = sinon.spy(Client2.statsSocket, "send");
+      // spyOnSocket = sinon.spy(Client2.statsSocket, "send");
+      Client2.submitCallQualityFeedback(
+        Client2._lastCallSession.callUUID,
+        "5",
+        [],
+        "",
+        false,
+      ).then(() => {
+        waitUntilOutgoingCall(
+          spyOnSocket.calledWith(sinon.match.has("msg", "FEEDBACK")),
+          done,
+          500,
+        );
+      }).catch(() => {
+        done(new Error('outbound call should send feedback failed'));
       });
-
-      bailTimer = setTimeout(() => {
-        bail = true;
-        done(new Error("outgoing call end failed"));
-      }, TIMEOUT);
     });
   });
 });

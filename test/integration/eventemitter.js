@@ -83,13 +83,18 @@ describe('plivoWebSdk', function () {
       });
     });
 
-    // eslint-disable-next-line no-undef
-    beforeEach((done) => {
+    const resetListners = () => {
       const keys = Object.keys(events);
       // reset all the flags
       keys.forEach((key) => {
-        events[key].status = false;
+        Client1.removeAllListeners(key);
+        Client2.removeAllListeners(key);
       });
+    };
+
+    // eslint-disable-next-line no-undef
+    beforeEach((done) => {
+      resetListners();
       done();
       clearTimeout(bailTimer);
     });
@@ -97,6 +102,7 @@ describe('plivoWebSdk', function () {
     // eslint-disable-next-line no-undef
     after(() => {
       spy.restore();
+      resetListners();
     });
 
     // eslint-disable-next-line no-undef
@@ -111,8 +117,12 @@ describe('plivoWebSdk', function () {
         done(new Error('bailing'));
       }
       Client1.login(primary_user, primary_pass);
-      Client1.on('onLogin', () => {
-        waitUntilEmitter(events.onConnectionChangeConnected, done, 500);
+      Client1.on('onConnectionChange', (obj) => {
+        if (obj.state === 'connected') {
+          done();
+        } else {
+          done(new Error('failed to emit onConnectionChange connected'));
+        }
       });
       bailTimer = setTimeout(() => {
         throw new Error('failed to emit onConnectionChange connected');
@@ -126,7 +136,13 @@ describe('plivoWebSdk', function () {
         done(new Error('bailing'));
       }
       Client1.logout();
-      waitUntilEmitter(events.onConnectionChangeDisconnected, done, 500);
+      Client1.on('onConnectionChange', (obj) => {
+        if (obj.state === 'disconnected') {
+          done();
+        } else {
+          done(new Error('failed to emit onConnectionChange disconnected'));
+        }
+      });
       bailTimer = setTimeout(() => {
         throw new Error('failed to emit onConnectionChange disconnected');
       }, TIMEOUT);
@@ -141,13 +157,15 @@ describe('plivoWebSdk', function () {
       Client1.on('onLogin', () => {
         const extraHeaders = {};
         extraHeaders['X-PH-conference'] = 'true';
+        Client1.on('onMediaConnected', () => {
+          done();
+        });
         Client1.call(secondary_user, extraHeaders);
-        waitUntilEmitter(events.onMediaConnected, done, 500);
-        bailTimer = setTimeout(() => {
-          bail = true;
-          done(new Error('outgoing call failed'));
-        }, TIMEOUT);
       });
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error('outgoing call failed'));
+      }, TIMEOUT);
     });
 
     // #4
