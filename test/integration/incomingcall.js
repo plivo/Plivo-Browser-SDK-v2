@@ -103,10 +103,10 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-      Client2.call(primary_user, {});
       Client1.on("onIncomingCall", () => {
         done();
       });
+      Client2.call(primary_user, {});
       // waitUntilIncoming(events.onIncomingCall, done, 500);
       bailTimer = setTimeout(() => {
         bail = true;
@@ -189,7 +189,6 @@ describe('plivoWebSdk', function () {
       Client1.on(
         "onIncomingCall",
         (callerName, extraHeaders2) => {
-          console.log('******* reached 4');
           if (extraHeaders2 && extraHeaders2["X-Ph-Random"]) {
             Client1.reject();
             done();
@@ -198,13 +197,6 @@ describe('plivoWebSdk', function () {
           }
         },
       );
-      // console.log('******* reached 1');
-      // if (Client1._currentSession) {
-      //   console.log('******* reached 2');
-      //   Client1.hangup();
-      //   Client1._currentSession = null;
-      // }
-      console.log('******* reached 3');
       Client2.call(primary_user, extraHeaders);
     });
   });

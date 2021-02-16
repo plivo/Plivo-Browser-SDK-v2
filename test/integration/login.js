@@ -18,7 +18,6 @@ const primary_user = process.env.PLIVO_ENDPOINT1_USERNAME;
 const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 
 function waitUntilLogin(boolObj, callback, delay) {
-  console.log('******** waituntill login', boolObj);
   // if delay is undefined or is not an integer
   const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
     ? 100

@@ -53,7 +53,6 @@ describe("plivoWebSdk", function () {
     let bail = false;
 
     function waitUntilOutgoingCall(boolObj, callback, delay) {
-      console.log('******** waituntill outgoingcall', boolObj);
       // if delay is undefined or is not an integer
       const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
         ? 100

@@ -48,7 +48,6 @@ describe("plivoWebSdk", function () {
     let bail = false;
 
     function waitUntilNetworkChange(boolObj, callback, delay) {
-      console.log('******** waituntill network change', boolObj);
       // if delay is undefined or is not an integer
       const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
         ? 100
@@ -149,7 +148,6 @@ describe("plivoWebSdk", function () {
         waitUntilNetworkChange(spy.calledWith("stats send success"), done, 500);
       }
       function checkReconnection() {
-        console.log('******** reconnection triggered');
         waitUntilNetworkChange(
           events.onConnectionChangeConnected,
           checkCallSumary,
@@ -162,7 +160,6 @@ describe("plivoWebSdk", function () {
         Client2.on("onIncomingCall", (callerName, extraHeaders2, callInfo) => {
           Client2.answer(callInfo.callUUID);
           setTimeout(() => {
-            console.log('******** disconnection triggered');
             Client1.phone.transport.disconnect();
             waitUntilNetworkChange(
               events.onConnectionChangeDisconnected,

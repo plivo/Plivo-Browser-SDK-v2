@@ -51,7 +51,6 @@ describe('plivoWebSdk', function () {
     let bail = false;
 
     function waitUntilEmitter(boolObj, callback, delay) {
-      console.log('******** waituntill emitter', boolObj);
       // if delay is undefined or is not an integer
       const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10))
         ? 100
