@@ -82,13 +82,18 @@ describe('plivoWebSdk', function () {
       });
     });
 
-    // eslint-disable-next-line no-undef
-    beforeEach((done) => {
+    const resetListners = () => {
       const keys = Object.keys(events);
       // reset all the flags
       keys.forEach((key) => {
-        events[key].status = false;
+        Client1.removeAllListeners(key);
+        Client2.removeAllListeners(key);
       });
+    };
+
+    // eslint-disable-next-line no-undef
+    beforeEach((done) => {
+      resetListners();
       done();
       clearTimeout(bailTimer);
     });
@@ -96,6 +101,7 @@ describe('plivoWebSdk', function () {
     // eslint-disable-next-line no-undef
     after(() => {
       spy.restore();
+      resetListners();
     });
 
     // eslint-disable-next-line no-undef
@@ -103,32 +109,44 @@ describe('plivoWebSdk', function () {
       done();
     });
 
+    // #1
     // eslint-disable-next-line no-undef
     it('should be able to emit onConnectionChange connected on login', (done) => {
       if (bail) {
         done(new Error('bailing'));
       }
       Client1.login(primary_user, primary_pass);
-      Client1.on('onLogin', () => {
-        waitUntilEmitter(events.onConnectionChangeConnected, done, 500);
+      Client1.on('onConnectionChange', (obj) => {
+        if (obj.state === 'connected') {
+          done();
+        } else {
+          done(new Error('failed to emit onConnectionChange connected'));
+        }
       });
       bailTimer = setTimeout(() => {
         throw new Error('failed to emit onConnectionChange connected');
       }, TIMEOUT);
     });
 
+    // #2
     // eslint-disable-next-line no-undef
     it('should be able to emit onConnectionChange disconnected on logout', (done) => {
       if (bail) {
         done(new Error('bailing'));
       }
       Client1.logout();
-      waitUntilEmitter(events.onConnectionChangeDisconnected, done, 500);
+      Client1.on('onConnectionChange', (obj) => {
+        if (obj.state === 'disconnected') {
+          done();
+        } else {
+          done(new Error('failed to emit onConnectionChange disconnected'));
+        }
+      });
       bailTimer = setTimeout(() => {
         throw new Error('failed to emit onConnectionChange disconnected');
       }, TIMEOUT);
     });
-
+    // #3
     // eslint-disable-next-line no-undef
     it('outbound call should emit onMediaConnected', (done) => {
       if (bail) {
@@ -138,15 +156,18 @@ describe('plivoWebSdk', function () {
       Client1.on('onLogin', () => {
         const extraHeaders = {};
         extraHeaders['X-PH-conference'] = 'true';
+        Client1.on('onMediaConnected', () => {
+          done();
+        });
         Client1.call(secondary_user, extraHeaders);
-        waitUntilEmitter(events.onMediaConnected, done, 500);
-        bailTimer = setTimeout(() => {
-          bail = true;
-          done(new Error('outgoing call failed'));
-        }, TIMEOUT);
       });
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error('outgoing call failed'));
+      }, TIMEOUT);
     });
 
+    // #4
     // eslint-disable-next-line no-undef
     it('send a dtmf digit', (done) => {
       if (bail) {
