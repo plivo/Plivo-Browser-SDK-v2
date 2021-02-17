@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Client } from '../../lib/client';
 
@@ -49,28 +48,40 @@ describe('plivoWebSdk', function () {
 
     let bail = false;
 
+    function waitUntilIncoming(boolObj, callback, delay) {
+      console.log('******** waituntill incomingcall', boolObj);
+      // if delay is undefined or is not an integer
+      const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10))
+        ? 100
+        : delay;
+      setTimeout(() => {
+        if (boolObj.status) {
+          callback();
+        } else {
+          waitUntilIncoming(boolObj, callback, newDelay);
+        }
+      }, newDelay);
+    }
+
     // eslint-disable-next-line no-undef
-    before((done) => {
-      Client2.login(secondary_user, secondary_pass);
+    before(() => {
       Client1.login(primary_user, primary_pass);
-      Client2.on('onLogin', () => {
-        done();
+      Client2.login(secondary_user, secondary_pass);
+      Client1.on('onIncomingCallCanceled', () => {
+        events.onIncomingCallCanceled.status = true;
       });
-      // Client1.on('onIncomingCallCanceled', () => {
-      //   events.onIncomingCallCanceled.status = true;
-      // });
-      // Client1.on('onCallFailed', () => {
-      //   events.onCallFailed.status = true;
-      // });
-      // Client1.on('onCallAnswered', () => {
-      //   events.onCallAnswered.status = true;
-      // });
-      // Client1.on('onCallTerminated', () => {
-      //   events.onCallTerminated.status = true;
-      // });
-      // Client1.on('onIncomingCall', () => {
-      //   events.onIncomingCall.status = true;
-      // });
+      Client1.on('onCallFailed', () => {
+        events.onCallFailed.status = true;
+      });
+      Client1.on('onCallAnswered', () => {
+        events.onCallAnswered.status = true;
+      });
+      Client1.on('onCallTerminated', () => {
+        events.onCallTerminated.status = true;
+      });
+      Client1.on('onIncomingCall', () => {
+        events.onIncomingCall.status = true;
+      });
     });
 
     // eslint-disable-next-line no-undef
@@ -78,19 +89,17 @@ describe('plivoWebSdk', function () {
       const keys = Object.keys(events);
       // reset all the flags
       keys.forEach((key) => {
-        // events[key].status = false;
-        Client1.removeAllListeners(key);
-        Client2.removeAllListeners(key);
+        events[key].status = false;
       });
       done();
       clearTimeout(bailTimer);
     });
 
     // eslint-disable-next-line no-undef
-    // after(() => {
-    //   Client1.logout();
-    //   Client2.logout();
-    // });
+    after(() => {
+      Client1.logout();
+      Client2.logout();
+    });
 
     // eslint-disable-next-line no-undef
     afterEach((done) => {
@@ -103,11 +112,14 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-      Client1.on("onIncomingCall", () => {
-        done();
-      });
-      Client2.call(primary_user, {});
-      // waitUntilIncoming(events.onIncomingCall, done, 500);
+      if (Client2.isLoggedIn && Client1.isLoggedIn) {
+        Client2.call(primary_user, {});
+      } else {
+        Client2.on('onLogin', () => {
+          Client2.call(primary_user, {});
+        });
+      }
+      waitUntilIncoming(events.onIncomingCall, done, 500);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('incoming call failed'));
@@ -120,11 +132,8 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-      Client1.on("onCallAnswered", () => {
-        done();
-      });
       Client1.answer();
-      // waitUntilIncoming(events.onCallAnswered, done, 500);
+      waitUntilIncoming(events.onCallAnswered, done, 500);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('outgoing call answer failed'));
@@ -137,11 +146,8 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-      Client1.on("onCallTerminated", () => {
-        done();
-      });
       Client1.hangup();
-      // waitUntilIncoming(events.onCallTerminated, done, 500);
+      waitUntilIncoming(events.onCallTerminated, done, 500);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('incoming call hangup failed'));
@@ -156,14 +162,13 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-
+      // eslint-disable-next-line no-underscore-dangle
       Client2._currentSession = null;
-      Client1.on("onCallFailed", () => {
-        done();
-      });
-      Client1.on("onIncomingCall", () => {
+      function reject() {
         Client1.reject();
-      });
+        waitUntilIncoming(events.onCallFailed, done, 500);
+      }
+      waitUntilIncoming(events.onIncomingCall, reject, 500);
       Client2.call(primary_user, {});
       bailTimer = setTimeout(() => {
         bail = true;
@@ -178,26 +183,26 @@ describe('plivoWebSdk', function () {
       Client2.hangup();
       // eslint-disable-next-line no-underscore-dangle
       Client2._currentSession = null;
-      Client1._currentSession = null;
       if (bail) {
         done(new Error('bailing'));
       }
-      const extraHeaders = {
-        "X-Ph-Random": "true",
-      };
-      Client1.removeAllListeners("");
-      Client1.on(
-        "onIncomingCall",
-        (callerName, extraHeaders2) => {
-          if (extraHeaders2 && extraHeaders2["X-Ph-Random"]) {
-            Client1.reject();
-            done();
-          } else {
-            done(new Error('incoming call with extra headers failed'));
-          }
-        },
-      );
-      Client2.call(primary_user, extraHeaders);
+      setTimeout(() => {
+        const extraHeaders = {
+          "X-Ph-Random": "true",
+        };
+        Client2.on(
+          "onIncomingCall",
+          (callerName, extraHeaders2) => {
+            if (extraHeaders2 && extraHeaders2["X-Ph-Random"]) {
+              Client1.reject();
+              done();
+            } else {
+              done(new Error('incoming call with extra headers failed'));
+            }
+          },
+        );
+        Client1.call(secondary_user, extraHeaders);
+      }, 1000);
     });
   });
 });
