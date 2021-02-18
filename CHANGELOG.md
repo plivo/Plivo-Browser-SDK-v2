@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## v2.2.2 (released@ 18-02-2021)
+**Bug Fixes**
+
+* Fixed: Missing Information in Call summary event when the browser is closed during an ongoing call.
+
+* Fixed: Issue where, for the first call post initialization of the SDK, input audio was getting picked from the device microphone even if an external Bluetooth device was added before calling.
 ## v2.2.1 (released@ 01-02-2021)
 **Features**
 
