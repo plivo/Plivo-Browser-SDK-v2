@@ -234,6 +234,15 @@ const replaceAudioTrack = function (
   } else {
     if (currentLocalStream) {
       currentLocalStream.getTracks().forEach((track) => track.stop());
+    } else if (!client.permOnClick) {
+      if ((window as any).localStream) {
+        (window as any).localStream.getTracks()
+          .forEach((track: { stop: () => void; }) => {
+            track.stop();
+            (window as any).localStream.removeTrack(track);
+          });
+        (window as any).localStream = null;
+      }
     }
     return;
   }
@@ -278,6 +287,7 @@ const replaceAudioTrack = function (
           }
         }
       })
+      .catch(() => {})
       .then(() => {
         stopVolumeDataStreaming();
       })

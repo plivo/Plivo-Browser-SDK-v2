@@ -4,10 +4,9 @@
 //   ../../plivo-jssip
 
 import { EventEmitter } from 'events';
-import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
+import { WebSocketInterface, UA} from 'plivo-jssip';
 import { RTCSession, SessionIceCandidateEvent, SessionFailedEvent, SessionEndedEvent } from 'plivo-jssip';
-
-class Plivo {
+declare class Plivo {
     client: Client;
     constructor(options: ConfiguationOptions);
 }

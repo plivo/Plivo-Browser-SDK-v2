@@ -38,8 +38,7 @@ const Plivo = {
  * Prepare summary event when browser tab is about to close
  * @returns Summary event
  */
-const getSummaryEvent = function (): SummaryEvent {
-  const client: Client = this;
+const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
   const clientVersionParse = getClientVersion();
   const sdkVersionParse = getSDKVersion();
   const deviceOs = getOS();
@@ -67,6 +66,13 @@ const getSummaryEvent = function (): SummaryEvent {
     deviceOs,
     setupOptions: client.options,
   };
+  if (client._currentSession) {
+    summaryEvent.signalling = client._currentSession.signallingInfo;
+  }
+  const deviceInfo = await getAudioDevicesInfo.call(client);
+  if (deviceInfo) {
+    summaryEvent.audioDeviceInfo = deviceInfo;
+  }
   return summaryEvent;
 };
 
@@ -76,28 +82,29 @@ const getSummaryEvent = function (): SummaryEvent {
  */
 export const addCloseProtectionListeners = function (): void {
   const client: Client = this;
-  const summaryEvent: SummaryEvent = getSummaryEvent.call(client);
-  if (client.options.closeProtection) {
-    window.onbeforeunload = (event: BeforeUnloadEvent) => {
-      Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
-      event.preventDefault();
-      // eslint-disable-next-line no-param-reassign
-      event.returnValue = '';
-    };
-  } else {
-    window.onbeforeunload = () => {
-      Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+  getSummaryEvent(client).then((summaryEvent) => {
+    if (client.options.closeProtection) {
+      window.onbeforeunload = (event: BeforeUnloadEvent) => {
+        Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+        event.preventDefault();
+        // eslint-disable-next-line no-param-reassign
+        event.returnValue = '';
+      };
+    } else {
+      window.onbeforeunload = () => {
+        Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+        if (client._currentSession) {
+          client._currentSession.session.terminate();
+        }
+      };
+    }
+    window.onunload = () => {
       if (client._currentSession) {
         client._currentSession.session.terminate();
       }
+      Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
     };
-  }
-  window.onunload = () => {
-    if (client._currentSession) {
-      client._currentSession.session.terminate();
-    }
-    Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
-  };
+  });
 };
 
 /**
