@@ -1144,8 +1144,14 @@ export class Client extends EventEmitter {
         ) {
           session = this._lastCallSession;
         }
-        if (session && this.statsSocket) {
-          nonRTPStats.sendFeedbackEvent.call(this, session, feedback);
+        if (session) {
+          if (this.statsSocket) {
+            nonRTPStats.sendFeedbackEvent.call(this, session, feedback);
+          } else {
+            this.statsSocket = new StatsSocket();
+            this.statsSocket.connect();
+            nonRTPStats.sendFeedbackEvent.call(this, session, feedback);
+          }
         }
         // send console logs
         if (sendConsoleLogs === true) {

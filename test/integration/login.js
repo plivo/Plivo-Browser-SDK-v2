@@ -17,6 +17,20 @@ const Client1 = new Client(options);
 const primary_user = process.env.PLIVO_ENDPOINT1_USERNAME;
 const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 
+function waitUntilLogin(boolObj, callback, delay) {
+  // if delay is undefined or is not an integer
+  const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
+    ? 100
+    : delay;
+  setTimeout(() => {
+    if (boolObj.status) {
+      callback();
+    } else {
+      waitUntilLogin(boolObj, callback, newDelay);
+    }
+  }, newDelay);
+}
+
 // eslint-disable-next-line no-undef
 describe("plivoWebSdk", function () {
   const GLOBAL_TIMEOUT = 240000;
@@ -37,20 +51,6 @@ describe("plivoWebSdk", function () {
     });
 
     let bail = false;
-
-    function waitUntilLogin(boolObj, callback, delay) {
-      // if delay is undefined or is not an integer
-      const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
-        ? 100
-        : delay;
-      setTimeout(() => {
-        if (boolObj.status) {
-          callback();
-        } else {
-          waitUntilLogin(boolObj, callback, newDelay);
-        }
-      }, newDelay);
-    }
 
     // eslint-disable-next-line no-undef
     before(() => {
@@ -77,15 +77,16 @@ describe("plivoWebSdk", function () {
     });
 
     // eslint-disable-next-line no-undef
-    after((done) => {
-      done();
-    });
+    // after((done) => {
+    //   done();
+    // });
 
-    // eslint-disable-next-line no-undef
-    afterEach((done) => {
-      done();
-    });
+    // // eslint-disable-next-line no-undef
+    // afterEach((done) => {
+    //   done();
+    // });
 
+    // #10
     // eslint-disable-next-line no-undef
     it("login should fail", (done) => {
       Client1.login(primary_user, "wrong_password");
@@ -98,6 +99,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
+    // #11
     // eslint-disable-next-line no-undef
     it("login should work", (done) => {
       if (bail) {
@@ -110,7 +112,7 @@ describe("plivoWebSdk", function () {
         throw new Error("login failed");
       }, TIMEOUT);
     });
-
+    // #12
     // eslint-disable-next-line no-undef
     it("should be able to logout", (done) => {
       Client1.logout();

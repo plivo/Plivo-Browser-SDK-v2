@@ -11,6 +11,7 @@ module.exports = function (config) {
             'lib/**': [ 'browserify' ],
         },
         browserify: {
+            debug: true,
             transform: [ ["envify", env], [["babelify", { extensions: [ '.ts', '.js' ]}]] ],
             plugin: [ ["tsify",{target: 'es6'}] ]
         },
@@ -37,8 +38,9 @@ module.exports = function (config) {
             captureConsole: true
         },
         captureTimeout: 210000,
-        browserDisconnectTolerance: 3,
-        browserDisconnectTimeout : 210000,
+        browserDisconnectTolerance: 5,
+        browserDisconnectTimeout : 10000,
         browserNoActivityTimeout : 210000,
+        restartOnFileChange: true
     })
 }

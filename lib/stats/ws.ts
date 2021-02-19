@@ -169,8 +169,8 @@ export class StatsSocket {
         if (this.ws) {
           const item = this.messageBuffer.shift();
           this.ws.send(item as string);
-          Plivo.log.debug('sent stat : ', item);
-          if (message.msg === 'CALL_SUMMARY') {
+          Plivo.log.debug('stats send success');
+          if (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK') {
             // destroying stats socket since call has ended
             this.disconnect();
             client.statsSocket = null;
