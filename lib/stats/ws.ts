@@ -198,7 +198,7 @@ export class StatsSocket {
       this.send(message, client);
     }, retrySecondsCount * 900);
 
-    Plivo.log.error('unable to send message, statsSocket is not open');
+    Plivo.log.warn('statsSocket is not open, retrying to connect');
     this.reconnect();
     return false;
   }
