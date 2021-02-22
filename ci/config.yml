@@ -5,6 +5,11 @@ dockerOnly: false
 language: nodejs
 sonar:
   exclusions: node_modules/
+unitTests:
+  nodejs:
+        testsReportFile: nodejs.tests.report.xml
+        coverageReportFile: nodejs.coverage.report.xml
+        command: 'npm run test:unit'
 build:
   nodejs:
     command: npm install && npm run build
