@@ -4,5 +4,5 @@
 
 websdkPipeline ([
 	buildContainer: 'plivo/jenkins-ci/nodejs/10.13.0/debian/stretch:latest',
-	disableQAStages: true
+	disableLint: true
 ])
