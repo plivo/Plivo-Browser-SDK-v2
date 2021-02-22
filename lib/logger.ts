@@ -70,7 +70,7 @@ class PlivoLogger {
 
   private _enableSipLogs = (debugLevel:AvailableLogMethods): void => {
     if (['ALL', 'ALL-PLAIN'].indexOf(debugLevel) !== -1) {
-      (customLocalStorage as any).debug = 'PlivoSIP:*';
+      (customLocalStorage as any).debug = 'JsSIP:*';
       (window as any)._PlivoUseColorLog = true;
       // Turn off coloring in SIPlib console
       if (debugLevel === 'ALL-PLAIN') {

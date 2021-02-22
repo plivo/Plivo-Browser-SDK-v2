@@ -40,7 +40,7 @@ module.exports = env => {
           loader: 'string-replace-loader',
           options: {
             multiple: [
-              { search: 'require.*debug.*JsSIP', replace: "require('debug')('PlivoSIP", flags: 'g' },
+              // { search: 'require.*debug.*JsSIP', replace: "require('debug')('JsSIP", flags: 'g' },
               { search: 'jssip_id', replace: 'plivosip_id', flags: 'g' },
               { search: '"version.*.3.0.*"', replace: `"version": ${version}"`, flags: 'g' },
               { search: 'PLIVO_LIB_VERSION', replace: version, flags: 'g' },
