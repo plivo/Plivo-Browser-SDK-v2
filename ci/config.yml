@@ -6,10 +6,13 @@ language: nodejs
 sonar:
   exclusions: node_modules/
 unitTests:
+  ignoreFailure: 'false'
   nodejs:
         testsReportFile: nodejs.tests.report.xml
         coverageReportFile: nodejs.coverage.report.xml
-        command: 'npm run test:unit'
+        command: |
+          npm install
+          npm run test:unit
 build:
   nodejs:
     command: npm install && npm run build
