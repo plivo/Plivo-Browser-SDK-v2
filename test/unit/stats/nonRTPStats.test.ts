@@ -3,7 +3,7 @@ import { StatsSocket } from '../../../lib/stats/ws';
 import { getSDKVersion } from '../../../lib/utils/device';
 import WebSocket from '../../mock/WebSocket';
 import pkg from '../../../package.json';
-import nonRTPStatsResponse from '../../payloads/nonRTPStatsEvent.json';
+import nonRTPStatsResponse from '../../payloads/nonRTPStatsEvent';
 
 describe('NonRTPStats', () => {
   let context;
