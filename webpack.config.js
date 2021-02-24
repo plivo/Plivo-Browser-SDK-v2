@@ -103,7 +103,7 @@ DtsBundlePlugin.prototype.apply = function (compiler) {
       name: 'plivo-browser-sdk',
       main: 'types/lib/index.d.ts',
       out: '../../index.d.ts',
-      outputAsModuleFolder: true // to use npm in-package typings
+      outputAsModuleFolder: false
     });
   });
 };
