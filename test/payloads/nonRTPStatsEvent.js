@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const ANSWER_EVENT = {
   msg: "CALL_ANSWERED",
   info: "Incoming call answered",
