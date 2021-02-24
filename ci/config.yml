@@ -12,7 +12,7 @@ unitTests:
         coverageReportFile: nodejs.coverage.report.xml
         command: |
           npm install
-          npm run test:unit
+          npm run test:unit-jenkins
 build:
   nodejs:
     command: npm install && npm run build
