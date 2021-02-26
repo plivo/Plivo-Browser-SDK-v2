@@ -1,4 +1,16 @@
 {
+    "audioDeviceInfo": {
+        "activeInputAudioDevice": "Default - MacBook Pro Speakers (Built-in)",
+        "activeOutputAudioDevice": "Default - MacBook Pro Speakers (Built-in)",
+        "audioInputGroupIds": "default ,",
+        "audioInputIdSet": "",
+        "audioInputLables": "Default - MacBook Pro Microphone (Built-in) ,",
+        "audioOutputGroupIds": "default ,",
+        "audioOutputIdSet": "default",
+        "audioOutputLables": "Default - MacBook Pro Speakers (Built-in) ,",
+        "noOfAudioInput": 1,
+        "noOfAudioOutput": 1
+    },
     "callUUID": "f0dd8baf-a299-4535-8679-b0bcc725fea2",
     "callstats_key": "fb85a852-e7be-11ea-b940-5b5a84a8b39b",
     "codec": "opus",

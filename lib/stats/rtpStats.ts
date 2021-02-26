@@ -9,6 +9,8 @@ import { AudioLevel } from '../media/audioLevel';
 import { processStreams } from './mediaMetrics';
 import { Logger } from '../logger';
 import { CallSession } from '../managers/callSession';
+import { getAudioDevicesInfo } from '../media/audioDevice';
+import { DeviceAudioInfo } from './nonRTPStats';
 
 export interface StatsLocalStream {
   ssrc?: number;
@@ -60,6 +62,7 @@ export interface StatsObject {
   networkEffectiveType: string;
   networkDownlinkSpeed: number;
   statsIOUsed: boolean;
+  audioDeviceInfo?: DeviceAudioInfo;
 }
 
 interface RtpStatsStream {
@@ -411,7 +414,7 @@ const sendStats = function (statMsg: StatsObject): void {
  * Prepare and send CALL_STATS event to Plivo stats.
  * @param {RtpStatsStream} stream - holds local and remote stat details
  */
-const processStats = function (stream: RtpStatsStream): void {
+const processStats = function (stream: RtpStatsStream, deviceInfo: DeviceAudioInfo): void {
   const getStatsRef: GetRTPStats = this;
   getStatsRef.collected = {
     msg: 'CALL_STATS',
@@ -436,6 +439,9 @@ const processStats = function (stream: RtpStatsStream): void {
       : -1,
     statsIOUsed: getStatsRef.statsioused,
   };
+  if (deviceInfo) {
+    getStatsRef.collected.audioDeviceInfo = deviceInfo;
+  }
 
   getStatsRef.collected.local.audioLevel = handleStat(
     stream.local.audioInputLevel as number,
@@ -461,7 +467,7 @@ const processStats = function (stream: RtpStatsStream): void {
     );
   } else if (
     getStatsRef.clientScope.browserDetails.browser === 'firefox'
-    || getStatsRef.clientScope.browserDetails.browser === 'safari'
+        || getStatsRef.clientScope.browserDetails.browser === 'safari'
   ) {
     getStatsRef.collected.local.rtt = handleStat(stream.local.rtt as number, 'float');
     getStatsRef.collected.local.jitter = handleStat(
@@ -545,7 +551,9 @@ export const handleChromeStats = function (stream: RtpStatsStream): void {
       stream.local.audioInputLevel = this.audioInputLevel / this.audioInputCount;
       stream.remote.audioOutputLevel = this.audioOutputLevel / this.audioOutputCount;
       clearAudioSamples.call(this);
-      processStats.call(this, stream);
+      getAudioDevicesInfo.call(this.clientScope).then((devices: DeviceAudioInfo) => {
+        processStats.call(this, stream, devices);
+      });
     },
     null,
     (err: any) => {
@@ -650,7 +658,9 @@ export const handleFirefoxSafariStats = function (stream: RtpStatsStream): void 
                 if (this.clientScope.browserDetails.browser === 'safari') {
                   stream = handleSafariChanges(stream);
                 }
-                processStats.call(this, stream);
+                getAudioDevicesInfo.call(this.clientScope).then((devices: DeviceAudioInfo) => {
+                  processStats.call(this, stream, devices);
+                });
               }
             });
           })
