@@ -10,7 +10,7 @@ import {
 import audioVisualize from './audioVisualize';
 import { Logger } from '../logger';
 import { Client, PlivoObject } from '../client';
-import { DeviceAudioInfo } from '../stats/nonRTPStats';
+import { DeviceAudioInfo, sendEvents } from '../stats/nonRTPStats';
 import getBrowserDetails from '../utils/browserDetection';
 
 export interface RingToneDevices {
@@ -532,6 +532,72 @@ export const isElectronApp = function (): boolean {
 };
 
 /**
+ * Get input and output audio device information to send to plivo stats.
+ * @returns Fulfills with audio device information or reject with error
+ */
+export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
+  return navigator.mediaDevices.enumerateDevices().then((devices) => {
+    const deviceInfo: DeviceAudioInfo = {
+      noOfAudioInput: 0,
+      noOfAudioOutput: 0,
+      audioInputLables: '',
+      audioOutputLables: '',
+      audioInputGroupIds: '',
+      audioOutputGroupIds: '',
+      audioInputIdSet: this.audio.microphoneDevices.get() || '',
+      audioOutputIdSet: this.audio.speakerDevices.get() || '',
+      activeInputAudioDevice: '',
+      activeOutputAudioDevice: '',
+    };
+    let activeInputDeviceForSafari: any = null;
+    devices.forEach((d) => {
+      if (d.deviceId === 'default' && d.kind === 'audioinput') {
+        // eslint-disable-next-line
+        d['defaultInputDeviceGroupId'] = d.groupId;
+      } else if (d.deviceId === 'default' && d.kind === 'audiooutput') {
+        // eslint-disable-next-line
+        d['defaultOutputDeviceGroupId'] = d.groupId;
+      }
+
+      if (d.kind === 'audioinput') {
+        deviceIdDeviceLableMap.set(d.deviceId, d.label);
+        deviceInfo.noOfAudioInput += 1;
+        if (deviceInfo.noOfAudioInput === 1) {
+          activeInputDeviceForSafari = d.label;
+        }
+        deviceInfo.audioInputLables += `${d.label} ,`;
+        deviceInfo.audioInputGroupIds += `${d.groupId} ,`;
+      } else if (d.kind === 'audiooutput') {
+        deviceIdDeviceLableMap.set(d.deviceId, d.label);
+        deviceInfo.noOfAudioOutput += 1;
+        deviceInfo.audioOutputLables += `${d.label} ,`;
+        deviceInfo.audioOutputGroupIds += `${d.groupId} ,`;
+      }
+    });
+    if (deviceInfo.audioInputIdSet === '') {
+      deviceInfo.activeInputAudioDevice = deviceIdDeviceLableMap.get('default');
+      if (getBrowserDetails().browser === 'safari') {
+        deviceInfo.activeInputAudioDevice = activeInputDeviceForSafari;
+      }
+    } else {
+      deviceInfo.activeInputAudioDevice = deviceIdDeviceLableMap.get(
+        deviceInfo.audioInputIdSet,
+      );
+    }
+    if (deviceInfo.audioOutputIdSet === '') {
+      deviceInfo.activeOutputAudioDevice = deviceIdDeviceLableMap.get(
+        'default',
+      );
+    } else {
+      deviceInfo.activeOutputAudioDevice = deviceIdDeviceLableMap.get(
+        deviceInfo.audioOutputIdSet,
+      );
+    }
+    return deviceInfo;
+  });
+};
+
+/**
  * Check if input or output audio device has changed.
  */
 export const checkAudioDevChange = function (): void {
@@ -549,6 +615,13 @@ export const checkAudioDevChange = function (): void {
       const { audioRef } = deviceInfo;
       const lastActiveSpeakerDevice = clientObject ? clientObject.audio.speakerDevices.get() : '';
       if (availableAudioDevices && devices) {
+        // send event to call insights
+        if (client._currentSession) {
+          getAudioDevicesInfo.call(client).then((toggledDeviceInfo: DeviceAudioInfo) => {
+            const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
+            sendEvents.call(client, obj, client._currentSession);
+          });
+        }
         // Check if device is newly added with devices
         devices.forEach((device) => {
           // update device name : device Id Map
@@ -679,70 +752,4 @@ export const detectDeviceChange = function (): void {
       checkAudioDevChange.call(this);
     };
   }
-};
-
-/**
- * Get input and output audio device information to send to plivo stats.
- * @returns Fulfills with audio device information or reject with error
- */
-export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
-  return navigator.mediaDevices.enumerateDevices().then((devices) => {
-    const deviceInfo: DeviceAudioInfo = {
-      noOfAudioInput: 0,
-      noOfAudioOutput: 0,
-      audioInputLables: '',
-      audioOutputLables: '',
-      audioInputGroupIds: '',
-      audioOutputGroupIds: '',
-      audioInputIdSet: this.audio.microphoneDevices.get() || '',
-      audioOutputIdSet: this.audio.speakerDevices.get() || '',
-      activeInputAudioDevice: '',
-      activeOutputAudioDevice: '',
-    };
-    let activeInputDeviceForSafari: any = null;
-    devices.forEach((d) => {
-      if (d.deviceId === 'default' && d.kind === 'audioinput') {
-        // eslint-disable-next-line
-        d['defaultInputDeviceGroupId'] = d.groupId;
-      } else if (d.deviceId === 'default' && d.kind === 'audiooutput') {
-        // eslint-disable-next-line
-        d['defaultOutputDeviceGroupId'] = d.groupId;
-      }
-
-      if (d.kind === 'audioinput') {
-        deviceIdDeviceLableMap.set(d.deviceId, d.label);
-        deviceInfo.noOfAudioInput += 1;
-        if (deviceInfo.noOfAudioInput === 1) {
-          activeInputDeviceForSafari = d.label;
-        }
-        deviceInfo.audioInputLables += `${d.label} ,`;
-        deviceInfo.audioInputGroupIds += `${d.groupId} ,`;
-      } else if (d.kind === 'audiooutput') {
-        deviceIdDeviceLableMap.set(d.deviceId, d.label);
-        deviceInfo.noOfAudioOutput += 1;
-        deviceInfo.audioOutputLables += `${d.label} ,`;
-        deviceInfo.audioOutputGroupIds += `${d.groupId} ,`;
-      }
-    });
-    if (deviceInfo.audioInputIdSet === '') {
-      deviceInfo.activeInputAudioDevice = deviceIdDeviceLableMap.get('default');
-      if (getBrowserDetails().browser === 'safari') {
-        deviceInfo.activeInputAudioDevice = activeInputDeviceForSafari;
-      }
-    } else {
-      deviceInfo.activeInputAudioDevice = deviceIdDeviceLableMap.get(
-        deviceInfo.audioInputIdSet,
-      );
-    }
-    if (deviceInfo.audioOutputIdSet === '') {
-      deviceInfo.activeOutputAudioDevice = deviceIdDeviceLableMap.get(
-        'default',
-      );
-    } else {
-      deviceInfo.activeOutputAudioDevice = deviceIdDeviceLableMap.get(
-        deviceInfo.audioOutputIdSet,
-      );
-    }
-    return deviceInfo;
-  });
 };
