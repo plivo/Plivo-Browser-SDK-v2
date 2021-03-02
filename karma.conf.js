@@ -27,7 +27,9 @@ module.exports = function (config) {
                 flags: [
                     '--use-fake-device-for-media-stream',
                     '--use-fake-ui-for-media-stream',
-                    '--enable-blink-features=RTCRtpSender'
+                    '--enable-blink-features=RTCRtpSender', 
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox'
                 ]
             },
         },
