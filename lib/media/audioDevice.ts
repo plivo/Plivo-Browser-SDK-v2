@@ -4,6 +4,7 @@
 import {
   AUDIO_DEVICE_ABORT_ERROR_CODE,
   AUDIO_DEVICE_SECURITY_ERROR,
+  REMOTE_VIEW_ID,
   RINGBACK_ELEMENT_ID,
   RINGTONE_ELEMENT_ID,
 } from '../constants';
@@ -12,6 +13,7 @@ import { Logger } from '../logger';
 import { Client, PlivoObject } from '../client';
 import { DeviceAudioInfo } from '../stats/nonRTPStats';
 import getBrowserDetails from '../utils/browserDetection';
+import { setupRemoteView } from './document';
 
 export interface RingToneDevices {
   set: (id: string) => void;
@@ -383,7 +385,9 @@ export const outputDevices = ((): OutputDevices => ({
     speakerElement.forEach((e: any) => {
       if (typeof e.sinkId !== 'undefined') {
         e.setSinkId(deviceId)
-          .then(() => {})
+          .then(() => {
+            console.log('******* reached successs', e.sinkId);
+          })
           .catch((error) => {
             if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
               e.src = '';
@@ -545,8 +549,7 @@ export const checkAudioDevChange = function (): void {
 
   audioDevDictionary()
     .then((deviceInfo: DeviceDictionary) => {
-      const { devices } = deviceInfo;
-      const { audioRef } = deviceInfo;
+      const { devices, audioRef } = deviceInfo;
       const lastActiveSpeakerDevice = clientObject ? clientObject.audio.speakerDevices.get() : '';
       if (availableAudioDevices && devices) {
         // Check if device is newly added with devices
@@ -609,6 +612,11 @@ export const checkAudioDevChange = function (): void {
                 }
               }
               if (device.kind === 'audiooutput' && (lastActiveSpeakerDevice !== '' && lastActiveSpeakerDevice !== 'default') && clientObject) {
+                const initialRemoteView = document.getElementById(REMOTE_VIEW_ID);
+                initialRemoteView?.remove();
+
+                setupRemoteView();
+                clientObject.remoteView = document.getElementById(REMOTE_VIEW_ID);
                 clientObject.audio.speakerDevices.set('default');
               }
             }
