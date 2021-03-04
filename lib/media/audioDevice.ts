@@ -385,9 +385,7 @@ export const outputDevices = ((): OutputDevices => ({
     speakerElement.forEach((e: any) => {
       if (typeof e.sinkId !== 'undefined') {
         e.setSinkId(deviceId)
-          .then(() => {
-            console.log('******* reached successs', e.sinkId);
-          })
+          .then(() => {})
           .catch((error) => {
             if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
               e.src = '';
