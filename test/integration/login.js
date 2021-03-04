@@ -86,7 +86,7 @@ describe("plivoWebSdk", function () {
     //   done();
     // });
 
-    // #10
+    // #9
     // eslint-disable-next-line no-undef
     it("login should fail", (done) => {
       Client1.login(primary_user, "wrong_password");
@@ -99,7 +99,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #11
+    // #10
     // eslint-disable-next-line no-undef
     it("login should work", (done) => {
       if (bail) {
@@ -112,7 +112,8 @@ describe("plivoWebSdk", function () {
         throw new Error("login failed");
       }, TIMEOUT);
     });
-    // #12
+
+    // #11
     // eslint-disable-next-line no-undef
     it("should be able to logout", (done) => {
       Client1.logout();

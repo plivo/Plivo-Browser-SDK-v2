@@ -112,7 +112,7 @@ describe("plivoWebSdk", function () {
     //   done();
     // });
 
-    // #15
+    // #14
     // eslint-disable-next-line no-undef
     it("outbound call should go through and ring", (done) => {
       if (bail) {
@@ -149,7 +149,7 @@ describe("plivoWebSdk", function () {
     //   }, TIMEOUT);
     // });
 
-    // #16
+    // #15
     // eslint-disable-next-line no-undef
     it("outbound call should be answered", (done) => {
       if (bail) {
@@ -164,7 +164,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #17
+    // #16
     // eslint-disable-next-line no-undef
     it("outbound call should be hungup", (done) => {
       if (bail) {
@@ -178,7 +178,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #18
+    // #17
     // eslint-disable-next-line no-undef
     it("outbound call should be ended without answer", (done) => {
       if (bail) {
@@ -196,7 +196,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #19
+    // #18
     // eslint-disable-next-line no-undef
     it("outbound call should be muted", (done) => {
       if (bail) {
@@ -225,7 +225,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #20
+    // #19
     // eslint-disable-next-line no-undef
     it("outbound call should be unmuted", (done) => {
       if (bail) {
@@ -247,22 +247,13 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #21
+    // #20
     // eslint-disable-next-line no-undef
     it("outbound call should send feedback", (done) => {
       if (bail) {
         done(new Error("bailing"));
       }
 
-      // function checkArguments() {
-      //   const call = spyOnSocket.getCall(-1);
-      //   if (call.args[0].msg === "FEEDBACK") {
-      //     Client1.hangup();
-      //     done();
-      //   } else {
-      //     done(new Error("outgoing call end failed"));
-      //   }
-      // }
       spyOnSocket.resetHistory();
       spyOnSocket = sinon.spy(Client2.statsSocket, "send");
       // spyOnSocket = sinon.spy(Client2.statsSocket, "send");

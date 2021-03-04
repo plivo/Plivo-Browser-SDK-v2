@@ -108,6 +108,7 @@ describe('plivoWebSdk', function () {
       done();
     });
 
+    // #5
     // eslint-disable-next-line no-undef
     it('inbound call should come through with extra headers', (done) => {
       if (bail) {
@@ -133,6 +134,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // #6
     // eslint-disable-next-line no-undef
     it('inbound call should be answered', (done) => {
       if (bail) {
@@ -146,6 +148,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // #7
     // eslint-disable-next-line no-undef
     it('inbound call should be hungup', (done) => {
       if (bail) {
@@ -159,6 +162,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // #8
     // eslint-disable-next-line no-undef
     it('inbound call should be ended without answer', (done) => {
       // terminate any ongoing calls
@@ -179,31 +183,5 @@ describe('plivoWebSdk', function () {
         done(new Error('incoming call end failed'));
       }, TIMEOUT);
     });
-
-    // eslint-disable-next-line no-undef
-    // it('inbound call should receive extra headers', (done) => {
-    //   // terminate any ongoing calls
-    //   Client2.hangup();
-    //   if (bail) {
-    //     done(new Error('bailing'));
-    //   }
-    //   setTimeout(() => {
-    //     const extraHeaders = {
-    //       "X-Ph-Random": "true",
-    //     };
-    //     Client2.on(
-    //       "onIncomingCall",
-    //       (callerName, extraHeaders2) => {
-    //         if (extraHeaders2 && extraHeaders2["X-Ph-Random"]) {
-    //           Client1.reject();
-    //           done();
-    //         } else {
-    //           done(new Error('incoming call with extra headers failed'));
-    //         }
-    //       },
-    //     );
-    //     Client1.call(secondary_user, extraHeaders);
-    //   }, 1000);
-    // });
   });
 });

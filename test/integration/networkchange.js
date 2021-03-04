@@ -106,7 +106,7 @@ describe("plivoWebSdk", function () {
       done();
     });
 
-    // #13
+    // #12
     // eslint-disable-next-line no-undef
     it("socket disconnection should trigger a re-connection", (done) => {
       if (bail) {
@@ -136,7 +136,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #14
+    // #13
     // eslint-disable-next-line no-undef
     it("hangup after re-connection should send call summary", (done) => {
       if (bail) {
