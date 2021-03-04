@@ -888,7 +888,6 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
 declare module 'plivo-browser-sdk/stats/rtpStats' {
     import { Client, Storage } from 'plivo-browser-sdk/client';
     import { AudioLevel } from 'plivo-browser-sdk/media/audioLevel';
-    import { DeviceAudioInfo } from 'plivo-browser-sdk/stats/nonRTPStats';
     export interface StatsLocalStream {
             ssrc?: number;
             packetsLost?: number;
@@ -937,7 +936,6 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             networkEffectiveType: string;
             networkDownlinkSpeed: number;
             statsIOUsed: boolean;
-            audioDeviceInfo?: DeviceAudioInfo;
     }
     interface RtpStatsStream {
             codec: string;
