@@ -544,8 +544,7 @@ export class CallSession {
     callStatscb: () => void,
     err: Error | DOMError,
   ): void => {
-    Plivo.log.error(`peerconnection:${msg}: `, err);
-    if (clientObject.userName && clientObject.callStats) {
+    if (clientObject.userName && clientObject.callStats && callStatscb) {
       // eslint-disable-next-line no-param-reassign
       (err as Error).message = `peerconnection:${msg}`;
       clientObject.callStats.reportError(
@@ -556,6 +555,5 @@ export class CallSession {
       );
     }
     onSDPfailure.call(clientObject, this, err as Error);
-    Plivo.log.warn(`SDP failure - ${msg}`, err);
   };
 }

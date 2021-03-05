@@ -67,28 +67,12 @@ module.exports = (env) => {
           loader: "string-replace-loader",
           options: {
             multiple: [
-              {
-                search: "require.*debug.*JsSIP",
-                replace: "require('debug')('PlivoSIP",
-                flags: "g",
-              },
-              { search: "jssip_id", replace: "plivosip_id", flags: "g" },
-              {
-                search: '"version.*.3.0.*"',
-                replace: `"version": ${version}"`,
-                flags: "g",
-              },
-              { search: "PLIVO_LIB_VERSION", replace: version, flags: "g" },
-              {
-                search: "this.useColors",
-                replace: "window._PlivoUseColorLog",
-                flags: "g",
-              },
-              {
-                search: "shimCreateObjectURL: .* {",
-                replace: "shimCreateObjectURL: function() { \n if(true)return;",
-                flags: "g",
-              },
+              // { search: 'require.*debug.*JsSIP', replace: "require('debug')('JsSIP", flags: 'g' },
+              { search: 'jssip_id', replace: 'plivosip_id', flags: 'g' },
+              { search: '"version.*.3.0.*"', replace: `"version": ${version}"`, flags: 'g' },
+              { search: 'PLIVO_LIB_VERSION', replace: version, flags: 'g' },
+              { search: 'this.useColors', replace: 'window._PlivoUseColorLog', flags: 'g' },
+              { search: 'shimCreateObjectURL: .* {', replace: 'shimCreateObjectURL: function() { \n if(true)return;', flags: 'g' },
             ],
           },
         },
@@ -153,10 +137,10 @@ DtsBundlePlugin.prototype.apply = function (compiler) {
     var dts = require("dts-bundle");
 
     dts.bundle({
-      name: "plivo-browser-sdk",
-      main: "types/lib/index.d.ts",
-      out: "../../index.d.ts",
-      outputAsModuleFolder: true, // to use npm in-package typings
+      name: 'plivo-browser-sdk',
+      main: 'types/lib/index.d.ts',
+      out: '../../index.d.ts',
+      outputAsModuleFolder: false
     });
   });
 };

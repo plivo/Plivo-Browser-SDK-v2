@@ -102,11 +102,9 @@ const getLocalMedia = function (
 };
 
 /**
- * Create HTML audio elements for all the tones played during the call.
- * @param {Client} clientObject - client reference
- * @param {ConfiguationOptions} options - client configuration parameters
+ * Create HTML audio elements for webrtc remote stream.
  */
-export const setup = function (clientObject: Client, options: ConfiguationOptions): void {
+export const setupRemoteView = () => {
   const remoteView = document.createElement('audio');
   remoteView.id = REMOTE_VIEW_ID;
   remoteView.hidden = true;
@@ -115,7 +113,15 @@ export const setup = function (clientObject: Client, options: ConfiguationOption
   (remoteView as any).height = 0;
   remoteView.setAttribute('data-devicetype', 'speakerDevice');
   document.body.appendChild(remoteView);
+};
 
+/**
+ * Create HTML audio elements for all the tones played during the call.
+ * @param {Client} clientObject - client reference
+ * @param {ConfiguationOptions} options - client configuration parameters
+ */
+export const setup = function (clientObject: Client, options: ConfiguationOptions): void {
+  setupRemoteView();
   const audioConnectingElement = document.createElement('audio');
   audioConnectingElement.id = CONNECT_TONE_ELEMENT_ID;
   (audioConnectingElement as any).loop = 'loop';

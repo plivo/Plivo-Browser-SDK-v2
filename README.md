@@ -1,71 +1,108 @@
-# PlivoWebSDK
+# Plivo-Browser SDK-v2
 
-A pure javascript webRTC-SIP library
+## Introduction
 
-## Getting Started
-
-* [Documentation](https://www.plivo.com/docs/sdk/web/)
-* [Example App Repo](https://github.com/plivo/plivo-websdk-2.0-example)
-* [Hosted App Link](https://s3.amazonaws.com/plivobrowsersdk/v2/example.html)
+The Plivo Browser SDK codebase wraps the functions of Browser SDK as an ES module. To get started, see the [SDK overview](https://www.plivo.com/docs/sdk/client/browser/overview) and [SDK reference](https://www.plivo.com/docs/sdk/client/browser/reference/) docs. For release notes, see the [Changelog](https://www.plivo.com/docs/sdk/client/browser/changelog/).
 
 ## Installation
 
 ### NPM
 
-```npm install plivo-browser-sdk --save```
+You can include the [Plivo-Browser-SDK](https://www.npmjs.com/package/plivo-browser-sdk) NPM package as a dependency in your project. To do this, use the command
 
-#### Usage:
+```shell
+npm install plivo-browser-sdk --save 
+```
 
-```const Plivo = require('plivo-browser-sdk');```
+### Usage
 
-or
+You can import Browser SDK using ES module or TypeScript syntax
 
-```import Plivo from 'plivo-browser-sdk'```
- 
+```javascript
+import Plivo from 'plivo-browser-sdk'
+```
+
+or using commonJS
+
+```javascript
+const Plivo = require('plivo-browser-sdk');
+```
+
 ### CDN
 
-```html
+You can also include the Plivo JavaScript file shown below directly on your webpage if you don&#39;t want to include the package as a dependency.
+
+```javascript
 <script type="text/javascript" src="https://cdn.plivo.com/sdk/browser/v2/plivo.min.js"></script>
 ```
 
-## Setup Development Environment
+## TypeScript Support
+
+This Browser SDK package includes TypeScript declarations for Plivo Browser SDK. We support projects using TypeScript versions &gt;= 4.0.3. Read more about the benefits of TypeScript support in [this FAQ](https://support.plivo.com/hc/en-us/articles/360055776291).
+
+## Set Up Development Environment
 
 ### Install dependencies
 
-`npm install`
+```shell
+npm install
+```
 
 ### Build
 
-`npm run build`
+You can create a minified or non-minified build:
 
-Minified, production-ready build is created at `dist/plivowebsdk.min.js`
+```shell
+npm run build
+```
 
-`npm run build:nominify`
+This command creates a minified, production-ready build at dist/plivobrowsersdk.min.js.
 
-A non-minified version of the build file is created `dist/plivowebsdk.js`
+```shell
+npm run build:nominify
+```
 
-### Start development server
+This command creates a non-minified version of the build file at dist/plivobrowsersdk.js.
 
-`npm start`
+### Start the development server
 
-This builds the SDK file and attaches it to the port 9000 - `http://localhost:9000/plivowebsdk.js`
+```shell
+npm start
+```
 
-This uses [webpack-dev-server](https://github.com/webpack/webpack-dev-server) so, when there is a change in any file, the build file is auto build,
-When this is used in [plivo-websdk-2.0-example](https://github.com/plivo/plivo-websdk-2.0-example), the app will auto reload with the build with latest changes
+This command builds the SDK file and attaches it to port 9000 — http://localhost:9000/plivobrowsersdk.js. The project uses a [webpack-dev-server](https://github.com/webpack/webpack-dev-server) that helps with live reloading. Whenever there is a change in any file, it auto builds.
+
+If you use this server in [plivo-browser-sdk2-examples](https://github.com/plivo/plivo-browser-sdk2-examples), the app will auto-reload the build with the latest changes.
 
 ## Testing
 
 ### Unit tests
 
-There is no extra setup required for running unit tests. You can run unit tests using:
+No extra setup is required for running unit tests. You can run unit tests with the command
 
-`npm run test:unit`
+```shell
+npm run test:unit
+```
 
 ### Integration tests
 
-Running integration tests require some setup:
-* Replace master and slave user login details in [spec.js](https://github.com/plivo/plivo-websdk-2.0/blob/master/test/spec.js)
+Running integration tests requires some setup:
 
-After the setup, you can run integration tests using:
+- To perform test calls, you need two users. Create a .env file in the root directory of this repository and update it with primary and secondary user details as below:
 
-`npm run test:integration`
+```shell
+PLIVO_ENDPOINT1_USERNAME=<Endpoint-1 Username>
+PLIVO_ENDPOINT1_PASSWORD=<Endpoint-1 Password>
+PLIVO_ENDPOINT2_USERNAME=<Endpoint-2 Username>
+PLIVO_ENDPOINT2_PASSWORD=<Endpoint-2 Password>
+```
+
+- After the setup, you can run integration tests by running the command
+
+```shell
+npm run test:integration
+```
+
+## License
+
+See [LICENSE](https://github.com/plivo/Plivo-Browser-SDK-v2/blob/master/LICENSE)

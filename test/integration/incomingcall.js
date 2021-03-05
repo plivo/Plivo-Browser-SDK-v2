@@ -1,8 +1,7 @@
-"use strict";
+/* eslint-disable @typescript-eslint/naming-convention */
+import { Client } from '../../lib/client';
 
-const Client = require("../../types/lib/client").Client;
-
-var options = {
+const options = {
   debug: "ALL",
   permOnClick: true,
   codecs: ["OPUS", "PCMU"],
@@ -16,145 +15,172 @@ var options = {
 const Client1 = new Client(options);
 const Client2 = new Client(options);
 
-var primary_user = process.env.PLIVO_PRIMARY_USERNAME,
-  primary_pass = process.env.PLIVO_PRIMARY_PASSWORD;
+const primary_user = process.env.PLIVO_ENDPOINT1_USERNAME;
+const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 
-var secondary_user = process.env.PLIVO_SECONDARY_USERNAME,
-  secondary_pass = process.env.PLIVO_SECONDARY_PASSWORD;
+const secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME;
+const secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
 
-function waitUntil(boolObj, callback, delay) {
-  // if delay is undefined or is not an integer
-  delay =
-    typeof delay === "undefined" || isNaN(parseInt(delay, 10)) ? 100 : delay;
-  setTimeout(function () {
-    boolObj.status ? callback() : waitUntil(boolObj, callback, delay);
-  }, delay);
-}
-
-describe("plivoWebSdk", function () {
-  var GLOBAL_TIMEOUT = 240000;
+// eslint-disable-next-line no-undef
+describe('plivoWebSdk', function () {
+  const GLOBAL_TIMEOUT = 240000;
   this.timeout(GLOBAL_TIMEOUT);
-  var TIMEOUT = 20000;
+  const TIMEOUT = 20000;
   let bailTimer;
 
-  describe("incoming call", function () {
+  // eslint-disable-next-line no-undef
+  describe('incoming call', function () {
     this.timeout(GLOBAL_TIMEOUT);
 
-    var events = {};
+    const events = {};
 
-    var client_events = [
-      "onIncomingCallCanceled",
-      "onCallFailed",
-      "onCallAnswered",
-      "onCallTerminated",
-      "onIncomingCall",
+    const clientEvents = [
+      'onIncomingCallCanceled',
+      'onCallFailed',
+      'onCallAnswered',
+      'onCallTerminated',
+      'onIncomingCall',
     ];
 
-    for (var i in client_events) {
-      events[client_events[i]] = { status: false };
+    clientEvents.forEach((i) => {
+      events[i] = { status: false };
+    });
+
+    let bail = false;
+
+    function waitUntilIncoming(boolObj, callback, delay) {
+      // if delay is undefined or is not an integer
+      const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10))
+        ? 100
+        : delay;
+      setTimeout(() => {
+        if (boolObj.status) {
+          callback();
+        } else {
+          waitUntilIncoming(boolObj, callback, newDelay);
+        }
+      }, newDelay);
     }
 
-    var bail = false;
-
-    before(function () {
+    // eslint-disable-next-line no-undef
+    before((done) => {
       Client1.login(primary_user, primary_pass);
       Client2.login(secondary_user, secondary_pass);
-      Client1.on("onCallRemoteRinging", function () {
-        events["onCallRemoteRinging"].status = true;
+      Client2.on("onLogin", () => {
+        done();
       });
-      Client1.on("onIncomingCallCanceled", function () {
-        events["onIncomingCallCanceled"].status = true;
+      Client1.on('onIncomingCallCanceled', () => {
+        events.onIncomingCallCanceled.status = true;
       });
-      Client1.on("onCallFailed", function () {
-        events["onCallFailed"].status = true;
+      Client1.on('onCallFailed', () => {
+        events.onCallFailed.status = true;
       });
-      Client1.on("onCallAnswered", function () {
-        events["onCallAnswered"].status = true;
+      Client1.on('onCallAnswered', () => {
+        events.onCallAnswered.status = true;
       });
-      Client1.on("onCallTerminated", function () {
-        events["onCallTerminated"].status = true;
+      Client1.on('onCallTerminated', () => {
+        events.onCallTerminated.status = true;
       });
-      Client1.on("onIncomingCall", function () {
-        events["onIncomingCall"].status = true;
+      Client1.on('onIncomingCall', () => {
+        events.onIncomingCall.status = true;
       });
     });
 
-    beforeEach(function (done) {
+    // eslint-disable-next-line no-undef
+    beforeEach((done) => {
+      const keys = Object.keys(events);
       // reset all the flags
-      for (var key in events) {
+      keys.forEach((key) => {
         events[key].status = false;
-      }
+      });
       done();
       clearTimeout(bailTimer);
     });
 
-    after(function () {
+    // eslint-disable-next-line no-undef
+    after(() => {
       Client1.logout();
       Client2.logout();
     });
 
-    afterEach(function (done) {
+    // eslint-disable-next-line no-undef
+    afterEach((done) => {
       done();
     });
 
-    it("inbound call should come through", function (done) {
+    // #5
+    // eslint-disable-next-line no-undef
+    it('inbound call should come through with extra headers', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
-      if (Client2.isLoggedIn && Client1.isLoggedIn){
-        Client2.call(primary_user, {});
-      } else {
-        Client2.on("onLogin",function() {
-          Client2.call(primary_user, {});
-        })
-      }
-      waitUntil(events["onIncomingCall"], done, 500);
-      bailTimer = setTimeout(function () {
+      Client2.call(primary_user, {
+        "X-Ph-Random": "true",
+      });
+      Client1.on(
+        "onIncomingCall",
+        (callerName, extraHeaders2) => {
+          if (extraHeaders2 && extraHeaders2["X-Ph-Random"]) {
+            done();
+          } else {
+            done(new Error('incoming call with extra headers failed'));
+          }
+        },
+      );
+      // waitUntilIncoming(events.onIncomingCall, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("incoming call failed"));
+        done(new Error('incoming call failed'));
       }, TIMEOUT);
     });
 
-    it("inbound call should be answered", function (done) {
+    // #6
+    // eslint-disable-next-line no-undef
+    it('inbound call should be answered', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
       Client1.answer();
-      waitUntil(events["onCallAnswered"], done, 500);
-      bailTimer = setTimeout(function () {
+      waitUntilIncoming(events.onCallAnswered, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("outgoing call answer failed"));
+        done(new Error('outgoing call answer failed'));
       }, TIMEOUT);
     });
 
-    it("inbound call should be hungup", function (done) {
+    // #7
+    // eslint-disable-next-line no-undef
+    it('inbound call should be hungup', (done) => {
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
       Client1.hangup();
-      waitUntil(events["onCallTerminated"], done, 500);
-      bailTimer = setTimeout(function () {
+      waitUntilIncoming(events.onCallTerminated, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("incoming call hangup failed"));
+        done(new Error('incoming call hangup failed'));
       }, TIMEOUT);
     });
 
-    it("inbound call should be ended without answer", function (done) {
+    // #8
+    // eslint-disable-next-line no-undef
+    it('inbound call should be ended without answer', (done) => {
       // terminate any ongoing calls
       Client2.hangup();
       if (bail) {
-        done(new Error("bailing"));
+        done(new Error('bailing'));
       }
-      setTimeout(() => {
-        Client2.call(primary_user, {});
-        setTimeout(() => {
-          Client1.reject();
-          waitUntil(events["onCallFailed"], done, 500);
-        }, 3000);
-      }, 1000);
-      bailTimer = setTimeout(function () {
+      // eslint-disable-next-line no-underscore-dangle
+      Client2._currentSession = null;
+      Client2.call(primary_user, {});
+      function reject() {
+        Client1.reject();
+        waitUntilIncoming(events.onCallFailed, done, 500);
+      }
+      waitUntilIncoming(events.onIncomingCall, reject, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
-        done(new Error("incoming call end failed"));
+        done(new Error('incoming call end failed'));
       }, TIMEOUT);
     });
   });

@@ -1,8 +1,7 @@
-"use strict";
+/* eslint-disable @typescript-eslint/naming-convention */
+import { Client } from '../../lib/client';
 
-const Client = require("../../types/lib/client").Client;
-
-var options = {
+const options = {
   debug: "ALL",
   permOnClick: true,
   codecs: ["OPUS", "PCMU"],
@@ -15,93 +14,113 @@ var options = {
 
 const Client1 = new Client(options);
 
-var primary_user = process.env.PLIVO_PRIMARY_USERNAME,
-  primary_pass = process.env.PLIVO_PRIMARY_PASSWORD;
+const primary_user = process.env.PLIVO_ENDPOINT1_USERNAME;
+const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 
-function waitUntil(boolObj, callback, delay) {
+function waitUntilLogin(boolObj, callback, delay) {
   // if delay is undefined or is not an integer
-  delay =
-    typeof delay === "undefined" || isNaN(parseInt(delay, 10)) ? 100 : delay;
-  setTimeout(function () {
-    boolObj.status ? callback() : waitUntil(boolObj, callback, delay);
-  }, delay);
+  const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
+    ? 100
+    : delay;
+  setTimeout(() => {
+    if (boolObj.status) {
+      callback();
+    } else {
+      waitUntilLogin(boolObj, callback, newDelay);
+    }
+  }, newDelay);
 }
 
+// eslint-disable-next-line no-undef
 describe("plivoWebSdk", function () {
-  var GLOBAL_TIMEOUT = 240000;
+  const GLOBAL_TIMEOUT = 240000;
   this.timeout(GLOBAL_TIMEOUT);
-  var TIMEOUT = 20000;
+  const TIMEOUT = 20000;
   let bailTimer;
 
+  // eslint-disable-next-line no-undef
   describe("login", function () {
     this.timeout(GLOBAL_TIMEOUT);
 
-    var events = {};
+    const events = {};
 
-    var client_events = ["onLogin", "onLogout", "onLoginFailed"];
+    const clientEvents = ["onLogin", "onLogout", "onLoginFailed"];
 
-    for (var i in client_events) {
-      events[client_events[i]] = { status: false };
-    }
+    clientEvents.forEach((i) => {
+      events[i] = { status: false };
+    });
 
     let bail = false;
 
-    before(function () {
-      Client1.on("onLogin", function () {
-        events["onLogin"].status = true;
+    // eslint-disable-next-line no-undef
+    before(() => {
+      Client1.on("onLogin", () => {
+        events.onLogin.status = true;
       }); // done
-      Client1.on("onLogout", function () {
-        events["onLogout"].status = true;
+      Client1.on("onLogout", () => {
+        events.onLogout.status = true;
       }); // done
-      Client1.on("onLoginFailed", function () {
-        events["onLoginFailed"].status = true;
+      Client1.on("onLoginFailed", () => {
+        events.onLoginFailed.status = true;
       }); // done
     });
 
-    beforeEach(function (done) {
+    // eslint-disable-next-line no-undef
+    beforeEach((done) => {
+      const keys = Object.keys(events);
       // reset all the flags
-      for (var key in events) {
+      keys.forEach((key) => {
         events[key].status = false;
-      }
+      });
       done();
       clearTimeout(bailTimer);
     });
 
-    afterEach(function (done) {
-      done();
-    });
+    // eslint-disable-next-line no-undef
+    // after((done) => {
+    //   done();
+    // });
 
+    // // eslint-disable-next-line no-undef
+    // afterEach((done) => {
+    //   done();
+    // });
+
+    // #9
+    // eslint-disable-next-line no-undef
     it("login should fail", (done) => {
       Client1.login(primary_user, "wrong_password");
-      waitUntil(events["onLoginFailed"], done, 500);
+      waitUntilLogin(events.onLoginFailed, done, 500);
       Client1.on("onLoginFailed", () => {
         done();
       });
-      bailTimer = setTimeout(function () {
+      bailTimer = setTimeout(() => {
         done(new Error("login should have failed"));
       }, TIMEOUT);
     });
 
+    // #10
+    // eslint-disable-next-line no-undef
     it("login should work", (done) => {
       if (bail) {
         done(new Error("bailing"));
       }
       Client1.login(primary_user, primary_pass);
-      waitUntil(events["onLogin"], done, 500);
-      bailTimer = setTimeout(function () {
+      waitUntilLogin(events.onLogin, done, 500);
+      bailTimer = setTimeout(() => {
         bail = true;
         throw new Error("login failed");
       }, TIMEOUT);
     });
 
-    it("should be able to logout", function (done) {
-      setTimeout(() => {
-        Client1.logout();
-        waitUntil(events["onLogout"], done, 500);
-        bailTimer = setTimeout(function () {
-          done(new Error("logout failed"));
-        }, TIMEOUT);
-      }, 5000);
+    // #11
+    // eslint-disable-next-line no-undef
+    it("should be able to logout", (done) => {
+      Client1.logout();
+      waitUntilLogin(events.onLogout, done, 500);
+      bailTimer = setTimeout(() => {
+        done(new Error("logout failed"));
+      }, TIMEOUT);
     });
   });
 });

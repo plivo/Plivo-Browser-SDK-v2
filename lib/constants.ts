@@ -20,7 +20,7 @@ export const AUDIO_CONSTRAINTS = {
 
 // webrtc settings
 export const NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED = 50;
-export const REGISTER_EXPIRES_SECONDS = 120;
+export const REGISTER_EXPIRES_SECONDS = 1800;
 export const SESSION_TIMERS_EXPIRES = 300;
 export const WS_RECOVERY_MAX_INTERVAL = 20;
 export const WS_RECOVERY_MIN_INTERVAL = 2;
@@ -33,6 +33,10 @@ export const STUN_SERVERS = [
   'stun:stun.l.google.com:19302',
   'stun:stun1.l.google.com:19302',
 ];
+
+export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
+export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
+
 export const SIP_ERROR_CODE = {
   486: 'User was busy',
   408: 'No response from user',
