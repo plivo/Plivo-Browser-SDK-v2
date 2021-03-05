@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const webpack = require("webpack");
 const TerserPlugin = require("terser-webpack-plugin");
+const CreateFileWebpack = require('create-file-webpack')
 const package = require("./package");
 const version = package.version;
 
@@ -11,6 +12,14 @@ module.exports = (env) => {
     new webpack.EnvironmentPlugin({
       PLIVO_ENV: env.PLIVO_ENV,
     }),
+    // new CreateFileWebpack({
+    //   // path to folder in which the file will be created
+    //   path: './dist',
+    //   // file name
+    //   fileName: 'hash.json',
+    //   // content of the file
+    //   content: '{"version": "'+ version +'", "hash": "hash"}'
+    // })
   ];
   if (env.production) {
     plugins.push(new DtsBundlePlugin());
@@ -34,6 +43,18 @@ module.exports = (env) => {
           "sdk_signature",
           hash
         );
+      });
+    });
+
+    plugins.push(function () {
+      this.hooks.afterEmit.tap("IncludeHashPlugin", (stats) => {
+        fs.appendFile(
+          path.join(
+            path.join(path.resolve(__dirname, "dist"), "hash.json")
+          ),
+          '{"'+ version +'": "'+ stats.hash +'"}',
+          () => {}
+        )
       });
     });
   }

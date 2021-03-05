@@ -70,6 +70,7 @@
     "babelify": "^10.0.0",
     "browserify": "^16.5.2",
     "chai": "^4.2.0",
+    "create-file-webpack": "^1.0.2",
     "dotenv": "^8.2.0",
     "dts-bundle": "^0.7.3",
     "envify": "^4.1.0",
