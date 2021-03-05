@@ -148,12 +148,6 @@ export class Client extends EventEmitter {
   reconnectInterval: null | ReturnType<typeof setInterval>;
 
   /**
-   * Timer for sending heartbeat event to stats socket for keeping the socket alive
-   * @private
-   */
-  heartbeatTimer: null | ReturnType<typeof setInterval>;
-
-  /**
    * Controls the number of times media reconnection happens
    * @private
    */
@@ -668,8 +662,7 @@ export class Client extends EventEmitter {
     if (this.phone) {
       this.phone.stop();
     }
-    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-    this.heartbeatTimer = null;
+
     if (this.statsSocket) {
       this.statsSocket.disconnect();
       this.statsSocket = null;
@@ -1151,8 +1144,14 @@ export class Client extends EventEmitter {
         ) {
           session = this._lastCallSession;
         }
-        if (session && this.statsSocket) {
-          nonRTPStats.sendFeedbackEvent.call(this, session, feedback);
+        if (session) {
+          if (this.statsSocket) {
+            nonRTPStats.sendFeedbackEvent.call(this, session, feedback);
+          } else {
+            this.statsSocket = new StatsSocket();
+            this.statsSocket.connect();
+            nonRTPStats.sendFeedbackEvent.call(this, session, feedback);
+          }
         }
         // send console logs
         if (sendConsoleLogs === true) {

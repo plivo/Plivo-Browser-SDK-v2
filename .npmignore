@@ -18,3 +18,4 @@ types
 .eslintrc.json
 tsconfig.json
 coverage
+report

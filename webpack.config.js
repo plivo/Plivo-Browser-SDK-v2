@@ -40,7 +40,7 @@ module.exports = env => {
           loader: 'string-replace-loader',
           options: {
             multiple: [
-              { search: 'require.*debug.*JsSIP', replace: "require('debug')('PlivoSIP", flags: 'g' },
+              // { search: 'require.*debug.*JsSIP', replace: "require('debug')('JsSIP", flags: 'g' },
               { search: 'jssip_id', replace: 'plivosip_id', flags: 'g' },
               { search: '"version.*.3.0.*"', replace: `"version": ${version}"`, flags: 'g' },
               { search: 'PLIVO_LIB_VERSION', replace: version, flags: 'g' },
@@ -110,7 +110,7 @@ DtsBundlePlugin.prototype.apply = function (compiler) {
       name: 'plivo-browser-sdk',
       main: 'types/lib/index.d.ts',
       out: '../../index.d.ts',
-      outputAsModuleFolder: true // to use npm in-package typings
+      outputAsModuleFolder: false
     });
   });
 };
