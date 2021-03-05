@@ -30,6 +30,15 @@ describe("plivoWebSdk", function () {
   let bailTimer;
 
   // eslint-disable-next-line no-undef
+  before((done) => {
+    Client1.login(primary_user, primary_pass);
+    Client2.login(secondary_user, secondary_pass);
+    Client2.on("onLogin", () => {
+      done();
+    });
+  });
+
+  // eslint-disable-next-line no-undef
   describe("network change", function () {
     this.timeout(GLOBAL_TIMEOUT);
 
@@ -64,12 +73,7 @@ describe("plivoWebSdk", function () {
     }
 
     // eslint-disable-next-line no-undef
-    before((done) => {
-      Client1.login(primary_user, primary_pass);
-      Client2.login(secondary_user, secondary_pass);
-      Client1.on("onLogin", () => {
-        done();
-      });
+    before(() => {
       Client1.on("onConnectionChange", (obj) => {
         events.onConnectionChange.status = true;
         if (obj.state === "connected") {
@@ -102,7 +106,7 @@ describe("plivoWebSdk", function () {
       done();
     });
 
-    // #13
+    // #12
     // eslint-disable-next-line no-undef
     it("socket disconnection should trigger a re-connection", (done) => {
       if (bail) {
@@ -132,7 +136,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #14
+    // #13
     // eslint-disable-next-line no-undef
     it("hangup after re-connection should send call summary", (done) => {
       if (bail) {
