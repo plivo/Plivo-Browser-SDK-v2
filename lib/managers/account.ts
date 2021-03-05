@@ -408,7 +408,7 @@ class Account {
       || this.cs.incomingInvites.size
         >= C.NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED
     ) {
-      Plivo.log.debug('Already on call, sending busy signal.', this.cs.userName);
+      Plivo.log.debug('Already on call, sending busy signal.');
       const opts = {
         status_code: 486,
         reason_phrase: 'Busy Here',
