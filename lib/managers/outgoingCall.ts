@@ -408,6 +408,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     progress: OnProgress,
     accepted: onAccepted,
     confirmed: onConfirmed,
+    noCall: onEnded,
     icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
     && cs._currentSession.onIceCandidate(cs, event),
     icetimeout: (sec: number) => cs._currentSession
