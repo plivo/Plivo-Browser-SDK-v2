@@ -19,6 +19,7 @@ integrationTests:
         testsReportFile: nodejs.inttests.report.xml
         coverageReportFile: nodejs.intcoverage.report.xml
         command: |
+          npm install
           npm run test:integration
 build:
   nodejs:

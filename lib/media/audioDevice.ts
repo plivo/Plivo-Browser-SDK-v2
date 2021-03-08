@@ -236,6 +236,15 @@ const replaceAudioTrack = function (
   } else {
     if (currentLocalStream) {
       currentLocalStream.getTracks().forEach((track) => track.stop());
+    } else if (!client.permOnClick) {
+      if ((window as any).localStream) {
+        (window as any).localStream.getTracks()
+          .forEach((track: { stop: () => void; }) => {
+            track.stop();
+            (window as any).localStream.removeTrack(track);
+          });
+        (window as any).localStream = null;
+      }
     }
     return;
   }
@@ -280,6 +289,7 @@ const replaceAudioTrack = function (
           }
         }
       })
+      .catch(() => {})
       .then(() => {
         stopVolumeDataStreaming();
       })
@@ -385,9 +395,7 @@ export const outputDevices = ((): OutputDevices => ({
     speakerElement.forEach((e: any) => {
       if (typeof e.sinkId !== 'undefined') {
         e.setSinkId(deviceId)
-          .then(() => {
-            console.log('******* reached successs', e.sinkId);
-          })
+          .then(() => {})
           .catch((error) => {
             if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
               e.src = '';

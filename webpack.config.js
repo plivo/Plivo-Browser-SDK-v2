@@ -12,14 +12,6 @@ module.exports = (env) => {
     new webpack.EnvironmentPlugin({
       PLIVO_ENV: env.PLIVO_ENV,
     }),
-    // new CreateFileWebpack({
-    //   // path to folder in which the file will be created
-    //   path: './dist',
-    //   // file name
-    //   fileName: 'hash.json',
-    //   // content of the file
-    //   content: '{"version": "'+ version +'", "hash": "hash"}'
-    // })
   ];
   if (env.production) {
     plugins.push(new DtsBundlePlugin());
@@ -106,6 +98,13 @@ module.exports = (env) => {
           test: /.node$/,
           loader: "node-loader",
         },
+        {
+          test: /\.mp3$/,
+          loader: 'file-loader',
+          options: {
+            name: '[path][name].[ext]',
+          },
+        }
       ],
     },
     output: env.npm
