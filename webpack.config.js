@@ -39,7 +39,7 @@ module.exports = env => {
 
     plugins.push(function () {
       this.hooks.afterEmit.tap("CreateHashPlugin", (stats) => {
-        fs.appendFile(
+        fs.writeFile(
           path.join(
             path.join(path.resolve(__dirname, "dist"), "hash.json")
           ),
