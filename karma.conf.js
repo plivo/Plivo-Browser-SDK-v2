@@ -15,30 +15,16 @@ module.exports = function (config) {
             transform: [ ["envify", env], [["babelify", { extensions: [ '.ts', '.js' ]}]] ],
             plugin: [ ["tsify",{target: 'es6'}] ]
         },
-        reporters: ['progress', 'mocha', 'html', 'junit'],
+        reporters: ['progress', 'mocha', 'junit'],
         junitReporter: {
-            outputDir: 'report', // results will be saved as $outputDir/$browserName.xml
-            outputFile: undefined, // if included, results will be saved as $outputDir/$browserName/$outputFile
+            outputDir: 'reports', // results will be saved as $outputDir/$browserName.xml
+            outputFile: 'integrationTests.xml', // if included, results will be saved as $outputDir/$browserName/$outputFile
             suite: '', // suite will become the package name attribute in xml testsuite element
-            useBrowserName: true, // add browser name to report and classes names
+            useBrowserName: false, // add browser name to report and classes names
             nameFormatter: undefined, // function (browser, result) to customize the name attribute in xml testcase element
             classNameFormatter: undefined, // function (browser, result) to customize the classname attribute in xml testcase element
             properties: {}, // key value pair of properties to add to the <properties> section of the report
             xmlVersion: null // use '1' if reporting to be per SonarQube 6.2 XML format
-        },
-        htmlReporter: {
-            outputDir: 'report', // where to put the reports 
-            templatePath: null, // set if you moved jasmine_template.html
-            focusOnFailures: false, // reports show failures on start
-            namedFiles: false, // name files instead of creating sub-directories
-            pageTitle: null, // page title for reports; browser info by default
-            urlFriendlyName: false, // simply replaces spaces with _ for files/dirs
-            reportName: 'integrations', // report summary filename; browser info by default
-            
-            
-            // experimental
-            preserveDescribeNesting: false, // folded suites stay folded 
-            foldAll: false, // reports start folded (only with preserveDescribeNesting)
         },
         port: 9876,
         colors: true,
