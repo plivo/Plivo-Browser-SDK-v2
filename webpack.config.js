@@ -39,7 +39,9 @@ module.exports = env => {
 
     plugins.push(function () {
       this.hooks.afterEmit.tap("CreateHashPlugin", (stats) => {
-        fs.appendFile(
+        // const path_1 = require('./dist/hash.json')
+        // console.log('******* path', path_1)
+        fs.writeFile(
           path.join(
             path.join(path.resolve(__dirname, "dist"), "hash.json")
           ),
