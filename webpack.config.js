@@ -13,7 +13,7 @@ module.exports = env => {
     }),
   ];
   if (env.production){
-    plugins.push(new DtsBundlePlugin())
+    plugins.push(new DtsBundlePlugin())    
   }
   if (env.development) plugins.push(new webpack.NamedModulesPlugin());
   return {

@@ -620,10 +620,11 @@ export const checkAudioDevChange = function (): void {
                 }
               }
               if (device.kind === 'audiooutput' && (lastActiveSpeakerDevice !== '' && lastActiveSpeakerDevice !== 'default') && clientObject) {
-                const initialRemoteView = document.getElementById(REMOTE_VIEW_ID);
-                initialRemoteView?.remove();
-
-                setupRemoteView();
+                if (!client._currentSession) {
+                  const initialRemoteView = document.getElementById(REMOTE_VIEW_ID);
+                  initialRemoteView?.remove();
+                  setupRemoteView();
+                }
                 clientObject.remoteView = document.getElementById(REMOTE_VIEW_ID);
                 clientObject.audio.speakerDevices.set('default');
               }
