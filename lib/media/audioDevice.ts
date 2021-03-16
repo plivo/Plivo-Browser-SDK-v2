@@ -590,7 +590,6 @@ export const checkAudioDevChange = function (): void {
               });
               if (
                 device.kind === 'audioinput'
-                && (lastConnectedDevice === '' || lastConnectedDevice === 'default')
               ) {
                 if (isEdge || isChrome || isSafari || isElectron) {
                   replaceAudioTrack(device.deviceId, client, 'added', device.label);
