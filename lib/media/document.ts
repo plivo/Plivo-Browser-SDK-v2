@@ -12,7 +12,7 @@ import {
   SILENT_TONE_URL,
 } from '../constants';
 import { Logger } from '../logger';
-import { audioDevDictionary } from './audioDevice';
+import { audioDevDictionary, availableDevices } from './audioDevice';
 import { Client, ConfiguationOptions, PlivoObject } from '../client';
 
 interface AudioEvent {
@@ -47,6 +47,33 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
   }
   if (evt.status === 'success' && evt.stream) {
     audioDevDictionary.call(clientObject, true).then(() => {
+      availableDevices()
+        .then((devices) => {
+          if (navigator.platform === ' Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
+            Plivo.log.debug('Inside Windows machine. Updating the initial i/o audio device list');
+            let defaultInputGroupId;
+            let defaultOutputGroupId;
+            let preAddedDefaultDevice = "";
+            const temp = devices;
+            let groupIdDeviceId = {};
+            temp.forEach((e) => {
+              if (e.kind === 'audioinput' && e.deviceId === 'default') {
+                defaultInputGroupId = e.groupId;
+              }
+              if (e.kind === 'audiooutput') {
+                if (e.deviceId === 'default') {
+                  defaultOutputGroupId = e.groupId;
+                  preAddedDefaultDevice = e.label;
+                }
+                groupIdDeviceId[e.groupId] = e.deviceId;
+              }
+            });
+            if (defaultInputGroupId !== defaultOutputGroupId && (preAddedDefaultDevice.toLowerCase().includes('bluetooth'))) {
+              clientObject.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
+              Plivo.log.debug(`Updated the windows device id ${groupIdDeviceId[defaultInputGroupId]}`);
+            }
+          }
+        });
       Plivo.log.debug(
         `audioDevDictionary is updated onMediaPermission: ${evt.status}`,
       );

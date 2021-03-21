@@ -44,6 +44,12 @@ const Plivo: PlivoObject = { log: Logger, audioConstraints: {} };
 let clientObject: Client | null = null;
 let currentLocalStream: null | MediaStream = null;
 let currentAudioState;
+let defaultInputGroupId;
+let defaultOutputGroupId;
+let setByWindows = false;
+let setDevice = true;
+let settingFromWindows = false;
+let addedDevice;
 const audioVisual = audioVisualize();
 const deviceIdDeviceLableMap = new Map();
 let availableAudioDevices: MediaDeviceInfo[] = [];
@@ -418,6 +424,9 @@ export const outputDevices = ((): OutputDevices => ({
       }
       return false;
     });
+    if (!settingFromWindows) {
+      setByWindows = false;
+    }
     return true;
   },
   get() {
@@ -544,6 +553,39 @@ export const isElectronApp = function (): boolean {
 };
 
 /**
+ * Updating the default input & output device
+ */
+export const updateWindowDeviceList = function (deviceList) : void {
+  let groupIdDeviceId = {};
+  deviceList.forEach((device) => {
+    if (device.kind === 'audioinput' && device.deviceId === 'default') {
+      defaultInputGroupId = device.groupId;
+    }
+    if (device.kind === 'audiooutput') {
+      if (device.deviceId === 'default') {
+        defaultOutputGroupId = device.groupId;
+      }
+      groupIdDeviceId[device.groupId] = device.deviceId;
+    }
+  });
+  if (defaultInputGroupId !== defaultOutputGroupId && setDevice) {
+    settingFromWindows = true;
+    clientObject?.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
+    setByWindows = true;
+    Plivo.log.debug(`Updated the windows audio device with id ${groupIdDeviceId[defaultInputGroupId]}`);
+  }
+};
+
+/**
+ * Check the input & output audio device for windows machine such that both belong to same groupid
+ */
+export const setAudioDeviceForForWindows = function (devices, lastConnectedMicDevice, lastConnectedSpeakerDevice) : void {
+  if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || setByWindows)) {
+    updateWindowDeviceList(devices);
+  }
+};
+
+/**
  * Check if input or output audio device has changed.
  */
 export const checkAudioDevChange = function (): void {
@@ -554,11 +596,12 @@ export const checkAudioDevChange = function (): void {
   const isChrome = !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
   const isFirefox = typeof (window as any).InstallTrigger !== 'undefined';
   const isElectron = isElectronApp();
+  const lastActiveSpeakerDevice = clientObject ? clientObject.audio.speakerDevices.get() : '';
+  const lastConnectedMicDevice = clientObject ? clientObject.audio.microphoneDevices.get() : '';
 
   audioDevDictionary()
     .then((deviceInfo: DeviceDictionary) => {
       const { devices, audioRef } = deviceInfo;
-      const lastActiveSpeakerDevice = clientObject ? clientObject.audio.speakerDevices.get() : '';
       if (availableAudioDevices && devices) {
         // Check if device is newly added with devices
         devices.forEach((device) => {
@@ -578,16 +621,12 @@ export const checkAudioDevChange = function (): void {
             2. fire new device obj with proper lable name for USB audio
             So ignore any new default device object, since we reference point '2'
           */
-
-            const lastConnectedDevice = clientObject ? clientObject.audio.microphoneDevices.get() : '';
-            if (lastConnectedDevice === '' || lastConnectedDevice === 'default') {
-              Plivo.log.debug(`last connected device${lastConnectedDevice}`);
-            }
             if (!/default/i.test(device.deviceId)) {
               client.emit('audioDeviceChange', {
                 change: 'added',
                 device,
               });
+              addedDevice = device.label;
               if (
                 device.kind === 'audioinput'
               ) {
@@ -640,6 +679,21 @@ export const checkAudioDevChange = function (): void {
         // Calling audioDevDicSetterCb for backward compatibity
         if (audioDevDicSetterCb) audioDevDicSetterCb(audioRef);
       }
+      return ([devices, addedDevice, lastActiveSpeakerDevice, lastConnectedMicDevice]);
+    })
+    .then((deviceInfo) => {
+      let deviceList = deviceInfo[0];
+      let addedDevice = deviceInfo[1];
+      let lastActiveSpeakerDevice = deviceInfo[2];
+      let lastConnectedMicDevice = deviceInfo[3];
+      if (navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
+        if (addedDevice !== "" && addedDevice.toLowerCase().includes('bluetooth')) {
+          setAudioDeviceForForWindows(deviceList, lastConnectedMicDevice, lastActiveSpeakerDevice);
+        }
+      }
+    })
+    .then(() => {
+      settingFromWindows = false;
     })
     .catch((err) => {
       Plivo.log.error('Error checkAudioDevChange() ', err);
