@@ -858,6 +858,14 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         */
     export const isElectronApp: () => boolean;
     /**
+        * Check the input & output audio device for windows machine such that both belong to same groupid
+        */
+    export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
+    /**
+        * Updating the default input & output device
+        */
+    export const updateWindowDeviceList: (deviceList: any) => void;
+    /**
         * Check if input or output audio device has changed.
         */
     export const checkAudioDevChange: () => void;
