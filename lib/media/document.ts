@@ -55,7 +55,7 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
             let defaultOutputGroupId;
             let preAddedDefaultDevice = "";
             const temp = devices;
-            let groupIdDeviceId = {};
+            const groupIdDeviceId = {};
             temp.forEach((e) => {
               if (e.kind === 'audioinput' && e.deviceId === 'default') {
                 defaultInputGroupId = e.groupId;

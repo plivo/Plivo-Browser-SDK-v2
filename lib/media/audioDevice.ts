@@ -47,7 +47,7 @@ let currentAudioState;
 let defaultInputGroupId;
 let defaultOutputGroupId;
 let setByWindows = false;
-let setDevice = true;
+const setDevice = true;
 let settingFromWindows = false;
 let addedDevice;
 const audioVisual = audioVisualize();
@@ -556,7 +556,7 @@ export const isElectronApp = function (): boolean {
  * Updating the default input & output device
  */
 export const updateWindowDeviceList = function (deviceList) : void {
-  let groupIdDeviceId = {};
+  const groupIdDeviceId = {};
   deviceList.forEach((device) => {
     if (device.kind === 'audioinput' && device.deviceId === 'default') {
       defaultInputGroupId = device.groupId;
@@ -579,7 +579,8 @@ export const updateWindowDeviceList = function (deviceList) : void {
 /**
  * Check the input & output audio device for windows machine such that both belong to same groupid
  */
-export const setAudioDeviceForForWindows = function (devices, lastConnectedMicDevice, lastConnectedSpeakerDevice) : void {
+export const setAudioDeviceForForWindows = function (devices,
+  lastConnectedMicDevice, lastConnectedSpeakerDevice) : void {
   if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || setByWindows)) {
     updateWindowDeviceList(devices);
   }
@@ -682,13 +683,15 @@ export const checkAudioDevChange = function (): void {
       return ([devices, addedDevice, lastActiveSpeakerDevice, lastConnectedMicDevice]);
     })
     .then((deviceInfo) => {
-      let deviceList = deviceInfo[0];
-      let addedDevice = deviceInfo[1];
-      let lastActiveSpeakerDevice = deviceInfo[2];
-      let lastConnectedMicDevice = deviceInfo[3];
+      const deviceList = deviceInfo[0];
+      const newAddedDevice = deviceInfo[1];
+      const newLastActiveSpeakerDevice = deviceInfo[2];
+      const newLastConnectedMicDevice = deviceInfo[3];
       if (navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
-        if (addedDevice !== "" && addedDevice.toLowerCase().includes('bluetooth')) {
-          setAudioDeviceForForWindows(deviceList, lastConnectedMicDevice, lastActiveSpeakerDevice);
+        if (newAddedDevice !== "" && newAddedDevice.toLowerCase().includes('bluetooth')) {
+          setAudioDeviceForForWindows(
+            deviceList, newLastConnectedMicDevice, newLastActiveSpeakerDevice,
+          );
         }
       }
     })
