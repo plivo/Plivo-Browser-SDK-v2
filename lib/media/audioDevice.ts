@@ -615,6 +615,7 @@ export const checkAudioDevChange = function (): void {
             !availableAudioDevices.filter((a) => a.deviceId === device.deviceId)
               .length
           ) {
+            const lastConnectedDevice = clientObject ? clientObject.audio.microphoneDevices.get() : '';
             // If not present
             /*
             Setting USB audio device as default in mac sound settings will create below
@@ -630,6 +631,7 @@ export const checkAudioDevChange = function (): void {
               addedDevice = device.label;
               if (
                 device.kind === 'audioinput'
+                && (lastConnectedDevice === '' || lastConnectedDevice === 'default')
               ) {
                 if (isEdge || isChrome || isSafari || isElectron) {
                   replaceAudioTrack(device.deviceId, client, 'added', device.label);
