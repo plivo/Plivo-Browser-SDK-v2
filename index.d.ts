@@ -323,6 +323,14 @@ declare module 'plivo-browser-sdk/client' {
                 */
             networkChangeInterval: null | ReturnType<typeof setInterval>;
             /**
+                * store audio devices for last call
+                * @private
+                */
+            lastCallConnectedDevices: {
+                    input: MediaDeviceInfo;
+                    output: MediaDeviceInfo;
+            } | null;
+            /**
                 * Get current version of the SDK
                 */
             version: string;
@@ -494,6 +502,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             session: RTCSession;
             extraHeaders: ExtraHeaders;
             call_initiation_time?: number;
+            client: Client;
     }
     export interface CallInfo {
             callUUID: string;
@@ -865,6 +874,10 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Check the input & output audio device for windows machine such that both belong to same groupid
         */
     export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
+    /**
+        * Check audio devices for electron app
+        */
+    export const checkElectronAudioDevices: () => void;
     /**
         * Check if input or output audio device has changed.
         */
