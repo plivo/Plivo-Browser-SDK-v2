@@ -505,7 +505,7 @@ export const hangupClearance = function (session: CallSession) {
           client.lastCallConnectedDevices.input = item;
         }
         if (item.deviceId === "default" && item.kind === "audiooutput" && client.lastCallConnectedDevices) {
-          client.lastCallConnectedDevices.input = item;
+          client.lastCallConnectedDevices.output = item;
         }
       });
     });
