@@ -15,6 +15,9 @@ import { stopAudio } from '../media/document';
 import { Client } from '../client';
 import { startPingPong } from '../utils/networkManager';
 import { StatsSocket } from '../stats/ws';
+import {
+  audioDevDictionary, DeviceDictionary, isElectronApp,
+} from '../media/audioDevice';
 
 const Plivo = { log: Logger };
 let urlIndex: number = 0;
@@ -221,6 +224,25 @@ class Account {
   };
 
   /**
+   * Check audio devices for electron app
+   */
+  private checkAudioDevices = () => {
+    if (isElectronApp() && this.cs.lastCallConnectedDevices) {
+      audioDevDictionary().then((deviceInfo: DeviceDictionary) => {
+        const { devices } = deviceInfo;
+        devices.forEach((item) => {
+          if (item.deviceId !== 'default'
+              && item.kind === "audioinput"
+              && item.groupId === this.cs.lastCallConnectedDevices.input.groupId
+          ) {
+            this.cs.audio.microphoneDevices.set(item.deviceId);
+          }
+        });
+      });
+    }
+  };
+
+  /**
    * Triggered when web socket is connected.
    * @param {UserAgentConnectedEvent} evt
    */
@@ -376,6 +398,7 @@ class Account {
     } else {
       createOutgoingSession(evt);
     }
+    this.checkAudioDevices();
   };
 
   /**
