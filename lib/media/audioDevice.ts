@@ -587,6 +587,29 @@ export const setAudioDeviceForForWindows = function (devices,
 };
 
 /**
+ * Check audio devices for electron app
+ */
+export const checkElectronAudioDevices = function (): void {
+  const client: Client = this;
+  if (isElectronApp() && client.lastCallConnectedDevices) {
+    audioDevDictionary().then((deviceInfo: DeviceDictionary) => {
+      const { devices } = deviceInfo;
+      devices.forEach((item) => {
+        if (item.deviceId !== 'default'
+              && item.kind === "audioinput"
+              && item.groupId === client.lastCallConnectedDevices?.input.groupId
+        ) {
+          client.audio.microphoneDevices.set(item.deviceId);
+          setTimeout(() => {
+            client.audio.microphoneDevices.set('default');
+          }, 0);
+        }
+      });
+    });
+  }
+};
+
+/**
  * Check if input or output audio device has changed.
  */
 export const checkAudioDevChange = function (): void {
@@ -658,6 +681,10 @@ export const checkAudioDevChange = function (): void {
                   replaceAudioTrack(device.deviceId, client, 'removed', device.label);
                 } else if (isFirefox) {
                   replaceAudioTrackForFireFox(device.deviceId, client, 'removed');
+                }
+                if (client.lastCallConnectedDevices
+                  && device.groupId === client.lastCallConnectedDevices.input.groupId) {
+                  client.lastCallConnectedDevices = null;
                 }
               }
               if (device.kind === 'audiooutput' && (lastActiveSpeakerDevice !== '' && lastActiveSpeakerDevice !== 'default') && clientObject) {

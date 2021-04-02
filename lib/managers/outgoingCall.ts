@@ -518,6 +518,7 @@ export const createOutgoingSession = (
     dest: outboundCallNumber,
     session: evt.session,
     extraHeaders: outboundExtraHeaders,
+    client: cs,
   });
   cs.callSession = cs._currentSession.session;
   cs.callUUID = cs._currentSession.callUUID;

@@ -501,10 +501,10 @@ export const hangupClearance = function (session: CallSession) {
       const { devices } = deviceInfo;
       client.lastCallConnectedDevices = {} as any;
       devices.forEach((item) => {
-        if (item.deviceId === "default" && item.kind === "audioinput") {
+        if (item.deviceId === "default" && item.kind === "audioinput" && client.lastCallConnectedDevices) {
           client.lastCallConnectedDevices.input = item;
         }
-        if (item.deviceId === "default" && item.kind === "audiooutput") {
+        if (item.deviceId === "default" && item.kind === "audiooutput" && client.lastCallConnectedDevices) {
           client.lastCallConnectedDevices.input = item;
         }
       });

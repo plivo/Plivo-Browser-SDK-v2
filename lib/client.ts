@@ -389,7 +389,7 @@ export class Client extends EventEmitter {
    * store audio devices for last call
    * @private
    */
-  lastCallConnectedDevices: {input: MediaDeviceInfo, output: MediaDeviceInfo};
+  lastCallConnectedDevices: {input: MediaDeviceInfo, output: MediaDeviceInfo} | null;
 
   /**
    * Get current version of the SDK
