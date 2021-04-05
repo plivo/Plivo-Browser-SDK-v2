@@ -17,18 +17,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 * Fixed: Issue where audio was getting picked up from both the external and internal microphones when the Bluetooth device was disconnected during a call and then added back during the next call.
 * Fixed: Issue where audio output did not flow through an external Bluetooth device if one was added to a Windows machine.
 
-
 ## v2.2.2 (released@ 18-02-2021)
 **Bug Fixes**
 
 * Fixed: Missing Information in Call summary event when the browser is closed during an ongoing call.
 * Fixed: Issue where, for the first call post initialization of the SDK, input audio was getting picked from the device microphone even if an external Bluetooth device was added before calling.
+
 ## v2.2.1 (released@ 01-02-2021)
 **Features**
 
 * Added: TypeScript support for Plivo Browser SDK
 * Added: Network change improvements for Plivo Browser SDK
 * Added: Improvements in events that were getting emitted during mute and unmute
+
 ## v2.1.36 (released@ 10-12-2020)
 **Bug Fixes**
 * Fixed: Issue where incoming calls were not ringing in desktop browsers as well when the tab with the call was in background. This is the expected behavior in mobile browsers but not desktop ones.
