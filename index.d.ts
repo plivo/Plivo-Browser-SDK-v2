@@ -323,14 +323,6 @@ declare module 'plivo-browser-sdk/client' {
                 */
             networkChangeInterval: null | ReturnType<typeof setInterval>;
             /**
-                * store audio devices for last call
-                * @private
-                */
-            lastCallConnectedDevices: {
-                    input: MediaDeviceInfo;
-                    output: MediaDeviceInfo;
-            } | null;
-            /**
                 * Get current version of the SDK
                 */
             version: string;
