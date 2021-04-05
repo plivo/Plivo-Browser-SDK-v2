@@ -33,6 +33,10 @@ export const STUN_SERVERS = [
   'stun:stun.l.google.com:19302',
   'stun:stun1.l.google.com:19302',
 ];
+
+export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
+export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
+
 export const SIP_ERROR_CODE = {
   486: 'User was busy',
   408: 'No response from user',

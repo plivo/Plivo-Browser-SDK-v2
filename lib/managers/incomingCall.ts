@@ -248,30 +248,31 @@ export const createIncomingCallListeners = (incomingCall: CallSession): void => 
   incomingCall.session.on('icetimeout' as any, (sec: any) => incomingCall.onIceTimeout(cs, sec));
   incomingCall.session.on('failed', onFailed(incomingCall));
   incomingCall.session.on('ended', onEnded(incomingCall));
+  incomingCall.session.on('noCall' as any, onEnded(incomingCall));
   incomingCall.session.on('icecandidate', (event) => incomingCall.onIceCandidate(cs, event));
   incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err));
   incomingCall.session.on('peerconnection:createofferfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'createofferfailed',
-    cs.callStats.webRTCFunctions.createOffer,
+    cs.callStats ? cs.callStats.webRTCFunctions.createOffer : null,
     err,
   ));
   incomingCall.session.on('peerconnection:createanswerfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'createanswerfailed',
-    cs.callStats.webRTCFunctions.createAnswer,
+    cs.callStats ? cs.callStats.webRTCFunctions.createAnswer : null,
     err,
   ));
   incomingCall.session.on('peerconnection:setlocaldescriptionfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'setlocaldescriptionfailed',
-    cs.callStats.webRTCFunctions.setLocalDescription,
+    cs.callStats ? cs.callStats.webRTCFunctions.setLocalDescription : null,
     err,
   ));
   incomingCall.session.on('peerconnection:setremotedescriptionfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'setremotedescriptionfailed',
-    cs.callStats.webRTCFunctions.setRemoteDescription,
+    cs.callStats ? cs.callStats.webRTCFunctions.setRemoteDescription : null,
     err,
   ));
 };

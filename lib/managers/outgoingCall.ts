@@ -408,6 +408,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     progress: OnProgress,
     accepted: onAccepted,
     confirmed: onConfirmed,
+    noCall: onEnded,
     icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
     && cs._currentSession.onIceCandidate(cs, event),
     icetimeout: (sec: number) => cs._currentSession
@@ -420,28 +421,28 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     && cs._currentSession.handlePeerConnectionFailures(
       cs,
       'createofferfailed',
-      cs.callStats.webRTCFunctions.createOffer,
+      cs.callStats ? cs.callStats.webRTCFunctions.createOffer : null,
       err,
     ),
     'peerconnection:createanswerfailed': (err) => cs._currentSession
     && cs._currentSession.handlePeerConnectionFailures(
       cs,
       'createanswerfailed',
-      cs.callStats.webRTCFunctions.createAnswer,
+      cs.callStats ? cs.callStats.webRTCFunctions.createAnswer : null,
       err,
     ),
     'peerconnection:setlocaldescriptionfailed': (err) => cs._currentSession
     && cs._currentSession.handlePeerConnectionFailures(
       cs,
       'setlocaldescriptionfailed',
-      cs.callStats.webRTCFunctions.setLocalDescription,
+      cs.callStats ? cs.callStats.webRTCFunctions.setLocalDescription : null,
       err,
     ),
     'peerconnection:setremotedescriptionfailed': (err) => cs._currentSession
     && cs._currentSession.handlePeerConnectionFailures(
       cs,
       'setremotedescriptionfailed',
-      cs.callStats.webRTCFunctions.setRemoteDescription,
+      cs.callStats ? cs.callStats.webRTCFunctions.setRemoteDescription : null,
       err,
     ),
   };

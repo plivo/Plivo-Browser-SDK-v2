@@ -63,7 +63,7 @@ describe('Logger', () => {
 
   it('should enable sip logs if log level is ALL', () => {
     Logger.enableSipLogs('ALL');
-    expect(window.localStorage.debug).toBe('PlivoSIP:*');
+    expect(window.localStorage.debug).toBe('JsSIP:*');
   });
 
   it('should disable sip logs if log level is not ALL', () => {
