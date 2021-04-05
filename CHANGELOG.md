@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## v2.2.3 (released@ 05-04-2021)
+**Bug Fixes**
+
+* Fixed: Issue where one-way audio was observed for the next call after a custom device for input and output was removed.
+* Fixed: Issue where call-summary event was not getting sent reliably under unstable network connections.
+* Fixed: Issue where an error message was being published (setremotedescriptionfailed) when an outgoing PSTN call is rejected by the destination.
+* Fixed: Issue where one-way audio was observed if an external bluetooth device was first connected and then disconnected whilst the Browser SDK was on an active call.
+* Fixed: An issue where under unstable network conditions, Browser SDK keeps sending media metrics events even after a call has been hung up from the other end.
+* Fixed: Issue where audio was getting picked up from both the external and internal microphones when the Bluetooth device was disconnected during a call and then added back during the next call.
+* Fixed: Issue where audio output did not flow through an external Bluetooth device if one was added to a Windows machine.
+
+
+## v2.2.2 (released@ 18-02-2021)
+**Bug Fixes**
+
+* Fixed: Missing Information in Call summary event when the browser is closed during an ongoing call.
+* Fixed: Issue where, for the first call post initialization of the SDK, input audio was getting picked from the device microphone even if an external Bluetooth device was added before calling.
 ## v2.2.1 (released@ 01-02-2021)
 **Features**
 
