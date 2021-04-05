@@ -19,7 +19,7 @@ import {
 import { emitMetrics as _emitMetrics } from '../stats/mediaMetrics';
 import { GetRTPStats } from '../stats/rtpStats';
 import {
-  audioDevDictionary, DeviceDictionary, getAudioDevicesInfo, isElectronApp,
+  getAudioDevicesInfo, isElectronApp,
 } from '../media/audioDevice';
 import { Logger } from '../logger';
 import { Client } from '../client';
@@ -496,19 +496,6 @@ export const hangupClearance = function (session: CallSession) {
   if (client._currentSession) return;
   if (client.storage) client.storage = null;
   stopLocalStream.call(client);
-  audioDevDictionary()
-    .then((deviceInfo: DeviceDictionary) => {
-      const { devices } = deviceInfo;
-      client.lastCallConnectedDevices = {} as any;
-      devices.forEach((item) => {
-        if (item.deviceId === "default" && item.kind === "audioinput" && client.lastCallConnectedDevices) {
-          client.lastCallConnectedDevices.input = item;
-        }
-        if (item.deviceId === "default" && item.kind === "audiooutput" && client.lastCallConnectedDevices) {
-          client.lastCallConnectedDevices.output = item;
-        }
-      });
-    });
 };
 
 /**

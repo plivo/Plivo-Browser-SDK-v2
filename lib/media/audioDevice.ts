@@ -586,25 +586,47 @@ export const setAudioDeviceForForWindows = function (devices,
   }
 };
 
+const toggleNonDefaultDevice = (devices: MediaDeviceInfo[],
+  client: Client, type: MediaDeviceKind) => {
+  let requiredGroupId: string;
+  const audioType = type === "audioinput" ? "microphoneDevices" : "speakerDevices";
+  devices.forEach((item) => {
+    if (item.deviceId === "default" && item.kind === type) {
+      requiredGroupId = item.groupId;
+    }
+  });
+  devices.forEach((item) => {
+    if (item.deviceId !== "default" && item.groupId === requiredGroupId) {
+      client.audio[audioType].set(item.deviceId);
+      setTimeout(() => {
+        client.audio[audioType].set('default');
+      }, 0);
+    }
+  });
+};
+
 /**
  * Check audio devices for electron app
  */
 export const checkElectronAudioDevices = function (): void {
   const client: Client = this;
-  if (isElectronApp() && client.lastCallConnectedDevices) {
+  if (isElectronApp()) {
     audioDevDictionary().then((deviceInfo: DeviceDictionary) => {
       const { devices } = deviceInfo;
-      devices.forEach((item) => {
-        if (item.deviceId !== 'default'
-              && item.kind === "audioinput"
-              && item.groupId === client.lastCallConnectedDevices?.input.groupId
-        ) {
-          client.audio.microphoneDevices.set(item.deviceId);
-          setTimeout(() => {
-            client.audio.microphoneDevices.set('default');
-          }, 0);
-        }
-      });
+      // microphone device
+      const lastConnectedMicDevice = client.audio.microphoneDevices.get();
+      if (lastConnectedMicDevice === "" || lastConnectedMicDevice === "default") {
+        toggleNonDefaultDevice(devices, client, "audioinput");
+      } else {
+        client.audio.microphoneDevices.set(lastConnectedMicDevice);
+      }
+      // speaker device
+      const lastConnectedSpeakerDevice = client.audio.speakerDevices.get();
+      if (lastConnectedSpeakerDevice === "" || lastConnectedSpeakerDevice === "default") {
+        toggleNonDefaultDevice(devices, client, "audiooutput");
+      } else {
+        client.audio.speakerDevices.set(lastConnectedSpeakerDevice);
+      }
     });
   }
 };
@@ -681,10 +703,6 @@ export const checkAudioDevChange = function (): void {
                   replaceAudioTrack(device.deviceId, client, 'removed', device.label);
                 } else if (isFirefox) {
                   replaceAudioTrackForFireFox(device.deviceId, client, 'removed');
-                }
-                if (client.lastCallConnectedDevices
-                  && device.groupId === client.lastCallConnectedDevices.input.groupId) {
-                  client.lastCallConnectedDevices = null;
                 }
               }
               if (device.kind === 'audiooutput' && (lastActiveSpeakerDevice !== '' && lastActiveSpeakerDevice !== 'default') && clientObject) {
