@@ -386,6 +386,12 @@ export class Client extends EventEmitter {
   networkChangeInterval: null | ReturnType<typeof setInterval>;
 
   /**
+   * Calculate time taken for different stats
+   * @private
+   */
+  timeTakenForStats: {[key:string]: {init: number, end?: number}};
+
+  /**
    * Get current version of the SDK
    */
   public version: string;
@@ -605,6 +611,7 @@ export class Client extends EventEmitter {
     this.owaLastDetect = { time: 0 as any, isOneWay: true };
     this.owaDetectTime = 3600000;
     this.statsSocket = null;
+    this.timeTakenForStats = {};
 
     audioUtil.setAudioContraints(this);
     documentUtil.setup(this, this.options);
@@ -671,7 +678,10 @@ export class Client extends EventEmitter {
   };
 
   private _call = (phoneNumber: string, extraHeaders: ExtraHeaders): boolean => {
-    Plivo.log.info('<----- OUTGOING ----->');
+    this.timeTakenForStats.pdd = {
+      init: new Date().getTime(),
+    };
+    Plivo.log.info('<----- OUTGOING ----->', this.timeTakenForStats.pdd.init);
     Plivo.log.info(`Outgoing call initialized to : ${phoneNumber}`);
     if (!this.isLoggedIn) {
       Plivo.log.warn('Must be logged in before to make a call');
