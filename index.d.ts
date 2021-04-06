@@ -323,6 +323,16 @@ declare module 'plivo-browser-sdk/client' {
                 */
             networkChangeInterval: null | ReturnType<typeof setInterval>;
             /**
+                * Calculate time taken for different stats
+                * @private
+                */
+            timeTakenForStats: {
+                    [key: string]: {
+                            init: number;
+                            end?: number;
+                    };
+            };
+            /**
                 * Get current version of the SDK
                 */
             version: string;
