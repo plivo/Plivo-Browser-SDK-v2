@@ -11,6 +11,7 @@ import {
 } from '../stats/nonRTPStats';
 import { emitMetrics } from '../stats/mediaMetrics';
 import {
+  checkElectronAudioDevices,
   getAudioDevicesInfo,
   startVolumeDataStreaming,
   stopVolumeDataStreaming,
@@ -40,6 +41,7 @@ export interface CallSessionOptions {
   session: RTCSession;
   extraHeaders: ExtraHeaders;
   call_initiation_time?: number;
+  client: Client
 }
 
 export interface CallInfo {
@@ -378,6 +380,7 @@ export class CallSession {
       this.signallingInfo.call_initiation_time = options.call_initiation_time;
     }
     this.postDialDelayEndTime = null;
+    checkElectronAudioDevices.call(options.client);
   }
 
   private _clearCallStats = (): void => {

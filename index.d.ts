@@ -494,6 +494,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             session: RTCSession;
             extraHeaders: ExtraHeaders;
             call_initiation_time?: number;
+            client: Client;
     }
     export interface CallInfo {
             callUUID: string;
@@ -858,13 +859,17 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         */
     export const isElectronApp: () => boolean;
     /**
+        * Updating the default input & output device
+        */
+    export const updateWindowDeviceList: (deviceList: any) => void;
+    /**
         * Check the input & output audio device for windows machine such that both belong to same groupid
         */
     export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
     /**
-        * Updating the default input & output device
+        * Check audio devices for electron app
         */
-    export const updateWindowDeviceList: (deviceList: any) => void;
+    export const checkElectronAudioDevices: () => void;
     /**
         * Check if input or output audio device has changed.
         */
