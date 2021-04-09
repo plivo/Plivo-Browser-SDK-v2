@@ -735,7 +735,7 @@ export const checkAudioDevChange = function (): void {
       const newLastActiveSpeakerDevice = deviceInfo[2];
       const newLastConnectedMicDevice = deviceInfo[3];
       if (navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
-        if (newAddedDevice !== "" && newAddedDevice.toLowerCase().includes('bluetooth')) {
+        if (newAddedDevice && newAddedDevice !== "" && newAddedDevice.toLowerCase().includes('bluetooth')) {
           setAudioDeviceForForWindows(
             deviceList, newLastConnectedMicDevice, newLastActiveSpeakerDevice,
           );
