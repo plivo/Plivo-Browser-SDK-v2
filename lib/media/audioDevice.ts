@@ -582,6 +582,7 @@ export const updateWindowDeviceList = function (deviceList) : void {
 export const setAudioDeviceForForWindows = function (devices,
   lastConnectedMicDevice, lastConnectedSpeakerDevice) : void {
   if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || setByWindows)) {
+    availableAudioDevices = devices;
     updateWindowDeviceList(devices);
   }
 };
@@ -798,6 +799,13 @@ export const detectDeviceChange = function (): void {
     navigator.mediaDevices.ondevicechange = () => {
       checkAudioDevChange.call(this);
     };
+  }
+  if (navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
+    audioDevDictionary().then((deviceInfo: DeviceDictionary) => {
+      const { devices } = deviceInfo;
+      availableAudioDevices = devices;
+      updateWindowDeviceList(devices);
+    });
   }
 };
 
