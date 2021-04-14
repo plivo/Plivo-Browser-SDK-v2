@@ -699,7 +699,19 @@ export const checkAudioDevChange = function (): void {
                 delete activeDeviceLabelDeviceIdMap[device.label];
                 delete activeDeviceIdDeviceLabelMap[device.deviceId];
               }
-              if (device.kind === 'audioinput') {
+              let defaultGroupId;
+              let defaultDeviceId;
+              availableAudioDevices.forEach((item) => {
+                if (item.deviceId === "default" && item.kind === "audioinput") {
+                  defaultGroupId = item.groupId;
+                }
+              });
+              availableAudioDevices.forEach((item) => {
+                if (item.deviceId !== "default" && item.groupId === defaultGroupId) {
+                  defaultDeviceId = item.deviceId;
+                }
+              });
+              if (device.kind === 'audioinput' && defaultDeviceId === device.deviceId) {
                 if (isEdge || isChrome || isSafari || isElectron) {
                   replaceAudioTrack(device.deviceId, client, 'removed', device.label);
                 } else if (isFirefox) {
