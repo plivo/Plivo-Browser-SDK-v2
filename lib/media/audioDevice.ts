@@ -616,14 +616,14 @@ export const checkElectronAudioDevices = function (): void {
       const { devices } = deviceInfo;
       // microphone device
       const lastConnectedMicDevice = client.audio.microphoneDevices.get();
-      if (lastConnectedMicDevice === "" || lastConnectedMicDevice === "default") {
+      if (lastConnectedMicDevice === "" || lastConnectedMicDevice === "default" || !lastConnectedMicDevice) {
         toggleNonDefaultDevice(devices, client, "audioinput");
       } else {
         client.audio.microphoneDevices.set(lastConnectedMicDevice);
       }
       // speaker device
       const lastConnectedSpeakerDevice = client.audio.speakerDevices.get();
-      if (lastConnectedSpeakerDevice === "" || lastConnectedSpeakerDevice === "default") {
+      if (lastConnectedSpeakerDevice === "" || lastConnectedSpeakerDevice === "default" || !lastConnectedSpeakerDevice) {
         toggleNonDefaultDevice(devices, client, "audiooutput");
       } else {
         client.audio.speakerDevices.set(lastConnectedSpeakerDevice);
