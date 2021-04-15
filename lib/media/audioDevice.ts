@@ -231,7 +231,7 @@ let replaceAudioTrackForFireFox: (deviceId: string, clientObj: Client, state: st
  * @param {String} label - input or output audio device label
  */
 const replaceAudioTrack = function (
-  deviceId: string, client: Client, state: string, label: string,
+  deviceId: string, client: Client, state: string, label: string, waitForEnded?: boolean,
 ): void {
   Plivo.log.debug(`inside replacetrack device id  : ${deviceId}`);
   let sender: any = null;
@@ -274,25 +274,39 @@ const replaceAudioTrack = function (
       video: false,
     };
   }
-  if (navigator.mediaDevices.getUserMedia) {
+  const replaceStream = (stream: MediaStream) => {
+    if (pc) {
+      // eslint-disable-next-line
+      sender = pc.getSenders()[0];
+      if (currentLocalStream) {
+        currentLocalStream.getTracks().forEach((track) => track.stop());
+        currentLocalStream = null;
+      }
+      if (sender) {
+        sender.replaceTrack(stream.getAudioTracks()[0]);
+        Plivo.log.debug(`replaced sender : ${sender}`);
+        currentLocalStream = stream;
+        if (currentAudioState === false) {
+          updateAudioState(client);
+        }
+      }
+    }
+  };
+  if (navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.mediaDevices
       .getUserMedia(constraints)
       .then((stream) => {
-        if (pc) {
-          // eslint-disable-next-line prefer-destructuring
-          sender = pc.getSenders()[0];
-          if (currentLocalStream) {
-            currentLocalStream.getTracks().forEach((track) => track.stop());
-            currentLocalStream = null;
-          }
-          if (sender) {
-            sender.replaceTrack(stream.getAudioTracks()[0]);
-            Plivo.log.debug(`replaced sender : ${sender}`);
-            currentLocalStream = stream;
-            if (currentAudioState === false) {
-              updateAudioState(client);
-            }
-          }
+        const requiredTrack = stream.getAudioTracks()[0];
+        if (waitForEnded) {
+          requiredTrack.addEventListener('ended', () => {
+            navigator.mediaDevices
+              .getUserMedia({ audio: true, video: false })
+              .then((stream2) => {
+                replaceStream(stream2);
+              });
+          });
+        } else {
+          replaceStream(stream);
         }
       })
       .catch(() => {})
@@ -699,21 +713,10 @@ export const checkAudioDevChange = function (): void {
                 delete activeDeviceLabelDeviceIdMap[device.label];
                 delete activeDeviceIdDeviceLabelMap[device.deviceId];
               }
-              let defaultGroupId;
-              let defaultDeviceId;
-              availableAudioDevices.forEach((item) => {
-                if (item.deviceId === "default" && item.kind === "audioinput") {
-                  defaultGroupId = item.groupId;
-                }
-              });
-              availableAudioDevices.forEach((item) => {
-                if (item.deviceId !== "default" && item.groupId === defaultGroupId && item.kind === "audioinput") {
-                  defaultDeviceId = item;
-                }
-              });
-              if (device.kind === 'audioinput' && defaultDeviceId.deviceId === device.deviceId) {
+
+              if (device.kind === 'audioinput') {
                 if (isEdge || isChrome || isSafari || isElectron) {
-                  replaceAudioTrack(device.deviceId, client, 'removed', device.label);
+                  replaceAudioTrack(device.deviceId, client, 'removed', device.label, true);
                 } else if (isFirefox) {
                   replaceAudioTrackForFireFox(device.deviceId, client, 'removed');
                 }
