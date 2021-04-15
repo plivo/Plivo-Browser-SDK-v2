@@ -597,7 +597,7 @@ const toggleNonDefaultDevice = (devices: MediaDeviceInfo[],
     }
   });
   devices.forEach((item) => {
-    if (item.deviceId !== "default" && item.groupId === requiredGroupId) {
+    if (item.deviceId !== "default" && item.groupId === requiredGroupId && item.kind === type) {
       client.audio[audioType].set(item.deviceId);
       setTimeout(() => {
         client.audio[audioType].set('default');
@@ -707,11 +707,11 @@ export const checkAudioDevChange = function (): void {
                 }
               });
               availableAudioDevices.forEach((item) => {
-                if (item.deviceId !== "default" && item.groupId === defaultGroupId) {
-                  defaultDeviceId = item.deviceId;
+                if (item.deviceId !== "default" && item.groupId === defaultGroupId && item.kind === "audioinput") {
+                  defaultDeviceId = item;
                 }
               });
-              if (device.kind === 'audioinput' && defaultDeviceId === device.deviceId) {
+              if (device.kind === 'audioinput' && defaultDeviceId.deviceId === device.deviceId) {
                 if (isEdge || isChrome || isSafari || isElectron) {
                   replaceAudioTrack(device.deviceId, client, 'removed', device.label);
                 } else if (isFirefox) {
