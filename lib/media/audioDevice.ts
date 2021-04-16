@@ -283,7 +283,12 @@ const replaceAudioTrack = function (
         currentLocalStream = null;
       }
       if (sender) {
-        sender.replaceTrack(stream.getAudioTracks()[0]);
+        sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {
+          const pc2 = clientObject?.getPeerConnection().pc;
+          // eslint-disable-next-line
+          sender = pc2.getSenders()[0];
+          sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {});
+        });
         Plivo.log.debug(`replaced sender : ${sender}`);
         currentLocalStream = stream;
         if (currentAudioState === false) {
