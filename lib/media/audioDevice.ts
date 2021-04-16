@@ -699,6 +699,7 @@ export const checkAudioDevChange = function (): void {
                   replaceAudioTrackForFireFox(device.deviceId, client, 'added');
                 }
               }
+              if (clientObject) clientObject.audio.speakerDevices.set('default');
             }
           }
         });
