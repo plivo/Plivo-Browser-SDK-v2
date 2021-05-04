@@ -68,9 +68,15 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
                 groupIdDeviceId[e.groupId] = e.deviceId;
               }
             });
-            if (defaultInputGroupId !== defaultOutputGroupId && (preAddedDefaultDevice.toLowerCase().includes('bluetooth'))) {
-              clientObject.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
-              Plivo.log.debug(`Updated the windows device id ${groupIdDeviceId[defaultInputGroupId]}`);
+            if (defaultInputGroupId !== defaultOutputGroupId) {  
+              if (groupIdDeviceId[defaultInputGroupId]) {
+                clientObject.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
+                Plivo.log.debug(`Updated the windows device id ${groupIdDeviceId[defaultInputGroupId]}`);
+              } else {
+                clientObject.audio.microphoneDevices.set("default");
+                clientObject.audio.speakerDevices.set("default");
+                Plivo.log.debug(`Input and Output devices set to default for Windows`);
+              }
             }
           }
         });
