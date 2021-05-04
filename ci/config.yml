@@ -13,6 +13,14 @@ unitTests:
         command: |
           npm install
           npm run test:unit-jenkins
+integrationTests:
+  ignoreFailure: 'false'
+  nodejs:
+        testsReportFile: nodejs.inttests.report.xml
+        coverageReportFile: nodejs.intcoverage.report.xml
+        command: |
+          npm install
+          npm run test:integration
 build:
   nodejs:
     command: npm install && npm run build

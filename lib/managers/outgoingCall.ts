@@ -408,6 +408,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     progress: OnProgress,
     accepted: onAccepted,
     confirmed: onConfirmed,
+    noCall: onEnded,
     icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
     && cs._currentSession.onIceCandidate(cs, event),
     icetimeout: (sec: number) => cs._currentSession
@@ -517,6 +518,7 @@ export const createOutgoingSession = (
     dest: outboundCallNumber,
     session: evt.session,
     extraHeaders: outboundExtraHeaders,
+    client: cs,
   });
   cs.callSession = cs._currentSession.session;
   cs.callUUID = cs._currentSession.callUUID;

@@ -15,7 +15,21 @@ module.exports = function (config) {
             transform: [ ["envify", env], [["babelify", { extensions: [ '.ts', '.js' ]}]] ],
             plugin: [ ["tsify",{target: 'es6'}] ]
         },
-        reporters: ['progress', 'mocha'],
+        reporters: ['progress', 'html'],
+        htmlReporter: {
+            outputDir: 'report', // where to put the reports 
+            templatePath: null, // set if you moved jasmine_template.html
+            focusOnFailures: false, // reports show failures on start
+            namedFiles: false, // name files instead of creating sub-directories
+            pageTitle: null, // page title for reports; browser info by default
+            urlFriendlyName: false, // simply replaces spaces with _ for files/dirs
+            reportName: 'integrations', // report summary filename; browser info by default
+            
+            
+            // experimental
+            preserveDescribeNesting: false, // folded suites stay folded 
+            foldAll: false, // reports start folded (only with preserveDescribeNesting)
+        },
         port: 9876,
         colors: true,
         logLevel: config.LOG_DEBUG,
@@ -27,7 +41,9 @@ module.exports = function (config) {
                 flags: [
                     '--use-fake-device-for-media-stream',
                     '--use-fake-ui-for-media-stream',
-                    '--enable-blink-features=RTCRtpSender'
+                    '--enable-blink-features=RTCRtpSender', 
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox'
                 ]
             },
         },

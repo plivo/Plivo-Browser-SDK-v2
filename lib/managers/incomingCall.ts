@@ -248,6 +248,7 @@ export const createIncomingCallListeners = (incomingCall: CallSession): void => 
   incomingCall.session.on('icetimeout' as any, (sec: any) => incomingCall.onIceTimeout(cs, sec));
   incomingCall.session.on('failed', onFailed(incomingCall));
   incomingCall.session.on('ended', onEnded(incomingCall));
+  incomingCall.session.on('noCall' as any, onEnded(incomingCall));
   incomingCall.session.on('icecandidate', (event) => incomingCall.onIceCandidate(cs, event));
   incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err));
   incomingCall.session.on('peerconnection:createofferfailed', (err) => incomingCall.handlePeerConnectionFailures(
@@ -308,6 +309,7 @@ export const createIncomingSession = (
     session: evt.session,
     extraHeaders,
     call_initiation_time: callInitiationTime,
+    client: cs,
   });
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);

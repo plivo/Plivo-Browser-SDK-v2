@@ -18,7 +18,9 @@ import {
 } from '../stats/nonRTPStats';
 import { emitMetrics as _emitMetrics } from '../stats/mediaMetrics';
 import { GetRTPStats } from '../stats/rtpStats';
-import { getAudioDevicesInfo } from '../media/audioDevice';
+import {
+  getAudioDevicesInfo, isElectronApp,
+} from '../media/audioDevice';
 import { Logger } from '../logger';
 import { Client } from '../client';
 import { CallSession } from './callSession';
@@ -38,8 +40,7 @@ const Plivo = {
  * Prepare summary event when browser tab is about to close
  * @returns Summary event
  */
-const getSummaryEvent = function (): SummaryEvent {
-  const client: Client = this;
+const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
   const clientVersionParse = getClientVersion();
   const sdkVersionParse = getSDKVersion();
   const deviceOs = getOS();
@@ -67,6 +68,13 @@ const getSummaryEvent = function (): SummaryEvent {
     deviceOs,
     setupOptions: client.options,
   };
+  if (client._currentSession) {
+    summaryEvent.signalling = client._currentSession.signallingInfo;
+  }
+  const deviceInfo = await getAudioDevicesInfo.call(client);
+  if (deviceInfo) {
+    summaryEvent.audioDeviceInfo = deviceInfo;
+  }
   return summaryEvent;
 };
 
@@ -76,28 +84,29 @@ const getSummaryEvent = function (): SummaryEvent {
  */
 export const addCloseProtectionListeners = function (): void {
   const client: Client = this;
-  const summaryEvent: SummaryEvent = getSummaryEvent.call(client);
-  if (client.options.closeProtection) {
-    window.onbeforeunload = (event: BeforeUnloadEvent) => {
-      Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
-      event.preventDefault();
-      // eslint-disable-next-line no-param-reassign
-      event.returnValue = '';
-    };
-  } else {
-    window.onbeforeunload = () => {
-      Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+  getSummaryEvent(client).then((summaryEvent) => {
+    if (client.options.closeProtection) {
+      window.onbeforeunload = (event: BeforeUnloadEvent) => {
+        Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+        event.preventDefault();
+        // eslint-disable-next-line no-param-reassign
+        event.returnValue = '';
+      };
+    } else {
+      window.onbeforeunload = () => {
+        Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+        if (client._currentSession) {
+          client._currentSession.session.terminate();
+        }
+      };
+    }
+    window.onunload = () => {
       if (client._currentSession) {
         client._currentSession.session.terminate();
       }
+      Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
     };
-  }
-  window.onunload = () => {
-    if (client._currentSession) {
-      client._currentSession.session.terminate();
-    }
-    Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
-  };
+  });
 };
 
 /**
@@ -418,7 +427,7 @@ const removeCloseProtectionListeners = function (): void {
  */
 const stopLocalStream = function (): void {
   if ((window as any).localStream) {
-    if (getBrowserDetails().browser === 'chrome' || this.permOnClick) {
+    if (getBrowserDetails().browser === 'chrome' || this.permOnClick || isElectronApp()) {
       try {
         (window as any).localStream.getTracks().forEach((track: MediaStreamTrack) => {
           track.stop();
