@@ -858,6 +858,11 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Return if the app consuming Browser SDK is electron app or not.
         */
     export const isElectronApp: () => boolean;
+    /** 
+        * Get input and output audio device information to send to plivo stats.
+        * @returns Fulfills with audio device information or reject with error
+    */
+    export const getAudioDevicesInfo: () => Promise<DeviceAudioInfo>;
     /**
         * Updating the default input & output device
         */
@@ -891,11 +896,6 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Detect if input or output audio device has changed.
         */
     export const detectDeviceChange: () => void;
-    /**
-        * Get input and output audio device information to send to plivo stats.
-        * @returns Fulfills with audio device information or reject with error
-        */
-    export const getAudioDevicesInfo: () => Promise<DeviceAudioInfo>;
 }
 
 declare module 'plivo-browser-sdk/stats/rtpStats' {
