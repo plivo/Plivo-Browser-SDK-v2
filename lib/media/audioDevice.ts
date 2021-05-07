@@ -102,18 +102,20 @@ export const availableDevices = function (
         const list = [];
         e.forEach((dev) => {
           if (filterBy === 'input') {
-            if (dev.kind === 'audioinput') {
+            if (dev.kind === 'audioinput' && dev.deviceId !== 'communications' ) {
               list.push(dev as never);
             }
           } else if (filterBy === 'output') {
-            if (dev.kind === 'audiooutput') {
+            if (dev.kind === 'audiooutput' && dev.deviceId !== 'communications' ) {
               list.push(dev as never);
             }
           } else {
             // push all audio input and output devices
             // eslint-disable-next-line no-lonely-if
             if (!/video/i.test(dev.kind)) {
-              list.push(dev as never);
+              if ( dev.deviceId !== 'communications' ) {
+                list.push(dev as never);
+              }
             }
           }
         });
