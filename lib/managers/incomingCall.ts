@@ -309,6 +309,7 @@ export const createIncomingSession = (
     session: evt.session,
     extraHeaders,
     call_initiation_time: callInitiationTime,
+    client: cs,
   });
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);
