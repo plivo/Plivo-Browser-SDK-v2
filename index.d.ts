@@ -15,7 +15,7 @@ declare module 'plivo-browser-sdk' {
 declare module 'plivo-browser-sdk/client' {
     import { EventEmitter } from 'events';
     import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
-    import { Logger, AvailableLogMethods, AvailableFlagValues } from 'plivo-browser-sdk/logger';
+    import { Logger, AvailableLogMethods, AvailableFlagValues, DtmfOptions } from 'plivo-browser-sdk/logger';
     import { CallSession } from 'plivo-browser-sdk/managers/callSession';
     import { StatsSocket } from 'plivo-browser-sdk/stats/ws';
     import { OutputDevices, InputDevices, RingToneDevices } from 'plivo-browser-sdk/media/audioDevice';
@@ -43,6 +43,7 @@ declare module 'plivo-browser-sdk/client' {
             allowMultipleIncomingCalls?: boolean;
             closeProtection?: boolean;
             maxAverageBitrate?: number;
+            dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
             browser: string;
@@ -454,6 +455,9 @@ declare module 'plivo-browser-sdk/client' {
 declare module 'plivo-browser-sdk/logger' {
     export type AvailableLogMethods = 'INFO' | 'DEBUG' | 'WARN' | 'ERROR' | 'ALL' | 'OFF' | 'ALL-PLAIN';
     export type AvailableFlagValues = 'ALL' | 'NONE' | 'REMOTEONLY' | 'LOCALONLY';
+    export interface DtmfOptions {
+            sendDtmfType: string[];
+    }
     interface LoggerOptions {
             enableDate?: boolean;
             loggingName?: 'PlivoSDK';
@@ -858,13 +862,13 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         */
     export const isElectronApp: () => boolean;
     /**
-        * Check the input & output audio device for windows machine such that both belong to same groupid
-        */
-    export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
-    /**
         * Updating the default input & output device
         */
     export const updateWindowDeviceList: (deviceList: any) => void;
+    /**
+        * Check the input & output audio device for windows machine such that both belong to same groupid
+        */
+    export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
     /**
         * Check if input or output audio device has changed.
         */
