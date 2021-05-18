@@ -17,9 +17,6 @@ export const AUDIO_CONSTRAINTS = {
     googAutoGainControl: false,
   }],
 };
-export const DEFAULT_DTMFOPTIONS = {
-  sendDtmfType: ['INBAND', 'OUTBAND'],
-};
 
 // webrtc settings
 export const NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED = 50;
@@ -61,7 +58,6 @@ export const SIP_ERROR_CODE = {
 
 // Options
 export const DEFAULT_CODECS = ['OPUS', 'PCMU'];
-export const DTMF_OPTIONS = ['INBAND', 'OUTBAND'];
 export const CONSOLE_LOGS_BUFFER_SIZE = 900;
 export const MAX_AVERAGE_BITRATE = 48000;
 export const MIN_AVERAGE_BITRATE = 8000;
