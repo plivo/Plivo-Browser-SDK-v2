@@ -3,9 +3,7 @@
 import { EventEmitter } from 'events';
 import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
 import * as C from './constants';
-import {
-  Logger, AvailableLogMethods, AvailableFlagValues, DtmfOptions,
-} from './logger';
+import { Logger, AvailableLogMethods, AvailableFlagValues } from './logger';
 import * as audioUtil from './media/audioDevice';
 import * as documentUtil from './media/document';
 import validateOptions from './utils/options';
@@ -61,7 +59,6 @@ export interface ConfiguationOptions {
   allowMultipleIncomingCalls?: boolean;
   closeProtection?: boolean;
   maxAverageBitrate?: number;
-  dtmfOptions?: DtmfOptions;
 }
 
 export interface BrowserDetails {
@@ -902,18 +899,14 @@ export class Client extends EventEmitter {
       Plivo.log.debug(`sendDtmf - ${this._currentSession.callUUID}`);
       try {
         Plivo.log.debug(`sending dtmf digit ${digit}`);
-        const dtmfOption = documentUtil.getDTMFOption(this.options.dtmfOptions);
-        if (dtmfOption !== 'INBAND') {
-          this._currentSession.session.sendDTMF(digit);
-          Plivo.log.info(`sent outband dtmf`);
-        }
+        this._currentSession.session.sendDTMF(digit);
         if (digit === '*') {
-          return documentUtil.playAudio('dtmfstar', this);
+          return documentUtil.playAudio('dtmfstar');
         }
         if (digit === '#') {
-          return documentUtil.playAudio('dtmfpound', this);
+          return documentUtil.playAudio('dtmfpound');
         }
-        return documentUtil.playAudio(`dtmf${digit}`, this);
+        return documentUtil.playAudio(`dtmf${digit}`);
       } catch (err) {
         Plivo.log.error('Call has not been confirmed cannot send DTMF');
         if (Plivo.AppError) {

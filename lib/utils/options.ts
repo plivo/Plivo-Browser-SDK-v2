@@ -3,9 +3,7 @@
 /* eslint-disable import/no-cycle */
 /* eslint func-names: ["error", "as-needed"] */
 import * as C from '../constants';
-import {
-  Logger, AvailableLogMethods, AvailableFlagValues, DtmfOptions,
-} from '../logger';
+import { Logger, AvailableLogMethods, AvailableFlagValues } from '../logger';
 import { ConfiguationOptions } from '../client';
 
 const Plivo = { log: Logger };
@@ -30,7 +28,6 @@ const _options: ConfiguationOptions = {
   allowMultipleIncomingCalls: false,
   closeProtection: false,
   maxAverageBitrate: C.MAX_AVERAGE_BITRATE,
-  dtmfOptions: C.DEFAULT_DTMFOPTIONS,
 };
 
 /**
@@ -114,35 +111,6 @@ const checkRegion = function (name: string): boolean {
     return false;
   }
   return true;
-};
-
-/**
- * Check if provided dtmf options are present in the list of predefined dtmf options.
- * @param {Array<String>} dtmfOptions - dtmf options passed by user while initializing client
- */
-const checkDTMFOptions = function (dtmfOptions: DtmfOptions): DtmfOptions {
-  let dtmfoptionsLocal: string[];
-  const finalDtmfOptions: string[] = [];
-  if (dtmfOptions && 'sendDtmfType' in dtmfOptions) {
-    dtmfoptionsLocal = dtmfOptions.sendDtmfType;
-  } else {
-    return C.DEFAULT_DTMFOPTIONS;
-  }
-  const allowedDtmfOptions = C.DTMF_OPTIONS;
-  if (Array.isArray(dtmfoptionsLocal)) {
-    dtmfoptionsLocal.forEach((dtmf) => {
-      if (allowedDtmfOptions.indexOf(dtmf.toUpperCase()) === -1) {
-        Plivo.log.warn('Ignoring invalid dtmf option - ', dtmf);
-        Plivo.log.debug('Allowed list of dtmf options : ', allowedDtmfOptions);
-      } else {
-        finalDtmfOptions.push(dtmf.toUpperCase());
-      }
-    });
-    if (finalDtmfOptions.length === 0) return C.DEFAULT_DTMFOPTIONS;
-    return { sendDtmfType: finalDtmfOptions };
-  }
-  Plivo.log.error('Please send dtmfoption in following format. Eg: ', C.DEFAULT_DTMFOPTIONS);
-  return C.DEFAULT_DTMFOPTIONS;
 };
 
 /**
@@ -276,13 +244,6 @@ const validateOptions = function (
                   C.MAX_AVERAGE_BITRATE}`,
               );
             }
-          }
-          break;
-        case 'dtmfOptions':
-          if (options[key] && typeof options[key] === 'object') {
-            _options.dtmfOptions = checkDTMFOptions(options[key] as any);
-          } else {
-            _options.dtmfOptions = C.DEFAULT_DTMFOPTIONS;
           }
           break;
         default:
