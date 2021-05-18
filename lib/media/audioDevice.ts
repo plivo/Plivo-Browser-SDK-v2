@@ -576,8 +576,8 @@ export const isElectronApp = function (): boolean {
   return false;
 };
 
-/*
-* Get input and output audio device information to send to plivo stats.
+/**
+ * Get input and output audio device information to send to plivo stats.
  * @returns Fulfills with audio device information or reject with error
  */
 export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
