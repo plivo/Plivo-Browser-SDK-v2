@@ -39,6 +39,7 @@ export const STUN_SERVERS = [
 
 export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
 export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
+export const DTMF_TONE_PLAY_RETRY_ATTEMPTS = 4;
 
 export const SIP_ERROR_CODE = {
   486: 'User was busy',
