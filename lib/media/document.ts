@@ -10,6 +10,7 @@ import {
   RINGTONE_URL,
   SILENT_TONE_ELEMENT_ID,
   SILENT_TONE_URL,
+  DTMF_TONE_PLAY_RETRY_ATTEMPTS,
 } from '../constants';
 import { DtmfOptions, Logger } from '../logger';
 import {
@@ -236,6 +237,8 @@ export const getDTMFOption = function (dtmfOptions?: DtmfOptions): string {
  */
 export const playAudio = function (elementId: string, clientObj?: Client): void {
   try {
+    let onEndedCalled = false;
+    const retryCounts = DTMF_TONE_PLAY_RETRY_ATTEMPTS;
     const audioElement = document.getElementById(elementId) as HTMLAudioElement;
     // Unmute audio for playing audio during call
     audioElement.muted = false;
@@ -251,16 +254,38 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
     }
 
     audioElement.currentTime = 0;
+
+    // function to check if the "onended" emitter got called or not. Keeps retrying
+    const checkForDTMFTOne = function (retryCount: number) : void {
+      if (retryCount <= 0 && !onEndedCalled) {
+        if (clientObj) unmute.call(clientObj);
+        onEndedCalled = true;
+        return;
+      }
+      setTimeout(() => {
+        if (retryCount <= 0 || onEndedCalled) {
+          return;
+        } else if (retryCount > 0 && !onEndedCalled) {
+          checkForDTMFTOne(retryCount - 1);
+        } else {
+          return;
+        }
+      }, 100);
+    };
+
     const audioPromise = audioElement.play().then(() => {
       // onended event called after DTMF play tone is finished playing, unmute called
       if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') {
         audioElement.onended = (() => {
+          onEndedCalled = true;
           if (clientObj) unmute.call(clientObj);
         });
       } else if (elementId.includes('dtmf')) {
         Plivo.log.info(`sent inband dtmf`);
       }
     });
+
+    if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') checkForDTMFTOne(retryCounts);
     // Avoids unhandled promise rejection while playing audio
     if (audioPromise !== undefined) {
       audioPromise.catch(() => {}).then(() => {});
