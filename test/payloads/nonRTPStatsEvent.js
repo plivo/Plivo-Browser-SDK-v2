@@ -58,7 +58,7 @@ const SUMMARY_EVENT = {
   },
   clientName: "Not a supported browser.",
   userAgent:
-    "Mozilla/5.0 (darwin) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0",
+    `Mozilla/5.0 (${process.env.USERAGENT_OS}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`,
   clientVersionMajor: "4",
   clientVersionMinor: "0",
   clientVersionPatch: "0",
