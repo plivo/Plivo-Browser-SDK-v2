@@ -286,6 +286,11 @@ const replaceAudioTrack = function (
         currentLocalStream = null;
       }
       if (sender) {
+        Plivo.log.debug(`replaced sender : ${sender}`);
+        currentLocalStream = stream;
+        if (currentAudioState === false) {
+          updateAudioState(client);
+        }
         sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {
           const pc2 = clientObject?.getPeerConnection().pc;
           // eslint-disable-next-line
@@ -295,11 +300,6 @@ const replaceAudioTrack = function (
             if (sender) sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {});
           }
         });
-        Plivo.log.debug(`replaced sender : ${sender}`);
-        currentLocalStream = stream;
-        if (currentAudioState === false) {
-          updateAudioState(client);
-        }
       }
     }
   };

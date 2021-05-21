@@ -56,7 +56,6 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
             Plivo.log.debug('Inside Windows machine. Updating the initial i/o audio device list');
             let defaultInputGroupId;
             let defaultOutputGroupId;
-            let preAddedDefaultDevice = "";
             const temp = devices;
             const groupIdDeviceId = {};
             temp.forEach((e) => {
@@ -66,12 +65,11 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
               if (e.kind === 'audiooutput') {
                 if (e.deviceId === 'default') {
                   defaultOutputGroupId = e.groupId;
-                  preAddedDefaultDevice = e.label;
                 }
                 groupIdDeviceId[e.groupId] = e.deviceId;
               }
             });
-            if (defaultInputGroupId !== defaultOutputGroupId) {  
+            if (defaultInputGroupId !== defaultOutputGroupId) {
               if (groupIdDeviceId[defaultInputGroupId]) {
                 clientObject.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
                 Plivo.log.debug(`Updated the windows device id ${groupIdDeviceId[defaultInputGroupId]}`);
@@ -269,12 +267,8 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
         return;
       }
       setTimeout(() => {
-        if (retryCount <= 0 || onEndedCalled) {
-          return;
-        } else if (retryCount > 0 && !onEndedCalled) {
+        if (retryCount > 0 && !onEndedCalled) {
           checkForDTMFTOne(retryCount - 1);
-        } else {
-          return;
         }
       }, 100);
     };
