@@ -10,9 +10,12 @@ import {
   RINGTONE_URL,
   SILENT_TONE_ELEMENT_ID,
   SILENT_TONE_URL,
+  DTMF_TONE_PLAY_RETRY_ATTEMPTS,
 } from '../constants';
-import { Logger } from '../logger';
-import { audioDevDictionary, availableDevices } from './audioDevice';
+import { DtmfOptions, Logger } from '../logger';
+import {
+  audioDevDictionary, availableDevices, mute, unmute,
+} from './audioDevice';
 import { Client, ConfiguationOptions, PlivoObject } from '../client';
 
 interface AudioEvent {
@@ -68,9 +71,15 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
                 groupIdDeviceId[e.groupId] = e.deviceId;
               }
             });
-            if (defaultInputGroupId !== defaultOutputGroupId && (preAddedDefaultDevice.toLowerCase().includes('bluetooth'))) {
-              clientObject.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
-              Plivo.log.debug(`Updated the windows device id ${groupIdDeviceId[defaultInputGroupId]}`);
+            if (defaultInputGroupId !== defaultOutputGroupId) {  
+              if (groupIdDeviceId[defaultInputGroupId]) {
+                clientObject.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
+                Plivo.log.debug(`Updated the windows device id ${groupIdDeviceId[defaultInputGroupId]}`);
+              } else {
+                clientObject.audio.microphoneDevices.set("default");
+                clientObject.audio.speakerDevices.set("default");
+                Plivo.log.debug(`Input and Output devices set to default for Windows`);
+              }
             }
           }
         });
@@ -208,16 +217,81 @@ export const setup = function (clientObject: Client, options: ConfiguationOption
 };
 
 /**
+ * Parse the DTMFOptions and return the option, inband, outband or default
+ * @param {String[]} dtmfOptions - list of dtmf options
+ */
+
+export const getDTMFOption = function (dtmfOptions?: DtmfOptions): string {
+  let dtmfOptionsLocal: string[];
+  if (dtmfOptions && 'sendDtmfType' in dtmfOptions) {
+    dtmfOptionsLocal = dtmfOptions.sendDtmfType;
+  } else {
+    return "DEFAULT";
+  }
+  dtmfOptionsLocal = dtmfOptionsLocal.map((x) => x.toUpperCase());
+  if ((dtmfOptionsLocal.indexOf('INBAND') !== -1) && (dtmfOptionsLocal.indexOf('OUTBAND') === -1)) {
+    return "INBAND";
+  } if ((dtmfOptionsLocal.indexOf('INBAND') === -1) && (dtmfOptionsLocal.indexOf('OUTBAND') !== -1)) {
+    return "OUTBAND";
+  }
+  return "DEFAULT";
+};
+
+/**
  * Plays HTML audio elements based on element id.
  * @param {String} elementId - audio element id
  */
-export const playAudio = function (elementId: string): void {
+export const playAudio = function (elementId: string, clientObj?: Client): void {
   try {
+    let onEndedCalled = false;
+    const retryCounts = DTMF_TONE_PLAY_RETRY_ATTEMPTS;
     const audioElement = document.getElementById(elementId) as HTMLAudioElement;
     // Unmute audio for playing audio during call
     audioElement.muted = false;
+
+    let dtmfOption:string = "";
+    if (elementId.includes('dtmf')) {
+      dtmfOption = getDTMFOption(clientObj?.options.dtmfOptions);
+      Logger.debug(`DTMF Options :  ${dtmfOption}`);
+    }
+    // mute called before DTMF tone play
+    if (elementId.includes('dtmf') && clientObj && dtmfOption.toUpperCase() === 'OUTBAND') {
+      mute.call(clientObj);
+    }
+
     audioElement.currentTime = 0;
-    const audioPromise = audioElement.play();
+
+    // function to check if the "onended" emitter got called or not. Keeps retrying
+    const checkForDTMFTOne = function (retryCount: number) : void {
+      if (retryCount <= 0 && !onEndedCalled) {
+        if (clientObj) unmute.call(clientObj);
+        onEndedCalled = true;
+        return;
+      }
+      setTimeout(() => {
+        if (retryCount <= 0 || onEndedCalled) {
+          return;
+        } else if (retryCount > 0 && !onEndedCalled) {
+          checkForDTMFTOne(retryCount - 1);
+        } else {
+          return;
+        }
+      }, 100);
+    };
+
+    const audioPromise = audioElement.play().then(() => {
+      // onended event called after DTMF play tone is finished playing, unmute called
+      if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') {
+        audioElement.onended = (() => {
+          onEndedCalled = true;
+          if (clientObj) unmute.call(clientObj);
+        });
+      } else if (elementId.includes('dtmf')) {
+        Plivo.log.info(`sent inband dtmf`);
+      }
+    });
+
+    if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') checkForDTMFTOne(retryCounts);
     // Avoids unhandled promise rejection while playing audio
     if (audioPromise !== undefined) {
       audioPromise.catch(() => {}).then(() => {});
