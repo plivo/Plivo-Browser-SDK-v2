@@ -291,7 +291,7 @@ const replaceAudioTrack = function (
           // eslint-disable-next-line
           if (pc2) {
             sender = pc2.getSenders()[0];
-            sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {});
+            if (sender) sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {});
           }
         });
         Plivo.log.debug(`replaced sender : ${sender}`);
