@@ -167,3 +167,29 @@ export const uploadConsoleLogsToBucket = function (
       });
   });
 };
+
+export const fetchIPAddress = (): Promise<string> => new Promise((resolve, reject) => {
+  fetch('https://api.ipify.org?format=json', {
+    method: 'GET',
+  })
+    .then((response) => {
+      if (response.ok) {
+        response
+          .text()
+          .then((responseBody) => {
+            if (!responseBody) {
+              Plivo.log.error('Response is not valid');
+            }
+            const json = JSON.parse(responseBody);
+            resolve(json.ip);
+          })
+          .catch((error) => {
+            Plivo.log.error('Not able to get public IP', error);
+            reject(new Error('Not able to get public IP'));
+          });
+      } else {
+        Plivo.log.error('Not able to get public IP');
+        reject(new Error('Not able to get public IP'));
+      }
+    });
+});

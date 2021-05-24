@@ -19,7 +19,11 @@ import { CallSession } from './managers/callSession';
 import { StatsSocket } from './stats/ws';
 import { validateFeedback, FeedbackObject } from './utils/feedback';
 import {
-  PreSignedUrlRequest, getPreSignedS3URL, uploadConsoleLogsToBucket, PreSignedUrlResponse,
+  PreSignedUrlRequest,
+  getPreSignedS3URL,
+  uploadConsoleLogsToBucket,
+  PreSignedUrlResponse,
+  fetchIPAddress,
 } from './stats/httpRequest';
 import {
   OutputDevices,
@@ -389,6 +393,27 @@ export class Client extends EventEmitter {
   networkChangeInterval: null | ReturnType<typeof setInterval>;
 
   /**
+   * Maintains a boolean value that determines whether a newtwork is changed
+   * @private
+   */
+  isNetworkChanged: boolean;
+
+  /**
+   * Holds network disconnected timestamp
+   * @private
+   */
+  networkDisconnectedTimestamp: number | null;
+
+  /**
+   * Holds current network information
+   * @private
+   */
+  currentNetworkInfo: {
+    networkType: string;
+    ip: string;
+  };
+
+  /**
    * Get current version of the SDK
    */
   public version: string;
@@ -608,7 +633,10 @@ export class Client extends EventEmitter {
     this.owaLastDetect = { time: 0 as any, isOneWay: true };
     this.owaDetectTime = 3600000;
     this.statsSocket = null;
+    this.isNetworkChanged = false;
+    this.networkDisconnectedTimestamp = null;
 
+    this._updateCurrentNetworkInfo();
     audioUtil.setAudioContraints(this);
     documentUtil.setup(this, this.options);
     audioUtil.detectDeviceChange.call(this);
@@ -629,6 +657,17 @@ export class Client extends EventEmitter {
   }
 
   // private methods
+  private _updateCurrentNetworkInfo = () => {
+    fetchIPAddress().then((ip) => {
+      this.currentNetworkInfo = {
+        networkType: (navigator as any).connection
+          ? (navigator as any).connection.effectiveType
+          : 'unknown',
+        ip,
+      };
+    });
+  };
+
   private _login = (username: string, password: string): boolean => {
     this.isLoginCalled = true;
     if (

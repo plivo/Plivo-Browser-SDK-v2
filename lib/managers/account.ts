@@ -4,7 +4,7 @@ import * as SipLib from 'plivo-jssip';
 import * as C from '../constants';
 import { Logger } from '../logger';
 import * as pkg from '../../package.json';
-import { CallStatsValidationResponse, validateCallStats } from '../stats/httpRequest';
+import { CallStatsValidationResponse, fetchIPAddress, validateCallStats } from '../stats/httpRequest';
 import { createStatsSocket, initCallStatsIO } from '../stats/setup';
 import {
   createIncomingSession,
@@ -13,7 +13,7 @@ import { createOutgoingSession } from './outgoingCall';
 import { getCurrentTime, addMidAttribute } from './util';
 import { stopAudio } from '../media/document';
 import { Client } from '../client';
-import { startPingPong } from '../utils/networkManager';
+import { sendNetworkChangeEvent, startPingPong } from '../utils/networkManager';
 import { StatsSocket } from '../stats/ws';
 
 const Plivo = { log: Logger };
@@ -233,6 +233,19 @@ class Account {
       };
       this.cs.emit('onConnectionChange', eventData);
     }
+
+    // trigger network change event
+    fetchIPAddress().then((ip) => {
+      if (this.cs.browserDetails.browser !== 'chrome' && this.cs.browserDetails.browser !== 'edge') {
+        if (ip !== this.cs.currentNetworkInfo!.ip) {
+          sendNetworkChangeEvent(this.cs, ip);
+        }
+      } else if (this.cs.isNetworkChanged) {
+        // for chrome and edge
+        sendNetworkChangeEvent(this.cs, ip);
+        this.cs.isNetworkChanged = false;
+      }
+    });
   };
 
   /**
