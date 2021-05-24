@@ -29,7 +29,7 @@ module.exports = env => {
         var hash = stats.hash;
         replaceInFile(
           path.join(
-            path.join(path.resolve(__dirname, "dist"), "plivobrowsersdk.min.js")
+            path.join(path.resolve(__dirname, "dist"), env.npm ? "plivobrowsersdk.js" : "plivobrowsersdk.min.js")
           ),
           "sdk_signature",
           hash
