@@ -636,7 +636,6 @@ export class Client extends EventEmitter {
     this.isNetworkChanged = false;
     this.networkDisconnectedTimestamp = null;
 
-    this._updateCurrentNetworkInfo();
     audioUtil.setAudioContraints(this);
     documentUtil.setup(this, this.options);
     audioUtil.detectDeviceChange.call(this);
@@ -658,12 +657,19 @@ export class Client extends EventEmitter {
 
   // private methods
   private _updateCurrentNetworkInfo = () => {
-    fetchIPAddress().then((ip) => {
+    fetchIPAddress(this).then((ip) => {
       this.currentNetworkInfo = {
         networkType: (navigator as any).connection
           ? (navigator as any).connection.effectiveType
           : 'unknown',
         ip,
+      };
+    }).catch(() => {
+      this.currentNetworkInfo = {
+        networkType: (navigator as any).connection
+          ? (navigator as any).connection.effectiveType
+          : 'unknown',
+        ip: "",
       };
     });
   };
@@ -685,6 +691,7 @@ export class Client extends EventEmitter {
     const isValid = account.validate();
     if (!isValid) return false;
     account.setupUserAccount();
+    this._updateCurrentNetworkInfo();
     if (this.browserDetails.browser === 'safari') {
       documentUtil.playAudio(C.SILENT_TONE_ELEMENT_ID);
     }

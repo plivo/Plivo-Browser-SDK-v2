@@ -57,6 +57,8 @@ export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) 
     networkType: newNetworkType,
     ip: typeof ipAddress === "string" ? ipAddress : "",
   };
+  // eslint-disable-next-line no-param-reassign
+  client.networkDisconnectedTimestamp = null;
 };
 
 export const reconnectSocket = (client: Client) => {
@@ -64,8 +66,6 @@ export const reconnectSocket = (client: Client) => {
     Plivo.log.debug('Network changed re-registering');
     // eslint-disable-next-line no-param-reassign
     client.isNetworkChanged = true;
-    // eslint-disable-next-line no-param-reassign
-    client.networkDisconnectedTimestamp = new Date().getTime();
     if (!client._currentSession) {
       (client.phone as any)._transport.disconnect(true);
       (client.phone as any)._transport.connect();
@@ -98,6 +98,8 @@ export const startPingPong = ({
         ) {
           let isFailedMessageTriggered = false;
           let message: null | SipLib.Message = null;
+          // eslint-disable-next-line no-param-reassign
+          client.networkDisconnectedTimestamp = new Date().getTime();
           // timeout to check whether we receive failed event in 5 seconds
           const eventCheckTimeout = setTimeout(() => {
             if (!isFailedMessageTriggered) {

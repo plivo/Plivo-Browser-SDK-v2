@@ -234,8 +234,7 @@ class Account {
       this.cs.emit('onConnectionChange', eventData);
     }
 
-    // trigger network change event
-    fetchIPAddress().then((ip) => {
+    const triggerNetworkChange = (ip) => {
       if (this.cs.browserDetails.browser !== 'chrome' && this.cs.browserDetails.browser !== 'edge') {
         if (ip !== this.cs.currentNetworkInfo!.ip) {
           sendNetworkChangeEvent(this.cs, ip);
@@ -245,6 +244,13 @@ class Account {
         sendNetworkChangeEvent(this.cs, ip);
         this.cs.isNetworkChanged = false;
       }
+    };
+
+    // trigger network change event
+    fetchIPAddress(this.cs).then((ip) => {
+      triggerNetworkChange(ip);
+    }).catch(() => {
+      triggerNetworkChange("");
     });
   };
 
@@ -276,6 +282,11 @@ class Account {
       this.cs.emit('onConnectionChange', eventData);
       this.isPlivoSocketConnected = false;
     }
+
+    if (this.cs.browserDetails.browser !== "chrome" && this.cs.browserDetails.browser !== "edge" && !this.cs._currentSession) {
+      this.cs.networkDisconnectedTimestamp = new Date().getTime();
+    }
+
     if (!(evt as any).ignoreReconnection) {
       urlIndex += 1;
       const sipConfig = this.setupUAConfig();

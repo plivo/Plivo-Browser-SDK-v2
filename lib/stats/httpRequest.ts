@@ -1,8 +1,9 @@
 /* eslint func-names: ["error", "as-needed"] */
+import * as SipLib from 'plivo-jssip';
 import * as C from '../constants';
 import { Logger } from '../logger';
 // eslint-disable-next-line import/no-cycle
-import { PlivoObject } from '../client';
+import { Client, PlivoObject } from '../client';
 import { FeedbackObject } from '../utils/feedback';
 
 export interface CallStatsValidationResponse {
@@ -168,28 +169,16 @@ export const uploadConsoleLogsToBucket = function (
   });
 };
 
-export const fetchIPAddress = (): Promise<string> => new Promise((resolve, reject) => {
-  fetch('https://api.ipify.org?format=json', {
-    method: 'GET',
-  })
-    .then((response) => {
-      if (response.ok) {
-        response
-          .text()
-          .then((responseBody) => {
-            if (!responseBody) {
-              Plivo.log.error('Response is not valid');
-            }
-            const json = JSON.parse(responseBody);
-            resolve(json.ip);
-          })
-          .catch((error) => {
-            Plivo.log.error('Not able to get public IP', error);
-            reject(new Error('Not able to get public IP'));
-          });
-      } else {
-        Plivo.log.error('Not able to get public IP');
-        reject(new Error('Not able to get public IP'));
-      }
-    });
+export const fetchIPAddress = (
+  client: Client,
+): Promise<string> => new Promise((resolve, reject) => {
+  const message = new SipLib.Message(client.phone as SipLib.UA);
+  message.on('succeeded', (data) => {
+    if (data.response && data.response.body) {
+      resolve(data.response.body);
+    } else {
+      reject(new Error("couldn't retrieve ipaddress"));
+    }
+  });
+  message.send('admin', 'ipAddress', 'MESSAGE');
 });
