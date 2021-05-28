@@ -180,5 +180,8 @@ export const fetchIPAddress = (
       reject(new Error("couldn't retrieve ipaddress"));
     }
   });
+  message.on('failed', () => {
+    reject(new Error("couldn't retrieve ipaddress"));
+  });
   message.send('admin', 'ipAddress', 'MESSAGE');
 });
