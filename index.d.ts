@@ -324,6 +324,24 @@ declare module 'plivo-browser-sdk/client' {
                 */
             networkChangeInterval: null | ReturnType<typeof setInterval>;
             /**
+                * Maintains a boolean value that determines whether a newtwork is changed
+                * @private
+                */
+            isNetworkChanged: boolean;
+            /**
+                * Holds network disconnected timestamp
+                * @private
+                */
+            networkDisconnectedTimestamp: number | null;
+            /**
+                * Holds current network information
+                * @private
+                */
+            currentNetworkInfo: {
+                    networkType: string;
+                    ip: string;
+            };
+            /**
                 * Get current version of the SDK
                 */
             version: string;
