@@ -4,6 +4,7 @@ import * as SipLib from 'plivo-jssip';
 import { Client } from '../client';
 import { Logger } from '../logger';
 import { createStatsSocket } from '../stats/setup';
+import { StatsSocket } from '../stats/ws';
 
 interface PingPong {
   client: Client
@@ -25,9 +26,46 @@ export const restartStatSocket = (client: Client) => {
   }
 };
 
+export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) => {
+  const newNetworkType = (navigator as any).connection
+    ? (navigator as any).connection.effectiveType
+    : 'unknown';
+  const obj = {
+    msg: "NETWORK_CHANGE",
+    previousNetworkInfo: {
+      networkType: client.currentNetworkInfo.networkType,
+      ip: client.currentNetworkInfo.ip,
+    },
+    newNetworkInfo: {
+      networkType: newNetworkType,
+      ip: typeof ipAddress === "string" ? ipAddress : "",
+    },
+    reconnectionTimestamp: new Date().getTime(),
+    disconnectionTimestamp: client.networkDisconnectedTimestamp,
+  };
+  if (client.statsSocket) {
+    client.statsSocket.send(obj, client);
+  } else {
+    // eslint-disable-next-line no-param-reassign
+    client.statsSocket = new StatsSocket();
+    client.statsSocket.connect();
+    client.statsSocket.send(obj, client);
+  }
+  // update current network info
+  // eslint-disable-next-line no-param-reassign
+  client.currentNetworkInfo = {
+    networkType: newNetworkType,
+    ip: typeof ipAddress === "string" ? ipAddress : "",
+  };
+  // eslint-disable-next-line no-param-reassign
+  client.networkDisconnectedTimestamp = null;
+};
+
 export const reconnectSocket = (client: Client) => {
   if (navigator.onLine) {
     Plivo.log.debug('Network changed re-registering');
+    // eslint-disable-next-line no-param-reassign
+    client.isNetworkChanged = true;
     if (!client._currentSession) {
       (client.phone as any)._transport.disconnect(true);
       (client.phone as any)._transport.connect();
@@ -60,6 +98,8 @@ export const startPingPong = ({
         ) {
           let isFailedMessageTriggered = false;
           let message: null | SipLib.Message = null;
+          // eslint-disable-next-line no-param-reassign
+          client.networkDisconnectedTimestamp = new Date().getTime();
           // timeout to check whether we receive failed event in 5 seconds
           const eventCheckTimeout = setTimeout(() => {
             if (!isFailedMessageTriggered) {

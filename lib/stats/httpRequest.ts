@@ -1,8 +1,9 @@
 /* eslint func-names: ["error", "as-needed"] */
+import * as SipLib from 'plivo-jssip';
 import * as C from '../constants';
 import { Logger } from '../logger';
 // eslint-disable-next-line import/no-cycle
-import { PlivoObject } from '../client';
+import { Client, PlivoObject } from '../client';
 import { FeedbackObject } from '../utils/feedback';
 
 export interface CallStatsValidationResponse {
@@ -167,3 +168,20 @@ export const uploadConsoleLogsToBucket = function (
       });
   });
 };
+
+export const fetchIPAddress = (
+  client: Client,
+): Promise<string> => new Promise((resolve, reject) => {
+  const message = new SipLib.Message(client.phone as SipLib.UA);
+  message.on('succeeded', (data) => {
+    if (data.response && data.response.body) {
+      resolve(data.response.body);
+    } else {
+      reject(new Error("couldn't retrieve ipaddress"));
+    }
+  });
+  message.on('failed', () => {
+    reject(new Error("couldn't retrieve ipaddress"));
+  });
+  message.send('admin', 'ipAddress', 'MESSAGE');
+});

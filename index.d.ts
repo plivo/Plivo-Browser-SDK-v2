@@ -328,10 +328,28 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             timeTakenForStats: {
-                    [key: string]: {
-                            init: number;
-                            end?: number;
-                    };
+                [key: string]: {
+                        init: number;
+                        end?: number;
+                };
+            }
+            /**
+                * Maintains a boolean value that determines whether a newtwork is changed
+                * @private
+                */
+            isNetworkChanged: boolean;
+            /**
+                * Holds network disconnected timestamp
+                * @private
+                */
+            networkDisconnectedTimestamp: number | null;
+            /**
+                * Holds current network information
+                * @private
+                */
+            currentNetworkInfo: {
+                    networkType: string;
+                    ip: string;
             };
             /**
                 * Get current version of the SDK
@@ -872,10 +890,10 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Return if the app consuming Browser SDK is electron app or not.
         */
     export const isElectronApp: () => boolean;
-    /** 
+    /**
         * Get input and output audio device information to send to plivo stats.
         * @returns Fulfills with audio device information or reject with error
-    */
+        */
     export const getAudioDevicesInfo: () => Promise<DeviceAudioInfo>;
     /**
         * Updating the default input & output device
@@ -889,10 +907,6 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Check audio devices for electron app
         */
     export const checkElectronAudioDevices: () => void;
-    /**
-        * Check the input & output audio device for windows machine such that both belong to same groupid
-        */
-    export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
     /**
         * Check if input or output audio device has changed.
         */
