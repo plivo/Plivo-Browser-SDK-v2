@@ -342,6 +342,16 @@ declare module 'plivo-browser-sdk/client' {
                     ip: string;
             };
             /**
+                * Determines whether any audio device got toggled during current session
+                * @private
+                */
+            deviceToggledInCurrentSession: boolean;
+            /**
+                * Determines whether network got changed during current session
+                * @private
+                */
+            networkChangeInCurrentSession: boolean;
+            /**
                 * Get current version of the SDK
                 */
             version: string;
@@ -1171,6 +1181,8 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             signalling?: any;
             mediaConnection?: any;
             audioDeviceInfo?: DeviceAudioInfo;
+            isAudioDeviceToggled?: boolean;
+            isNetworkChanged?: boolean;
     }
     /**
         * Add call related information to call answered/summary stat.
