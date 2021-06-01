@@ -246,12 +246,14 @@ class Account {
       }
     };
 
-    // trigger network change event
-    fetchIPAddress(this.cs).then((ip) => {
-      triggerNetworkChange(ip);
-    }).catch(() => {
-      triggerNetworkChange("");
-    });
+    if (this.cs._currentSession) {
+      // trigger network change event
+      fetchIPAddress(this.cs).then((ip) => {
+        triggerNetworkChange(ip);
+      }).catch(() => {
+        triggerNetworkChange("");
+      });
+    }
   };
 
   /**
