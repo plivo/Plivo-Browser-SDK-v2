@@ -414,6 +414,18 @@ export class Client extends EventEmitter {
   };
 
   /**
+   * Determines whether any audio device got toggled during current session
+   * @private
+   */
+  deviceToggledInCurrentSession: boolean;
+
+  /**
+   * Determines whether network got changed during current session
+   * @private
+   */
+  networkChangeInCurrentSession: boolean;
+
+  /**
    * Get current version of the SDK
    */
   public version: string;
@@ -635,6 +647,8 @@ export class Client extends EventEmitter {
     this.statsSocket = null;
     this.isNetworkChanged = false;
     this.networkDisconnectedTimestamp = null;
+    this.deviceToggledInCurrentSession = false;
+    this.networkChangeInCurrentSession = false;
 
     audioUtil.setAudioContraints(this);
     documentUtil.setup(this, this.options);

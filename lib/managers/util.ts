@@ -67,6 +67,8 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
+    isAudioDeviceToggled: client.deviceToggledInCurrentSession,
+    isNetworkChanged: client.networkChangeInCurrentSession,
   };
   if (client._currentSession) {
     summaryEvent.signalling = client._currentSession.signallingInfo;
@@ -380,6 +382,8 @@ const clearSessionInfo = function (session: CallSession): void {
     client._lastCallSession = session;
     client.lastCallUUID = session.callUUID;
     client._currentSession = null;
+    client.networkChangeInCurrentSession = false;
+    client.deviceToggledInCurrentSession = false;
 
     client.callSession = null;
     client.callUUID = null;

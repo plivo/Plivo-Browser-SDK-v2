@@ -238,10 +238,12 @@ class Account {
       if (this.cs.browserDetails.browser !== 'chrome' && this.cs.browserDetails.browser !== 'edge') {
         if (ip !== this.cs.currentNetworkInfo!.ip) {
           sendNetworkChangeEvent(this.cs, ip);
+          this.cs.networkChangeInCurrentSession = true;
         }
       } else if (this.cs.isNetworkChanged) {
         // for chrome and edge
         sendNetworkChangeEvent(this.cs, ip);
+        this.cs.networkChangeInCurrentSession = true;
         this.cs.isNetworkChanged = false;
       }
     };
