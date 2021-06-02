@@ -382,8 +382,6 @@ const clearSessionInfo = function (session: CallSession): void {
     client._lastCallSession = session;
     client.lastCallUUID = session.callUUID;
     client._currentSession = null;
-    client.networkChangeInCurrentSession = false;
-    client.deviceToggledInCurrentSession = false;
 
     client.callSession = null;
     client.callUUID = null;

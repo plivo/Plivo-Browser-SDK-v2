@@ -174,6 +174,8 @@ export class StatsSocket {
             // destroying stats socket since call has ended
             this.disconnect();
             client.statsSocket = null;
+            client.networkChangeInCurrentSession = false;
+            client.deviceToggledInCurrentSession = false;
           }
         }
       }
