@@ -393,6 +393,12 @@ export class Client extends EventEmitter {
   networkChangeInterval: null | ReturnType<typeof setInterval>;
 
   /**
+   * Calculate time taken for different stats
+   * @private
+   */
+  timeTakenForStats: {[key:string]: {init: number, end?: number}};
+
+  /**
    * Maintains a boolean value that determines whether a newtwork is changed
    * @private
    */
@@ -633,6 +639,7 @@ export class Client extends EventEmitter {
     this.owaLastDetect = { time: 0 as any, isOneWay: true };
     this.owaDetectTime = 3600000;
     this.statsSocket = null;
+    this.timeTakenForStats = {};
     this.isNetworkChanged = false;
     this.networkDisconnectedTimestamp = null;
 
@@ -720,6 +727,9 @@ export class Client extends EventEmitter {
   };
 
   private _call = (phoneNumber: string, extraHeaders: ExtraHeaders): boolean => {
+    this.timeTakenForStats.pdd = {
+      init: new Date().getTime(),
+    };
     Plivo.log.info('<----- OUTGOING ----->');
     Plivo.log.info(`Outgoing call initialized to : ${phoneNumber}`);
     if (!this.isLoggedIn) {

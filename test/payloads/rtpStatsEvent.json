@@ -13,8 +13,12 @@
         "packetsLost": 1,
         "packetsSent": 635,
         "rtt": 26,
-        "ssrc": 3487669162
+        "ssrc": 3487669162,
+        "googEchoCancellationReturnLossEnhancement": 0,
+        "googEchoCancellationReturnLoss": -8
     },
+    "mediaSetupTime": 0,
+    "pdd": 0,
     "msg": "CALL_STATS",
     "networkDownlinkSpeed": -1,
     "networkEffectiveType": "unknown",
@@ -26,7 +30,9 @@
         "jitter": 0,
         "packetsLost": 1,
         "packetsReceived": 630,
-        "ssrc": 2203501410
+        "ssrc": 2203501410,
+        "googJitterBufferMs": 45,
+        "packetsDiscarded": 0
     },
     "source": "BrowserSDK",
     "statsIOUsed": true,

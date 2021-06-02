@@ -302,6 +302,10 @@ export const onIceConnectionChange = function (
       }
     }
     if (iceState === 'connected') {
+      const date = new Date().getTime();
+      client.timeTakenForStats.iceConnection.end = date;
+      client.timeTakenForStats.dtls = {} as any;
+      client.timeTakenForStats.dtls.init = date;
       client.emit('onMediaConnected', callSession.getCallInfo());
     }
   }

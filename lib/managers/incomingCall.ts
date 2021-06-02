@@ -161,6 +161,11 @@ const onAccepted = (incomingCall: CallSession) => (): void => {
     inboundConnection.oniceconnectionstatechange = () => onIceConnectionChange.call(
       cs, inboundConnection, incomingCall,
     );
+    inboundConnection.onconnectionstatechange = () => {
+      if (inboundConnection.connectionState === "connected") {
+        cs.timeTakenForStats.dtls.end = new Date().getTime();
+      }
+    };
   }
 };
 
