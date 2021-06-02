@@ -328,11 +328,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             timeTakenForStats: {
-                [key: string]: {
-                        init: number;
-                        end?: number;
-                };
-            }
+                    [key: string]: {
+                            init: number;
+                            end?: number;
+                    };
+            };
             /**
                 * Maintains a boolean value that determines whether a newtwork is changed
                 * @private
@@ -949,6 +949,8 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             packetsSent?: number;
             googJitterReceived?: number;
             googRtt?: number;
+            googEchoCancellationReturnLossEnhancement?: number;
+            googEchoCancellationReturnLoss?: number;
     }
     export interface StatsRemoteStream {
             ssrc?: number;
@@ -962,6 +964,8 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             audioOutputLevel?: number;
             googJitterReceived?: number;
             googRtt?: number;
+            googJitterBufferMs?: number;
+            packetsDiscarded?: number;
     }
     export interface StatsObject {
             msg: string;
@@ -981,6 +985,8 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             networkEffectiveType: string;
             networkDownlinkSpeed: number;
             statsIOUsed: boolean;
+            pdd?: number;
+            mediaSetupTime?: number;
     }
     interface RtpStatsStream {
             codec: string;
@@ -993,7 +999,7 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
         * Get RTP stats for chrome browser.
         * @param {RtpStatsStream} stream - holds local and remote stat details
         */
-    export const handleChromeStats: (stream: RtpStatsStream) => void;
+    export const handleChromeStats: (stream: RtpStatsStream) => Promise<void>;
     /**
         * Get RTP stats for firefox and safari browsers.
         * @param {RtpStatsStream} stream - holds local and remote stat details
