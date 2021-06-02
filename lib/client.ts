@@ -730,7 +730,7 @@ export class Client extends EventEmitter {
     this.timeTakenForStats.pdd = {
       init: new Date().getTime(),
     };
-    Plivo.log.info('<----- OUTGOING ----->', this.timeTakenForStats.pdd.init);
+    Plivo.log.info('<----- OUTGOING ----->');
     Plivo.log.info(`Outgoing call initialized to : ${phoneNumber}`);
     if (!this.isLoggedIn) {
       Plivo.log.warn('Must be logged in before to make a call');

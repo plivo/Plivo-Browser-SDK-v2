@@ -13,6 +13,20 @@ describe('RTPStats', () => {
             clientScope: {
                 browserDetails: {
                     browser: ''
+                },
+                timeTakenForStats: {
+                  dtls:{
+                    init: 0,
+                    end: 0
+                  },
+                  pdd:{
+                    init: 0,
+                    end: 0
+                  },
+                  iceConnection:{
+                    init: 0,
+                    end: 0
+                  },
                 }
             },
             packets: {
@@ -77,6 +91,12 @@ describe('RTPStats', () => {
             let expected = JSON.parse(JSON.stringify(rtpStatsResponse));
             expected.local.rtt = 0.026;
             expected.networkType = 'unknown';
+            expected.local.googEchoCancellationReturnLossEnhancement = null;
+            expected.local.googEchoCancellationReturnLoss = null;
+            expected.mediaSetupTime = 0;
+            expected.pdd = 0;
+            expected.remote.googJitterBufferMs= null;
+            expected.remote.packetsDiscarded= null;
             expect(context.collected).toStrictEqual(expected);
             res();
         }, 100))
@@ -91,6 +111,12 @@ describe('RTPStats', () => {
       const expected = JSON.parse(JSON.stringify(rtpStatsResponse));
       expected.local.rtt = 0.026;
       expected.networkType = 'unknown';
+      expected.local.googEchoCancellationReturnLossEnhancement = null;
+      expected.local.googEchoCancellationReturnLoss = null;
+      expected.mediaSetupTime = 0;
+      expected.pdd = 0;
+      expected.remote.googJitterBufferMs= null;
+      expected.remote.packetsDiscarded= null;
       expect(context.collected).toStrictEqual(expected);
       res();
     }, 100));
@@ -127,6 +153,12 @@ describe('RTPStats', () => {
       const expected = JSON.parse(JSON.stringify(rtpStatsResponse));
       expected.codec = 'pcmu';
       expected.networkType = 'unknown';
+      expected.local.googEchoCancellationReturnLossEnhancement = null;
+      expected.local.googEchoCancellationReturnLoss = null;
+      expected.mediaSetupTime = 0;
+      expected.pdd = 0;
+      expected.remote.googJitterBufferMs= null;
+      expected.remote.packetsDiscarded= null;
       expect(context.collected).toStrictEqual(expected);
       res();
     }, 100));
