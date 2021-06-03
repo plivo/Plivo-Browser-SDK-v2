@@ -185,3 +185,35 @@ export const fetchIPAddress = (
   });
   message.send('admin', 'ipAddress', 'MESSAGE');
 });
+
+export const calculateUplink = () => {
+  const http = new XMLHttpRequest();
+  let startTime;
+  let endTime;
+  const url = "http://localhost:5000/upload";
+
+  const showData = () => {
+    console.log('**** speed', endTime - startTime);
+    console.log('**** speed', 1 / ((endTime - startTime) / 1000));
+  };
+  let myData = "d="; // the raw data you will send
+  for (let i = 0; i < 1022 * 1022; i += 1) { // (2 + 1022 bytes = 1024b = 1kb).
+    myData += "k"; // add one byte of data;
+  }
+  console.log('***** data', myData);
+
+  http.open("POST", url, true);
+
+  http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  http.setRequestHeader("Content-length", `${myData.length}`);
+  http.setRequestHeader("Connection", "close");
+
+  http.onreadystatechange = () => {
+    if (http.readyState === 4 && http.status === 200) {
+      endTime = (new Date()).getTime();
+      showData();
+    }
+  };
+  startTime = (new Date()).getTime();
+  http.send(myData);
+};

@@ -24,6 +24,7 @@ import {
   uploadConsoleLogsToBucket,
   PreSignedUrlResponse,
   fetchIPAddress,
+  calculateUplink,
 } from './stats/httpRequest';
 import {
   OutputDevices,
@@ -636,6 +637,7 @@ export class Client extends EventEmitter {
     this.isNetworkChanged = false;
     this.networkDisconnectedTimestamp = null;
 
+    calculateUplink();
     audioUtil.setAudioContraints(this);
     documentUtil.setup(this, this.options);
     audioUtil.detectDeviceChange.call(this);
