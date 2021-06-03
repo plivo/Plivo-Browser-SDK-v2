@@ -962,6 +962,7 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             audioOutputLevel?: number;
             googJitterReceived?: number;
             googRtt?: number;
+            jitterBufferDelay?: number;
     }
     export interface StatsObject {
             msg: string;
@@ -981,6 +982,8 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             networkEffectiveType: string;
             networkDownlinkSpeed: number;
             statsIOUsed: boolean;
+            pdd?: number;
+            mediaSetupTime?: number;
     }
     interface RtpStatsStream {
             codec: string;
