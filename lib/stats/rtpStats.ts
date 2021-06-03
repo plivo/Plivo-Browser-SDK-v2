@@ -40,6 +40,7 @@ export interface StatsRemoteStream {
   audioOutputLevel?: number;
   googJitterReceived?: number;
   googRtt?: number;
+  jitterBufferDelay?: number;
 }
 
 export interface StatsObject {
@@ -60,6 +61,8 @@ export interface StatsObject {
   networkEffectiveType: string;
   networkDownlinkSpeed: number;
   statsIOUsed: boolean;
+  pdd?: number;
+  mediaSetupTime?: number;
 }
 
 interface RtpStatsStream {
@@ -449,6 +452,7 @@ const processStats = function (stream: RtpStatsStream): void {
     null,
     true,
   );
+  getStatsRef.collected.remote.jitterBufferDelay = handleStat((stream.remote as any).googCurrentDelayMs, 'int', null, true);
   if (getStatsRef.clientScope.browserDetails.browser === 'chrome') {
     getStatsRef.collected.local.rtt = handleStat(stream.local.googRtt as number, 'float');
     getStatsRef.collected.local.jitter = handleStat(

@@ -26,7 +26,8 @@
         "jitter": 0,
         "packetsLost": 1,
         "packetsReceived": 630,
-        "ssrc": 2203501410
+        "ssrc": 2203501410,
+        "jitterBufferDelay": 66
     },
     "source": "BrowserSDK",
     "statsIOUsed": true,

@@ -77,6 +77,7 @@ describe('RTPStats', () => {
             let expected = JSON.parse(JSON.stringify(rtpStatsResponse));
             expected.local.rtt = 0.026;
             expected.networkType = 'unknown';
+            expected.remote.jitterBufferDelay = null;
             expect(context.collected).toStrictEqual(expected);
             res();
         }, 100))
@@ -91,6 +92,7 @@ describe('RTPStats', () => {
       const expected = JSON.parse(JSON.stringify(rtpStatsResponse));
       expected.local.rtt = 0.026;
       expected.networkType = 'unknown';
+      expected.remote.jitterBufferDelay = null;
       expect(context.collected).toStrictEqual(expected);
       res();
     }, 100));
@@ -127,6 +129,7 @@ describe('RTPStats', () => {
       const expected = JSON.parse(JSON.stringify(rtpStatsResponse));
       expected.codec = 'pcmu';
       expected.networkType = 'unknown';
+      expected.remote.jitterBufferDelay = null;
       expect(context.collected).toStrictEqual(expected);
       res();
     }, 100));
