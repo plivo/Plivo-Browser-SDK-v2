@@ -163,6 +163,11 @@ const onSending = (): void => {
       if (!cs._currentSession) return;
       onIceConnectionChange.call(cs, outboundConnection, cs._currentSession);
     };
+    outboundConnection.onconnectionstatechange = () => {
+      if (outboundConnection.connectionState === "connected") {
+        cs.timeTakenForStats.dtls.end = new Date().getTime();
+      }
+    };
   }
 };
 
@@ -219,6 +224,7 @@ const handleProgressTone = (evt: SessionProgressEvent): void => {
  * @param {SessionProgressEvent} evt - rtcsession progress information
  */
 const OnProgress = (evt: SessionProgressEvent): void => {
+  cs.timeTakenForStats.pdd.end = new Date().getTime();
   if (cs._currentSession && evt.response) {
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);

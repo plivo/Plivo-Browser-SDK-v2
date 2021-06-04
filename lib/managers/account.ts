@@ -404,6 +404,8 @@ class Account {
     } else {
       createOutgoingSession(evt);
     }
+    this.cs.timeTakenForStats.iceConnection = {} as any;
+    this.cs.timeTakenForStats.iceConnection.init = new Date().getTime();
   };
 
   /**
