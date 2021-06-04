@@ -31,6 +31,7 @@
         "packetsLost": 1,
         "packetsReceived": 630,
         "ssrc": 2203501410,
+        "jitterBufferDelay": 66,
         "googJitterBufferMs": 45,
         "packetsDiscarded": 0
     },

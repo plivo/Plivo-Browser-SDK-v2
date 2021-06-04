@@ -42,6 +42,7 @@ export interface StatsRemoteStream {
   audioOutputLevel?: number;
   googJitterReceived?: number;
   googRtt?: number;
+  jitterBufferDelay?: number;
   googJitterBufferMs?: number;
   packetsDiscarded?: number;
 }
@@ -472,6 +473,7 @@ const processStats = function (stream: RtpStatsStream): void {
     null,
     true,
   );
+  getStatsRef.collected.remote.jitterBufferDelay = handleStat((stream.remote as any).googCurrentDelayMs, 'int', null, true);
   getStatsRef.collected.local.googEchoCancellationReturnLoss = handleStat(stream.local.googEchoCancellationReturnLoss!, 'int', null, true);
   getStatsRef.collected.local.googEchoCancellationReturnLossEnhancement = handleStat(stream.local.googEchoCancellationReturnLossEnhancement!, 'int', null, true);
   getStatsRef.collected.remote.googJitterBufferMs = handleStat(stream.remote.googJitterBufferMs!, 'int', null, true);

@@ -174,13 +174,8 @@ export class StatsSocket {
             // destroying stats socket since call has ended
             this.disconnect();
             client.statsSocket = null;
-          }
-
-          // disconnect stats socket if there is no active session after network change event
-          // eslint-disable-next-line no-underscore-dangle
-          if (message.msg === "NETWORK_CHANGE" && !client._currentSession) {
-            this.disconnect();
-            client.statsSocket = null;
+            client.networkChangeInCurrentSession = false;
+            client.deviceToggledInCurrentSession = false;
           }
         }
       }

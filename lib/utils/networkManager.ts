@@ -3,8 +3,8 @@
 import * as SipLib from 'plivo-jssip';
 import { Client } from '../client';
 import { Logger } from '../logger';
+import { sendEvents } from '../stats/nonRTPStats';
 import { createStatsSocket } from '../stats/setup';
-import { StatsSocket } from '../stats/ws';
 
 interface PingPong {
   client: Client
@@ -43,14 +43,7 @@ export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) 
     reconnectionTimestamp: new Date().getTime(),
     disconnectionTimestamp: client.networkDisconnectedTimestamp,
   };
-  if (client.statsSocket) {
-    client.statsSocket.send(obj, client);
-  } else {
-    // eslint-disable-next-line no-param-reassign
-    client.statsSocket = new StatsSocket();
-    client.statsSocket.connect();
-    client.statsSocket.send(obj, client);
-  }
+  sendEvents.call(client, obj, client._currentSession!);
   // update current network info
   // eslint-disable-next-line no-param-reassign
   client.currentNetworkInfo = {
