@@ -237,10 +237,12 @@ class Account {
     const triggerNetworkChange = (ip) => {
       if (this.cs.browserDetails.browser !== 'chrome' && this.cs.browserDetails.browser !== 'edge') {
         if (ip !== this.cs.currentNetworkInfo!.ip) {
+          this.cs.userName = this.credentials.userName;
           sendNetworkChangeEvent(this.cs, ip);
           this.cs.networkChangeInCurrentSession = true;
         }
       } else if (this.cs.isNetworkChanged) {
+        this.cs.userName = this.credentials.userName;
         // for chrome and edge
         sendNetworkChangeEvent(this.cs, ip);
         this.cs.networkChangeInCurrentSession = true;
