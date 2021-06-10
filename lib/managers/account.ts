@@ -211,6 +211,7 @@ class Account {
         messageCheckTimeout: this.cs._currentSession
           ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
       });
+      if (!this.cs._currentSession) return;
       if (this.cs.statsSocket) {
         this.cs.statsSocket.disconnect();
         this.cs.statsSocket = null;
