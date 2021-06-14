@@ -788,6 +788,11 @@ declare module 'plivo-browser-sdk/stats/ws' {
                 */
             ws: null | WebSocket;
             /**
+                * Holds a bollean which determines whether the socket is trying for a connection
+                * @private
+                */
+            isConnecting: boolean;
+            /**
                 * Stores the messages in buffer if websocket is unable to send message
                 * @private
                 */
@@ -805,26 +810,26 @@ declare module 'plivo-browser-sdk/stats/ws' {
             /**
                 * Create a web socket for stats and add event listeners.
                 */
-            connect(): void;
+            connect: () => void;
             /**
                 * Close the web socket.
                 */
-            disconnect(): void;
+            disconnect: () => void;
             /**
                 * Check if web socket is open or not.
                 */
-            isConnected(): boolean;
+            isConnected: () => boolean;
             /**
                 * Send messages to the socket.
                 * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
                 */
-            send(message: {
+            send: (message: {
                     [key: string]: any;
-            }, client: Client): boolean;
+            }, client: Client) => boolean;
             /**
                 * Reconnect to the socket
                 */
-            reconnect(): void;
+            reconnect: () => void;
     }
 }
 
