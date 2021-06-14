@@ -14,8 +14,6 @@ const Plivo = { log: Logger };
  * Triggered when websocket is opened.
  */
 function onOpen(): void {
-  const that: StatsSocket = this;
-  that.isConnecting = false;
   Plivo.log.debug(`stats socket ${(this as StatsSocket).url} connected`);
 }
 
@@ -53,8 +51,6 @@ function onMessage(e: MessageEvent): void {
    * @param {Event} e - Error event information
    */
 function onError(e: Event): void {
-  const that: StatsSocket = this;
-  that.isConnecting = false;
   Plivo.log.debug(`stats socket ${this.url} error: ${e}`);
 }
 
@@ -76,12 +72,6 @@ export class StatsSocket {
   ws: null | WebSocket;
 
   /**
-   * Holds a bollean which determines whether the socket is trying for a connection
-   * @private
-   */
-  isConnecting: boolean;
-
-  /**
    * Stores the messages in buffer if websocket is unable to send message
    * @private
    */
@@ -95,7 +85,6 @@ export class StatsSocket {
     this.url = C.STATSSOCKET_URL;
     this.ws = null;
     this.messageBuffer = [];
-    this.isConnecting = false;
     this.connect();
   }
 
@@ -123,11 +112,10 @@ export class StatsSocket {
   /**
    * Create a web socket for stats and add event listeners.
    */
-  connect = (): void => {
+  connect(): void {
     if (!this.ws) {
       Plivo.log.debug('opening stats socket');
       try {
-        this.isConnecting = true;
         this.ws = new WebSocket(this.url);
         this.ws.onopen = onOpen.bind(this);
         this.ws.onclose = onClose.bind(this);
@@ -138,12 +126,12 @@ export class StatsSocket {
         onError.call(this, e);
       }
     }
-  };
+  }
 
   /**
    * Close the web socket.
    */
-  disconnect = (): void => {
+  disconnect(): void {
     Plivo.log.debug('stats socket disconnect()');
     if (this.ws) {
       // unbind websocket event callbacks
@@ -155,23 +143,23 @@ export class StatsSocket {
       this.ws.close();
       this.ws = null;
     }
-  };
+  }
 
   /**
    * Check if web socket is open or not.
    */
-  isConnected = (): boolean => {
+  isConnected(): boolean {
     if (this.ws && this.ws.readyState === this.ws.OPEN) {
       return true;
     }
     return false;
-  };
+  }
 
   /**
    * Send messages to the socket.
    * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
    */
-  send = (message: {[key:string]: any}, client: Client): boolean => {
+  send(message: {[key:string]: any}, client: Client): boolean {
     if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
       this.messageBuffer.push(JSON.stringify(message));
     }
@@ -186,8 +174,6 @@ export class StatsSocket {
             // destroying stats socket since call has ended
             this.disconnect();
             client.statsSocket = null;
-            client.networkChangeInCurrentSession = false;
-            client.deviceToggledInCurrentSession = false;
           }
         }
       }
@@ -212,18 +198,18 @@ export class StatsSocket {
       this.send(message, client);
     }, retrySecondsCount * 900);
 
-    Plivo.log.warn('statsSocket is not open, retrying to connect', message.msg);
+    Plivo.log.warn('statsSocket is not open, retrying to connect');
     this.reconnect();
     return false;
-  };
+  }
 
   /**
    * Reconnect to the socket
    */
-  reconnect = ():void => {
-    if (navigator.onLine && !this.isConnecting) {
+  reconnect():void {
+    if (navigator.onLine) {
       this.ws = null;
       this.connect();
     }
-  };
+  }
 }
