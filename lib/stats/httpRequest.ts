@@ -171,17 +171,17 @@ export const uploadConsoleLogsToBucket = function (
 
 export const fetchIPAddress = (
   client: Client,
-): Promise<string> => new Promise((resolve, reject) => {
+): Promise<string | Error> => new Promise((resolve) => {
   const message = new SipLib.Message(client.phone as SipLib.UA);
   message.on('succeeded', (data) => {
     if (data.response && data.response.body) {
       resolve(data.response.body);
     } else {
-      reject(new Error("couldn't retrieve ipaddress"));
+      resolve(new Error("couldn't retrieve ipaddress"));
     }
   });
   message.on('failed', () => {
-    reject(new Error("couldn't retrieve ipaddress"));
+    resolve(new Error("couldn't retrieve ipaddress"));
   });
   message.send('admin', 'ipAddress', 'MESSAGE');
 });

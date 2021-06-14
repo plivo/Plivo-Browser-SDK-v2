@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable import/no-cycle */
 /* eslint-disable no-underscore-dangle */
 import * as SipLib from 'plivo-jssip';
@@ -18,7 +19,6 @@ export const restartStatSocket = (client: Client) => {
   if (client.callstatskey && navigator.onLine && client._currentSession) {
     if (client.statsSocket) {
       client.statsSocket.disconnect();
-      // eslint-disable-next-line no-param-reassign
       client.statsSocket = null;
     }
     // start socket
@@ -40,25 +40,22 @@ export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) 
       networkType: newNetworkType,
       ip: typeof ipAddress === "string" ? ipAddress : "",
     },
-    reconnectionTimestamp: new Date().getTime(),
+    reconnectionTimestamp: client.networkReconnectionTimestamp,
     disconnectionTimestamp: client.networkDisconnectedTimestamp,
   };
   sendEvents.call(client, obj, client._currentSession!);
   // update current network info
-  // eslint-disable-next-line no-param-reassign
   client.currentNetworkInfo = {
     networkType: newNetworkType,
     ip: typeof ipAddress === "string" ? ipAddress : "",
   };
-  // eslint-disable-next-line no-param-reassign
   client.networkDisconnectedTimestamp = null;
+  client.networkReconnectionTimestamp = null;
 };
 
 export const reconnectSocket = (client: Client) => {
   if (navigator.onLine) {
     Plivo.log.debug('Network changed re-registering');
-    // eslint-disable-next-line no-param-reassign
-    client.isNetworkChanged = true;
     if (!client._currentSession) {
       (client.phone as any)._transport.disconnect(true);
       (client.phone as any)._transport.connect();
@@ -80,7 +77,6 @@ export const startPingPong = ({
   const check = client._currentSession ? true : client.browserDetails.browser === 'chrome' || client.browserDetails.browser === 'edge';
   if (check) {
     if (client.networkChangeInterval == null) {
-      // eslint-disable-next-line no-param-reassign
       client.networkChangeInterval = setInterval(() => {
         // send message only when there is active network connect
         if (
@@ -91,7 +87,6 @@ export const startPingPong = ({
         ) {
           let isFailedMessageTriggered = false;
           let message: null | SipLib.Message = null;
-          // eslint-disable-next-line no-param-reassign
           client.networkDisconnectedTimestamp = new Date().getTime();
           // timeout to check whether we receive failed event in 5 seconds
           const eventCheckTimeout = setTimeout(() => {
@@ -119,7 +114,6 @@ export const resetPingPong = ({
   messageCheckTimeout,
 }: PingPong) => {
   clearInterval(client.networkChangeInterval as any);
-  // eslint-disable-next-line no-param-reassign
   client.networkChangeInterval = null;
   startPingPong({
     client,

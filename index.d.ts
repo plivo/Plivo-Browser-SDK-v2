@@ -334,15 +334,15 @@ declare module 'plivo-browser-sdk/client' {
                     };
             };
             /**
-                * Maintains a boolean value that determines whether a newtwork is changed
-                * @private
-                */
-            isNetworkChanged: boolean;
-            /**
                 * Holds network disconnected timestamp
                 * @private
                 */
             networkDisconnectedTimestamp: number | null;
+            /**
+                * Holds network reconnection timestamp
+                * @private
+                */
+            networkReconnectionTimestamp: number | null;
             /**
                 * Holds current network information
                 * @private
@@ -361,6 +361,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             networkChangeInCurrentSession: boolean;
+            /**
+                * Holds a boolean to get initial network info
+                * @private
+                */
+            didFetchInitialNetworkInfo: boolean;
             /**
                 * Get current version of the SDK
                 */

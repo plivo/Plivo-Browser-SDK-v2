@@ -23,7 +23,6 @@ import {
   getPreSignedS3URL,
   uploadConsoleLogsToBucket,
   PreSignedUrlResponse,
-  fetchIPAddress,
 } from './stats/httpRequest';
 import {
   OutputDevices,
@@ -399,16 +398,16 @@ export class Client extends EventEmitter {
   timeTakenForStats: {[key:string]: {init: number, end?: number}};
 
   /**
-   * Maintains a boolean value that determines whether a newtwork is changed
-   * @private
-   */
-  isNetworkChanged: boolean;
-
-  /**
    * Holds network disconnected timestamp
    * @private
    */
   networkDisconnectedTimestamp: number | null;
+
+  /**
+   * Holds network reconnection timestamp
+   * @private
+   */
+  networkReconnectionTimestamp: number | null;
 
   /**
    * Holds current network information
@@ -430,6 +429,12 @@ export class Client extends EventEmitter {
    * @private
    */
   networkChangeInCurrentSession: boolean;
+
+  /**
+   * Holds a boolean to get initial network info
+   * @private
+   */
+  didFetchInitialNetworkInfo: boolean;
 
   /**
    * Get current version of the SDK
@@ -652,10 +657,11 @@ export class Client extends EventEmitter {
     this.owaDetectTime = 3600000;
     this.statsSocket = null;
     this.timeTakenForStats = {};
-    this.isNetworkChanged = false;
     this.networkDisconnectedTimestamp = null;
+    this.networkReconnectionTimestamp = null;
     this.deviceToggledInCurrentSession = false;
     this.networkChangeInCurrentSession = false;
+    this.didFetchInitialNetworkInfo = false;
 
     audioUtil.setAudioContraints(this);
     documentUtil.setup(this, this.options);
@@ -677,24 +683,6 @@ export class Client extends EventEmitter {
   }
 
   // private methods
-  private _updateCurrentNetworkInfo = () => {
-    fetchIPAddress(this).then((ip) => {
-      this.currentNetworkInfo = {
-        networkType: (navigator as any).connection
-          ? (navigator as any).connection.effectiveType
-          : 'unknown',
-        ip,
-      };
-    }).catch(() => {
-      this.currentNetworkInfo = {
-        networkType: (navigator as any).connection
-          ? (navigator as any).connection.effectiveType
-          : 'unknown',
-        ip: "",
-      };
-    });
-  };
-
   private _login = (username: string, password: string): boolean => {
     this.isLoginCalled = true;
     if (
@@ -712,7 +700,6 @@ export class Client extends EventEmitter {
     const isValid = account.validate();
     if (!isValid) return false;
     account.setupUserAccount();
-    this._updateCurrentNetworkInfo();
     if (this.browserDetails.browser === 'safari') {
       documentUtil.playAudio(C.SILENT_TONE_ELEMENT_ID);
     }

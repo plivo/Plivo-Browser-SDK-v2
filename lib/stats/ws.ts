@@ -212,7 +212,7 @@ export class StatsSocket {
       this.send(message, client);
     }, retrySecondsCount * 900);
 
-    Plivo.log.warn('statsSocket is not open, retrying to connect', message.msg);
+    Plivo.log.warn('statsSocket is not open, retrying to connect');
     this.reconnect();
     return false;
   };
