@@ -13,7 +13,41 @@ module.exports = env => {
     }),
   ];
   if (env.production){
-    plugins.push(new DtsBundlePlugin())    
+    plugins.push(new DtsBundlePlugin())
+    plugins.push(function () {
+      this.hooks.afterEmit.tap("IncludeHashPlugin", (stats) => {
+        var replaceInFile = function (filePath, toReplace, replacement) {
+          var str;
+          try {
+            str = fs.readFileSync(filePath, "utf8");
+          } catch (e) {
+            console.log("error during replace", e);
+          }
+          var out = str.replace(new RegExp(toReplace, "g"), replacement);
+          fs.writeFileSync(filePath, out);
+        };
+        var hash = stats.hash;
+        replaceInFile(
+          path.join(
+            path.join(path.resolve(__dirname, "dist"), env.npm ? "plivobrowsersdk.js" : "plivobrowsersdk.min.js")
+          ),
+          "sdk_signature",
+          hash
+        );
+      });
+    });
+
+    plugins.push(function () {
+      this.hooks.afterEmit.tap("CreateHashPlugin", (stats) => {
+        fs.writeFile(
+          path.join(
+            path.join(path.resolve(__dirname, "dist"), "hash.json")
+          ),
+          '{"'+ version +'": "'+ stats.hash +'"}',
+          () => {}
+        )
+      });
+    });
   }
   if (env.development) plugins.push(new webpack.NamedModulesPlugin());
   return {

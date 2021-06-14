@@ -17,6 +17,9 @@ export const AUDIO_CONSTRAINTS = {
     googAutoGainControl: false,
   }],
 };
+export const DEFAULT_DTMFOPTIONS = {
+  sendDtmfType: ['INBAND', 'OUTBAND'],
+};
 
 // webrtc settings
 export const NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED = 50;
@@ -36,6 +39,7 @@ export const STUN_SERVERS = [
 
 export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
 export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
+export const DTMF_TONE_PLAY_RETRY_ATTEMPTS = 4;
 
 export const SIP_ERROR_CODE = {
   486: 'User was busy',
@@ -58,6 +62,7 @@ export const SIP_ERROR_CODE = {
 
 // Options
 export const DEFAULT_CODECS = ['OPUS', 'PCMU'];
+export const DTMF_OPTIONS = ['INBAND', 'OUTBAND'];
 export const CONSOLE_LOGS_BUFFER_SIZE = 900;
 export const MAX_AVERAGE_BITRATE = 48000;
 export const MIN_AVERAGE_BITRATE = 8000;
@@ -137,3 +142,4 @@ export const NETWORK_CHANGE_INTERVAL_IDLE_STATE = 10000;
 export const NETWORK_CHANGE_INTERVAL_ON_CALL_STATE = 4000;
 export const MESSAGE_CHECK_TIMEOUT_IDLE_STATE = 5000;
 export const MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE = 2000;
+export const IP_ADDRESS_FETCH_RETRY_COUNT = 10;

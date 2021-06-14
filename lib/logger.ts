@@ -13,6 +13,9 @@ const DEFAULT_LOG_METHOD = 'INFO';
 export type AvailableLogMethods = 'INFO' | 'DEBUG' | 'WARN' | 'ERROR' | 'ALL' | 'OFF' | 'ALL-PLAIN';
 export type AvailableFlagValues = 'ALL' | 'NONE' | 'REMOTEONLY' | 'LOCALONLY';
 
+export interface DtmfOptions {
+  sendDtmfType : string[]
+}
 interface LoggerOptions{
   enableDate?: boolean,
   loggingName?: 'PlivoSDK',

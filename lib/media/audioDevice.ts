@@ -60,8 +60,8 @@ const activeDeviceLabelDeviceIdMap = {};
 const activeDeviceIdDeviceLabelMap = {};
 
 const isSafari = /constructor/i.test((window as any).HTMLElement) || ((p) => p.toString() === '[object SafariRemoteNotification]') || (!(window as any).safari || (typeof (window as any).safari !== 'undefined' && (window as any).safari.pushNotification));
-const isWindows = navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win')
- 
+const isWindows = navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win');
+
 /**
  * Add audio constraints to client reference.
  * @param {Client} _clientObject - client reference
@@ -102,18 +102,20 @@ export const availableDevices = function (
         const list = [];
         e.forEach((dev) => {
           if (filterBy === 'input') {
-            if (dev.kind === 'audioinput') {
+            if (dev.kind === 'audioinput' && dev.deviceId !== 'communications') {
               list.push(dev as never);
             }
           } else if (filterBy === 'output') {
-            if (dev.kind === 'audiooutput') {
+            if (dev.kind === 'audiooutput' && dev.deviceId !== 'communications') {
               list.push(dev as never);
             }
           } else {
             // push all audio input and output devices
             // eslint-disable-next-line no-lonely-if
             if (!/video/i.test(dev.kind)) {
-              list.push(dev as never);
+              if (dev.deviceId !== 'communications') {
+                list.push(dev as never);
+              }
             }
           }
         });
@@ -198,7 +200,7 @@ export const startVolumeDataStreaming = function (client: Client): void {
       localStream = (pcTemp as any).getLocalStreams()[0];
       audioVisual.start(client, localStream, remoteStream);
     }
-    if (isSafari && localStream.active === false) {
+    if (isSafari && localStream && localStream.active === false) {
       const deviceLabel = Object.keys(activeDeviceLabelDeviceIdMap)[0];
       const newDeviceId = activeDeviceLabelDeviceIdMap[deviceLabel];
       if (clientObject) {
@@ -284,19 +286,20 @@ const replaceAudioTrack = function (
         currentLocalStream = null;
       }
       if (sender) {
-        sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {
-          const pc2 = clientObject?.getPeerConnection().pc;
-          // eslint-disable-next-line
-          if (pc2) {
-            sender = pc2.getSenders()[0];
-            sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {});
-          }
-        });
         Plivo.log.debug(`replaced sender : ${sender}`);
         currentLocalStream = stream;
         if (currentAudioState === false) {
           updateAudioState(client);
         }
+        sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {
+          const pc2 = clientObject?.getPeerConnection().pc;
+          // eslint-disable-next-line
+          if (pc2) {
+            // eslint-disable-next-line prefer-destructuring
+            sender = pc2.getSenders()[0];
+            if (sender) sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {});
+          }
+        });
       }
     }
   };
@@ -574,8 +577,8 @@ export const isElectronApp = function (): boolean {
   return false;
 };
 
-/*
-* Get input and output audio device information to send to plivo stats.
+/**
+ * Get input and output audio device information to send to plivo stats.
  * @returns Fulfills with audio device information or reject with error
  */
 export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
@@ -734,7 +737,7 @@ export const checkAudioDevChange = function (): void {
   const isElectron = isElectronApp();
   const lastActiveSpeakerDevice = clientObject ? clientObject.audio.speakerDevices.get() : '';
   const lastConnectedMicDevice = clientObject ? clientObject.audio.microphoneDevices.get() : '';
-  let isRemoved = false; 
+  let isRemoved = false;
   audioDevDictionary()
     .then((deviceInfo: DeviceDictionary) => {
       const { devices, audioRef } = deviceInfo;
@@ -744,6 +747,7 @@ export const checkAudioDevChange = function (): void {
           getAudioDevicesInfo.call(client).then((toggledDeviceInfo: DeviceAudioInfo) => {
             const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
             sendEvents.call(client, obj, client._currentSession);
+            client.deviceToggledInCurrentSession = true;
           });
         }
         // Check if device is newly added with devices
@@ -840,9 +844,9 @@ export const checkAudioDevChange = function (): void {
       const newLastActiveSpeakerDevice = deviceInfo[2];
       const newLastConnectedMicDevice = deviceInfo[3];
 
-      //Calling only for windows systems to select i/o device having same group id.
-      //This is called only when a new device is added
-      //In case of device removal, i/o device get set to default
+      // Calling only for windows systems to select i/o device having same group id.
+      // This is called only when a new device is added
+      // In case of device removal, i/o device get set to default
       if (isWindows) {
         if (newAddedDevice && newAddedDevice !== "") {
           if (!isRemoved) {

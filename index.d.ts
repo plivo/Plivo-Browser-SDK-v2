@@ -15,7 +15,7 @@ declare module 'plivo-browser-sdk' {
 declare module 'plivo-browser-sdk/client' {
     import { EventEmitter } from 'events';
     import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
-    import { Logger, AvailableLogMethods, AvailableFlagValues } from 'plivo-browser-sdk/logger';
+    import { Logger, AvailableLogMethods, AvailableFlagValues, DtmfOptions } from 'plivo-browser-sdk/logger';
     import { CallSession } from 'plivo-browser-sdk/managers/callSession';
     import { StatsSocket } from 'plivo-browser-sdk/stats/ws';
     import { OutputDevices, InputDevices, RingToneDevices } from 'plivo-browser-sdk/media/audioDevice';
@@ -43,6 +43,7 @@ declare module 'plivo-browser-sdk/client' {
             allowMultipleIncomingCalls?: boolean;
             closeProtection?: boolean;
             maxAverageBitrate?: number;
+            dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
             browser: string;
@@ -323,6 +324,49 @@ declare module 'plivo-browser-sdk/client' {
                 */
             networkChangeInterval: null | ReturnType<typeof setInterval>;
             /**
+                * Calculate time taken for different stats
+                * @private
+                */
+            timeTakenForStats: {
+                    [key: string]: {
+                            init: number;
+                            end?: number;
+                    };
+            };
+            /**
+                * Holds network disconnected timestamp
+                * @private
+                */
+            networkDisconnectedTimestamp: number | null;
+            /**
+                * Holds network reconnection timestamp
+                * @private
+                */
+            networkReconnectionTimestamp: number | null;
+            /**
+                * Holds current network information
+                * @private
+                */
+            currentNetworkInfo: {
+                    networkType: string;
+                    ip: string;
+            };
+            /**
+                * Determines whether any audio device got toggled during current session
+                * @private
+                */
+            deviceToggledInCurrentSession: boolean;
+            /**
+                * Determines whether network got changed during current session
+                * @private
+                */
+            networkChangeInCurrentSession: boolean;
+            /**
+                * Holds a boolean to get initial network info
+                * @private
+                */
+            didFetchInitialNetworkInfo: boolean;
+            /**
                 * Get current version of the SDK
                 */
             version: string;
@@ -454,6 +498,9 @@ declare module 'plivo-browser-sdk/client' {
 declare module 'plivo-browser-sdk/logger' {
     export type AvailableLogMethods = 'INFO' | 'DEBUG' | 'WARN' | 'ERROR' | 'ALL' | 'OFF' | 'ALL-PLAIN';
     export type AvailableFlagValues = 'ALL' | 'NONE' | 'REMOTEONLY' | 'LOCALONLY';
+    export interface DtmfOptions {
+            sendDtmfType: string[];
+    }
     interface LoggerOptions {
             enableDate?: boolean;
             loggingName?: 'PlivoSDK';
@@ -741,6 +788,11 @@ declare module 'plivo-browser-sdk/stats/ws' {
                 */
             ws: null | WebSocket;
             /**
+                * Holds a bollean which determines whether the socket is trying for a connection
+                * @private
+                */
+            isConnecting: boolean;
+            /**
                 * Stores the messages in buffer if websocket is unable to send message
                 * @private
                 */
@@ -758,26 +810,26 @@ declare module 'plivo-browser-sdk/stats/ws' {
             /**
                 * Create a web socket for stats and add event listeners.
                 */
-            connect(): void;
+            connect: () => void;
             /**
                 * Close the web socket.
                 */
-            disconnect(): void;
+            disconnect: () => void;
             /**
                 * Check if web socket is open or not.
                 */
-            isConnected(): boolean;
+            isConnected: () => boolean;
             /**
                 * Send messages to the socket.
                 * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
                 */
-            send(message: {
+            send: (message: {
                     [key: string]: any;
-            }, client: Client): boolean;
+            }, client: Client) => boolean;
             /**
                 * Reconnect to the socket
                 */
-            reconnect(): void;
+            reconnect: () => void;
     }
 }
 
@@ -858,10 +910,10 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Return if the app consuming Browser SDK is electron app or not.
         */
     export const isElectronApp: () => boolean;
-    /** 
+    /**
         * Get input and output audio device information to send to plivo stats.
         * @returns Fulfills with audio device information or reject with error
-    */
+        */
     export const getAudioDevicesInfo: () => Promise<DeviceAudioInfo>;
     /**
         * Updating the default input & output device
@@ -917,6 +969,8 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             packetsSent?: number;
             googJitterReceived?: number;
             googRtt?: number;
+            googEchoCancellationReturnLossEnhancement?: number;
+            googEchoCancellationReturnLoss?: number;
     }
     export interface StatsRemoteStream {
             ssrc?: number;
@@ -930,6 +984,9 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             audioOutputLevel?: number;
             googJitterReceived?: number;
             googRtt?: number;
+            jitterBufferDelay?: number;
+            googJitterBufferMs?: number;
+            packetsDiscarded?: number;
     }
     export interface StatsObject {
             msg: string;
@@ -949,6 +1006,8 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             networkEffectiveType: string;
             networkDownlinkSpeed: number;
             statsIOUsed: boolean;
+            pdd?: number;
+            mediaSetupTime?: number;
     }
     interface RtpStatsStream {
             codec: string;
@@ -961,7 +1020,7 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
         * Get RTP stats for chrome browser.
         * @param {RtpStatsStream} stream - holds local and remote stat details
         */
-    export const handleChromeStats: (stream: RtpStatsStream) => void;
+    export const handleChromeStats: (stream: RtpStatsStream) => Promise<void>;
     /**
         * Get RTP stats for firefox and safari browsers.
         * @param {RtpStatsStream} stream - holds local and remote stat details
@@ -1149,6 +1208,8 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             signalling?: any;
             mediaConnection?: any;
             audioDeviceInfo?: DeviceAudioInfo;
+            isAudioDeviceToggled?: boolean;
+            isNetworkChanged?: boolean;
     }
     /**
         * Add call related information to call answered/summary stat.
