@@ -165,7 +165,7 @@ const onSending = (): void => {
     };
     outboundConnection.onconnectionstatechange = () => {
       if (outboundConnection.connectionState === "connected") {
-        cs.timeTakenForStats.dtls.end = new Date().getTime();
+        cs.timeTakenForStats.mediaSetup.end = new Date().getTime();
       }
     };
   }

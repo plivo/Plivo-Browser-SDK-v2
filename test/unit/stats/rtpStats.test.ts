@@ -15,15 +15,11 @@ describe('RTPStats', () => {
                     browser: ''
                 },
                 timeTakenForStats: {
-                  dtls:{
+                  mediaSetup:{
                     init: 0,
                     end: 0
                   },
                   pdd:{
-                    init: 0,
-                    end: 0
-                  },
-                  iceConnection:{
                     init: 0,
                     end: 0
                   },

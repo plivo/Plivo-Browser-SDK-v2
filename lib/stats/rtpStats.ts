@@ -418,13 +418,10 @@ const sendStats = function (statMsg: StatsObject): void {
  * calculate media setup time
  * @param {Client} client
  */
-const calculateMediaSetupTime = (client: Client): number => {
-  const iceConnectionTime = client.timeTakenForStats.iceConnection
-    ? client.timeTakenForStats.iceConnection.end! - client.timeTakenForStats.iceConnection.init : 0;
-  const dtlsTime = client.timeTakenForStats.dtls
-    ? client.timeTakenForStats.dtls.end! - client.timeTakenForStats.dtls.init : 0;
-  return iceConnectionTime + dtlsTime;
-};
+const calculateMediaSetupTime = (
+  client: Client,
+): number => (client.timeTakenForStats.mediaSetup
+  ? client.timeTakenForStats.mediaSetup.end! - client.timeTakenForStats.mediaSetup.init : 0);
 
 /**
  * Prepare and send CALL_STATS event to Plivo stats.
