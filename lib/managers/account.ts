@@ -50,6 +50,11 @@ class Account {
   };
 
   /**
+   * Hold the value of number of retry counts done
+   */
+  private fetchIpCount: number;
+
+  /**
    * Validate the account credentials and session.
    */
   public validate = (): boolean => this._validate();
@@ -86,6 +91,7 @@ class Account {
     // for qa purpose
     this.reinviteCounter = 0;
     this.isPlivoSocketConnected = false;
+    this.fetchIpCount = 0;
   }
 
   private _validate = (): boolean => {
@@ -191,6 +197,21 @@ class Account {
     }
   };
 
+  private tiggerNetworkChangeEvent = async () => {
+    this.fetchIpCount += 1;
+    const ipAddress = await fetchIPAddress(this.cs);
+    if (typeof ipAddress === "string") {
+      sendNetworkChangeEvent(this.cs, ipAddress);
+    } else if (this.fetchIpCount !== C.IP_ADDRESS_FETCH_RETRY_COUNT) {
+      setTimeout(() => {
+        this.tiggerNetworkChangeEvent();
+      }, this.fetchIpCount * 200);
+    } else {
+      Plivo.log.warn('Could not retreive ipaddress');
+      this.fetchIpCount = 0;
+    }
+  };
+
   private _createListeners = (): void => {
     if (this.cs.phone) {
       this.cs.phone.on('connected', this._onConnected);
@@ -211,12 +232,22 @@ class Account {
         messageCheckTimeout: this.cs._currentSession
           ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
       });
+      if (!this.cs._currentSession) return;
+
+      // create stats socket and trigger and trigger network change event
+      // when user is in in-call state
       if (this.cs.statsSocket) {
         this.cs.statsSocket.disconnect();
         this.cs.statsSocket = null;
       }
       this.cs.statsSocket = new StatsSocket();
       this.cs.statsSocket.connect();
+      this.cs.networkReconnectionTimestamp = new Date().getTime();
+      this.tiggerNetworkChangeEvent();
+    });
+    window.addEventListener('offline', () => {
+      if (!this.cs._currentSession) return;
+      this.cs.networkDisconnectedTimestamp = new Date().getTime();
     });
   };
 
@@ -232,31 +263,24 @@ class Account {
         state: 'connected',
       };
       this.cs.emit('onConnectionChange', eventData);
-    }
-
-    const triggerNetworkChange = (ip) => {
-      if (this.cs.browserDetails.browser !== 'chrome' && this.cs.browserDetails.browser !== 'edge') {
-        if (ip !== this.cs.currentNetworkInfo!.ip) {
-          this.cs.userName = this.credentials.userName;
-          sendNetworkChangeEvent(this.cs, ip);
-          this.cs.networkChangeInCurrentSession = true;
-        }
-      } else if (this.cs.isNetworkChanged) {
-        this.cs.userName = this.credentials.userName;
-        // for chrome and edge
-        sendNetworkChangeEvent(this.cs, ip);
-        this.cs.networkChangeInCurrentSession = true;
-        this.cs.isNetworkChanged = false;
+      if (!this.cs.didFetchInitialNetworkInfo) {
+        fetchIPAddress(this.cs).then((ip) => {
+          this.cs.currentNetworkInfo = {
+            networkType: (navigator as any).connection
+              ? (navigator as any).connection.effectiveType
+              : 'unknown',
+            ip: typeof ip === "string" ? ip : '',
+          };
+        }).catch(() => {
+          this.cs.currentNetworkInfo = {
+            networkType: (navigator as any).connection
+              ? (navigator as any).connection.effectiveType
+              : 'unknown',
+            ip: "",
+          };
+        });
+        this.cs.didFetchInitialNetworkInfo = true;
       }
-    };
-
-    if (this.cs._currentSession) {
-      // trigger network change event
-      fetchIPAddress(this.cs).then((ip) => {
-        triggerNetworkChange(ip);
-      }).catch(() => {
-        triggerNetworkChange("");
-      });
     }
   };
 
@@ -287,10 +311,6 @@ class Account {
       }
       this.cs.emit('onConnectionChange', eventData);
       this.isPlivoSocketConnected = false;
-    }
-
-    if (this.cs.browserDetails.browser !== "chrome" && this.cs.browserDetails.browser !== "edge" && !this.cs._currentSession) {
-      this.cs.networkDisconnectedTimestamp = new Date().getTime();
     }
 
     if (!(evt as any).ignoreReconnection) {
