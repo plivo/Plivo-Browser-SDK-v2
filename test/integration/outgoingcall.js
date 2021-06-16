@@ -213,7 +213,7 @@ describe("plivoWebSdk", function () {
       }
 
       Client1.call(secondary_user, {});
-      Client2.on("onIncomingCall", (callerName, extraHeaders2, callInfo) => {
+      Client2.on("onIncomingCall", (callerId, extraHeaders2, callInfo, callerName) => {
         spyOnSocket = sinon.spy(Client1.statsSocket, "send");
         Client2.answer(callInfo.callUUID);
         mute();

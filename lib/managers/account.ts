@@ -4,7 +4,7 @@ import * as SipLib from 'plivo-jssip';
 import * as C from '../constants';
 import { Logger } from '../logger';
 import * as pkg from '../../package.json';
-import { CallStatsValidationResponse, validateCallStats } from '../stats/httpRequest';
+import { CallStatsValidationResponse, fetchIPAddress, validateCallStats } from '../stats/httpRequest';
 import { createStatsSocket, initCallStatsIO } from '../stats/setup';
 import {
   createIncomingSession,
@@ -13,7 +13,7 @@ import { createOutgoingSession } from './outgoingCall';
 import { getCurrentTime, addMidAttribute } from './util';
 import { stopAudio } from '../media/document';
 import { Client } from '../client';
-import { startPingPong } from '../utils/networkManager';
+import { sendNetworkChangeEvent, startPingPong } from '../utils/networkManager';
 import { StatsSocket } from '../stats/ws';
 
 const Plivo = { log: Logger };
@@ -48,6 +48,11 @@ class Account {
     userName: string;
     password: string;
   };
+
+  /**
+   * Hold the value of number of retry counts done
+   */
+  private fetchIpCount: number;
 
   /**
    * Validate the account credentials and session.
@@ -86,6 +91,7 @@ class Account {
     // for qa purpose
     this.reinviteCounter = 0;
     this.isPlivoSocketConnected = false;
+    this.fetchIpCount = 0;
   }
 
   private _validate = (): boolean => {
@@ -191,6 +197,21 @@ class Account {
     }
   };
 
+  private tiggerNetworkChangeEvent = async () => {
+    this.fetchIpCount += 1;
+    const ipAddress = await fetchIPAddress(this.cs);
+    if (typeof ipAddress === "string") {
+      sendNetworkChangeEvent(this.cs, ipAddress);
+    } else if (this.fetchIpCount !== C.IP_ADDRESS_FETCH_RETRY_COUNT) {
+      setTimeout(() => {
+        this.tiggerNetworkChangeEvent();
+      }, this.fetchIpCount * 200);
+    } else {
+      Plivo.log.warn('Could not retreive ipaddress');
+      this.fetchIpCount = 0;
+    }
+  };
+
   private _createListeners = (): void => {
     if (this.cs.phone) {
       this.cs.phone.on('connected', this._onConnected);
@@ -211,12 +232,22 @@ class Account {
         messageCheckTimeout: this.cs._currentSession
           ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
       });
+      if (!this.cs._currentSession) return;
+
+      // create stats socket and trigger and trigger network change event
+      // when user is in in-call state
       if (this.cs.statsSocket) {
         this.cs.statsSocket.disconnect();
         this.cs.statsSocket = null;
       }
       this.cs.statsSocket = new StatsSocket();
       this.cs.statsSocket.connect();
+      this.cs.networkReconnectionTimestamp = new Date().getTime();
+      this.tiggerNetworkChangeEvent();
+    });
+    window.addEventListener('offline', () => {
+      if (!this.cs._currentSession) return;
+      this.cs.networkDisconnectedTimestamp = new Date().getTime();
     });
   };
 
@@ -232,6 +263,24 @@ class Account {
         state: 'connected',
       };
       this.cs.emit('onConnectionChange', eventData);
+      if (!this.cs.didFetchInitialNetworkInfo) {
+        fetchIPAddress(this.cs).then((ip) => {
+          this.cs.currentNetworkInfo = {
+            networkType: (navigator as any).connection
+              ? (navigator as any).connection.effectiveType
+              : 'unknown',
+            ip: typeof ip === "string" ? ip : '',
+          };
+        }).catch(() => {
+          this.cs.currentNetworkInfo = {
+            networkType: (navigator as any).connection
+              ? (navigator as any).connection.effectiveType
+              : 'unknown',
+            ip: "",
+          };
+        });
+        this.cs.didFetchInitialNetworkInfo = true;
+      }
     }
   };
 
@@ -263,6 +312,7 @@ class Account {
       this.cs.emit('onConnectionChange', eventData);
       this.isPlivoSocketConnected = false;
     }
+
     if (!(evt as any).ignoreReconnection) {
       urlIndex += 1;
       const sipConfig = this.setupUAConfig();
@@ -376,6 +426,8 @@ class Account {
     } else {
       createOutgoingSession(evt);
     }
+    this.cs.timeTakenForStats.mediaSetup = {} as any;
+    this.cs.timeTakenForStats.mediaSetup.init = new Date().getTime();
   };
 
   /**

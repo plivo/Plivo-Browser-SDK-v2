@@ -103,6 +103,8 @@ const onProgress = (incomingCall: CallSession) => (): void => {
   incomingCall.setPostDialDelayEndTime(getCurrentTime());
   Plivo.log.debug('call ringing with 180 code, incoming call in progress');
   const callerUri = incomingCall.session.remote_identity.uri.toString();
+  // Fetch the caller name
+  const callerName = incomingCall.session.remote_identity.display_name;
   // if already on an incomingCall then do not play the ringtone
   if (cs.ringToneFlag !== false && !cs._currentSession) {
     Plivo.log.debug('ringtone enabled : ', cs.ringToneFlag);
@@ -113,15 +115,16 @@ const onProgress = (incomingCall: CallSession) => (): void => {
     }
     isIncomingCallRinging = true;
   }
-  const callerName = `${callerUri.substring(
+  const callerId = `${callerUri.substring(
     4,
     callerUri.indexOf('@'),
   )}@${DOMAIN}`;
   cs.emit(
     'onIncomingCall',
-    callerName,
+    callerId,
     incomingCall.extraHeaders,
     incomingCall.getCallInfo(),
+    callerName,
   );
   addCloseProtectionListeners.call(cs);
   Plivo.log.debug('Incoming Call Extra Headers : ', incomingCall.extraHeaders);
@@ -161,6 +164,11 @@ const onAccepted = (incomingCall: CallSession) => (): void => {
     inboundConnection.oniceconnectionstatechange = () => onIceConnectionChange.call(
       cs, inboundConnection, incomingCall,
     );
+    inboundConnection.onconnectionstatechange = () => {
+      if (inboundConnection.connectionState === "connected") {
+        cs.timeTakenForStats.mediaSetup.end = new Date().getTime();
+      }
+    };
   }
 };
 
