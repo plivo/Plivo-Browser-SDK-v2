@@ -647,25 +647,47 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
  */
 export const updateWindowDeviceList = function (deviceList) : void {
   const groupIdDeviceId = {};
+  const labelIdDeviceId = {}
+  console.log(deviceList);
+  let outputDeviceLabels : any [] = [];
+  let defaultInputDeviceLabel = "";
   deviceList.forEach((device) => {
     if (device.kind === 'audioinput' && device.deviceId === 'default') {
       defaultInputGroupId = device.groupId;
+      let tempList = device.label.split('Default -');
+      if (tempList) defaultInputDeviceLabel = tempList[1].replace(/^\s+|\s+$/g,'') 
+
     }
     if (device.kind === 'audiooutput') {
+      outputDeviceLabels.push(device.label);
       if (device.deviceId === 'default') {
         defaultOutputGroupId = device.groupId;
       }
       groupIdDeviceId[device.groupId] = device.deviceId;
+      labelIdDeviceId[device.label] = device.deviceId;
     }
   });
+  console.log("input group id : output group id");
+  console.log(defaultInputGroupId,defaultOutputGroupId,setDevice);
   if (defaultInputGroupId !== defaultOutputGroupId && setDevice) {
     settingFromWindows = true;
+    console.log("printing dictionary");
+    console.log(groupIdDeviceId);
     if (groupIdDeviceId[defaultInputGroupId]) {
       clientObject?.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
       setByWindows = true;
       Plivo.log.debug(`Updated the windows audio device with id ${groupIdDeviceId[defaultInputGroupId]}`);
+      console.log(`Updated the windows audio device with id ${groupIdDeviceId[defaultInputGroupId]}`);
+    } else if (outputDeviceLabels.includes(defaultInputDeviceLabel)) {
+      if (labelIdDeviceId[defaultInputDeviceLabel]) {
+        clientObject?.audio.speakerDevices.set(labelIdDeviceId[defaultInputDeviceLabel]);
+        setByWindows = true;
+        Plivo.log.debug(`Updated the windows audio device with id based on label ${labelIdDeviceId[defaultInputDeviceLabel]}`);
+        console.log(`Updated the windows audio device with id based on label ${labelIdDeviceId[defaultInputDeviceLabel]}`);
+      }
     }
   }
+
 };
 
 /**
@@ -673,7 +695,9 @@ export const updateWindowDeviceList = function (deviceList) : void {
  */
 export const setAudioDeviceForForWindows = function (devices,
   lastConnectedMicDevice, lastConnectedSpeakerDevice) : void {
-  if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || setByWindows)) {
+    console.log("inside setAudioDeviceForForWindows")
+    console.log(lastConnectedMicDevice,lastConnectedSpeakerDevice,settingFromWindows)
+  if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || settingFromWindows)) {
     availableAudioDevices = devices;
     updateWindowDeviceList(devices);
   }
@@ -784,8 +808,13 @@ export const checkAudioDevChange = function (): void {
                 } else if (isFirefox) {
                   replaceAudioTrackForFireFox(device.deviceId, client, 'added');
                 }
+                console.log("Setting timeout");
+                console.log(isWindows);
                 if (isWindows) {
-                  if (clientObject) clientObject.audio.microphoneDevices.set('default');
+                  console.log("Setting to default mic");
+                  setTimeout(() => {
+                    if (clientObject) clientObject.audio.microphoneDevices.set('default');
+                  }, 100);
                 }
               }
               if (clientObject && !isWindows) clientObject.audio.speakerDevices.set('default');
@@ -847,10 +876,12 @@ export const checkAudioDevChange = function (): void {
       // This is called only when a new device is added
       // In case of device removal, i/o device get set to default
       if (isWindows) {
+        console.log(newAddedDevice, isRemoved);
         if (newAddedDevice && newAddedDevice !== "") {
           if (!isRemoved) {
             isRemoved = true;
-            Plivo.log.debug("Trying to set device for windows system");
+            console.log("Trying to set device for windows system");
+            settingFromWindows = true;
             setAudioDeviceForForWindows(
               deviceList, newLastConnectedMicDevice, newLastActiveSpeakerDevice,
             );
