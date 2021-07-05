@@ -18,7 +18,9 @@ import {
 } from '../stats/nonRTPStats';
 import { emitMetrics as _emitMetrics } from '../stats/mediaMetrics';
 import { GetRTPStats } from '../stats/rtpStats';
-import { getAudioDevicesInfo } from '../media/audioDevice';
+import {
+  getAudioDevicesInfo, isElectronApp,
+} from '../media/audioDevice';
 import { Logger } from '../logger';
 import { Client } from '../client';
 import { CallSession } from './callSession';
@@ -425,7 +427,7 @@ const removeCloseProtectionListeners = function (): void {
  */
 const stopLocalStream = function (): void {
   if ((window as any).localStream) {
-    if (getBrowserDetails().browser === 'chrome' || this.permOnClick) {
+    if (getBrowserDetails().browser === 'chrome' || this.permOnClick || isElectronApp()) {
       try {
         (window as any).localStream.getTracks().forEach((track: MediaStreamTrack) => {
           track.stop();

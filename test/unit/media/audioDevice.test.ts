@@ -256,6 +256,14 @@ describe('AudioDevice', () => {
     const muteSpy = jest.spyOn(mediaStream, 'getAudioTracks');
     AudioDevice.mute.call(context);
     expect(muteSpy).toHaveBeenCalledTimes(1);
+    muteSpy.mockRestore();
+  });
+
+  it('should unmute through local stream', () => {
+    const unmuteSpy = jest.spyOn(mediaStream, 'getAudioTracks');
+    AudioDevice.unmute.call(context);
+    expect(unmuteSpy).toHaveBeenCalledTimes(1);
+    unmuteSpy.mockRestore();
   });
 
   it('should mute through session', () => {
@@ -265,12 +273,6 @@ describe('AudioDevice', () => {
     AudioDevice.mute.call(context);
     expect(muteSpy).toHaveBeenCalledTimes(1);
     audioFlagfn.mockRestore();
-  });
-
-  it('should unmute through local stream', () => {
-    const unmuteSpy = jest.spyOn(mediaStream, 'getAudioTracks');
-    AudioDevice.unmute.call(context);
-    expect(unmuteSpy).toHaveBeenCalledTimes(1);
   });
 
   it('should unmute through session', () => {
