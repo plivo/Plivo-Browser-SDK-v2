@@ -275,6 +275,7 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
       // onended event called after DTMF play tone is finished playing, unmute called
       if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') {
         audioElement.onended = (() => {
+          onEndedCalled = true;
           if (clientObj) unmute.call(clientObj);
         });
       } else if (elementId.includes('dtmf')) {

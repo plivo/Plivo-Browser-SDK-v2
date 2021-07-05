@@ -907,7 +907,6 @@ export class Client extends EventEmitter {
           this._currentSession.session.sendDTMF(digit);
           Plivo.log.info(`sent outband dtmf`);
         }
-        this._currentSession.session.sendDTMF(digit);
         if (digit === '*') {
           return documentUtil.playAudio('dtmfstar', this);
         }
