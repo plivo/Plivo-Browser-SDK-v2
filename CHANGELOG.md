@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## v2.2.4 (released@ 05-07-2021)
+**Bug Fixes**
+
+* Fixed: Issue with audio input/output device toggle on Windows platform.
+* Fixed: Issue where non-default behavior was not maintained when Bluetooth was added over Headphones in Electron.
+
+**Features**
+* Added: Attribute called ‘callerName’ to the onIncoming call event. This attribute contains the name of the caller (if set by the initiator of the call) and can be displayed on the user interface.
+* Added: Ability to identify custom modifications to the officially released SDK versions.
+* Added: Capture audio input/output device toggle events during an active call
+* Added: Ability to select between Inband and Outband DTMF during initialization. For more information, refer to the Configuration Parameters section in the detailed reference.
+
 ## v2.2.3 (released@ 05-04-2021)
 **Bug Fixes**
 
