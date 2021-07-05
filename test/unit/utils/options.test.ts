@@ -1,3 +1,5 @@
+import { C } from 'plivo-jssip';
+import { Logger } from '../../../lib/logger';
 import validateOptions from '../../../lib/utils/options';
 
 describe('ValidateOptions', () => {
@@ -22,6 +24,9 @@ describe('ValidateOptions', () => {
       allowMultipleIncomingCalls: false,
       closeProtection: false,
       maxAverageBitrate: 48000,
+      dtmfOptions: {
+        sendDtmfType: ['INBAND','OUTBAND']
+      }
     };
   });
 
@@ -93,6 +98,71 @@ describe('ValidateOptions', () => {
 
   it('should validate undefined options', () => {
     expect(validateOptions(undefined as any)).toStrictEqual(options);
+  });
+
+  it('should pass valid DTMF option', () => {
+    const inpOpts = { ...options };
+    inpOpts.dtmfOptions = {sendDtmfType:["INBAND","OUTBAND"]};
+    expect(validateOptions(inpOpts)).toStrictEqual(inpOpts);
+  });
+
+  it('should validate invalid DTMF option', () => {
+    const inputOptions = { ...options };
+    inputOptions.dtmfOptions = {sendDtmfType:["random","randomagain"]};
+    expect(validateOptions(inputOptions)).toStrictEqual(options);
+  });
+
+  it('should validate invalid DTMF option', () => {
+    const inputOptions = { ...options };
+    inputOptions.dtmfOptions = {sendDtm:["inband","outband"]};
+    expect(validateOptions(inputOptions)).toStrictEqual(options);
+  });
+
+  it('should validate semi-invalid DTMF option', () => {
+    const inputOptions = { ...options };
+    inputOptions.dtmfOptions = {sendDtmfType:["inband","sfhjsdf"]};
+    const inputOptionsVerify = { ...options };
+    inputOptionsVerify.dtmfOptions = {sendDtmfType:["INBAND"]};
+    expect(validateOptions(inputOptions)).toStrictEqual(inputOptionsVerify);
+  });
+
+  it('should validate semi-invalid DTMF option', () => {
+    const inputOptions = { ...options };
+    inputOptions.dtmfOptions = {sendDtmfType:["gibberish","outband"]};
+    const inputOptionsVerify = { ...options };
+    inputOptionsVerify.dtmfOptions = {sendDtmfType:["OUTBAND"]};
+    console.log(inputOptions);
+    console.log(validateOptions(inputOptions));
+    expect(validateOptions(inputOptions)).toStrictEqual(inputOptionsVerify);
+  });
+
+  it('should validate DTMF option', () => {
+    const inputOptions = { ...options };
+    inputOptions.dtmfOptions = {sendDtmfType:["outband"]};
+    const inputOptionsVerify = { ...options };
+    inputOptionsVerify.dtmfOptions = {sendDtmfType:["OUTBAND"]};
+    expect(validateOptions(inputOptions)).toStrictEqual(inputOptionsVerify);
+  });
+
+  it('should validate DTMF option', () => {
+    const inputOptions = { ...options };
+    inputOptions.dtmfOptions = {sendDtmfType:["inBaNd"]};
+    const inputOptionsVerify = { ...options };
+    inputOptionsVerify.dtmfOptions = {sendDtmfType:["INBAND"]};
+    expect(validateOptions(inputOptions)).toStrictEqual(inputOptionsVerify);
+  });
+
+  it('should validate invalid DTMF option', () => {
+    const inputOptions = { ...options };
+    inputOptions.dtmfOptions = {sendDtmfType:["fkgkkfgk"]};
+    expect(validateOptions(inputOptions)).toStrictEqual(options);
+  });
+
+
+  it('should validate invalid DTMF option', () => {
+    const inputOptions = { ...options };
+    inputOptions.dtmfOptions = undefined;
+    expect(validateOptions(inputOptions)).toStrictEqual(options);
   });
 
   it('should pass valid client region', () => {
