@@ -12,10 +12,8 @@ import {
   SILENT_TONE_URL,
   DTMF_TONE_PLAY_RETRY_ATTEMPTS,
 } from '../constants';
-import { DtmfOptions, Logger } from '../logger';
-import {
-  audioDevDictionary, availableDevices, mute, unmute,
-} from './audioDevice';
+import { Logger } from '../logger';
+import { audioDevDictionary, availableDevices } from './audioDevice';
 import { Client, ConfiguationOptions, PlivoObject } from '../client';
 
 interface AudioEvent {
@@ -57,7 +55,7 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
             let defaultInputGroupId;
             let defaultOutputGroupId;
             const temp = devices;
-            const groupIdDeviceId = {};
+            let groupIdDeviceId = {};
             temp.forEach((e) => {
               if (e.kind === 'audioinput' && e.deviceId === 'default') {
                 defaultInputGroupId = e.groupId;
@@ -215,50 +213,18 @@ export const setup = function (clientObject: Client, options: ConfiguationOption
 };
 
 /**
- * Parse the DTMFOptions and return the option, inband, outband or default
- * @param {String[]} dtmfOptions - list of dtmf options
- */
-
-export const getDTMFOption = function (dtmfOptions?: DtmfOptions): string {
-  let dtmfOptionsLocal: string[];
-  if (dtmfOptions && 'sendDtmfType' in dtmfOptions) {
-    dtmfOptionsLocal = dtmfOptions.sendDtmfType;
-  } else {
-    return "DEFAULT";
-  }
-  dtmfOptionsLocal = dtmfOptionsLocal.map((x) => x.toUpperCase());
-  if ((dtmfOptionsLocal.indexOf('INBAND') !== -1) && (dtmfOptionsLocal.indexOf('OUTBAND') === -1)) {
-    return "INBAND";
-  } if ((dtmfOptionsLocal.indexOf('INBAND') === -1) && (dtmfOptionsLocal.indexOf('OUTBAND') !== -1)) {
-    return "OUTBAND";
-  }
-  return "DEFAULT";
-};
-
-/**
  * Plays HTML audio elements based on element id.
  * @param {String} elementId - audio element id
  */
-export const playAudio = function (elementId: string, clientObj?: Client): void {
+export const playAudio = function (elementId: string): void {
   try {
     let onEndedCalled = false;
     const retryCounts = DTMF_TONE_PLAY_RETRY_ATTEMPTS;
     const audioElement = document.getElementById(elementId) as HTMLAudioElement;
     // Unmute audio for playing audio during call
     audioElement.muted = false;
-
-    let dtmfOption:string = "";
-    if (elementId.includes('dtmf')) {
-      dtmfOption = getDTMFOption(clientObj?.options.dtmfOptions);
-      Logger.debug(`DTMF Options :  ${dtmfOption}`);
-    }
-    // mute called before DTMF tone play
-    if (elementId.includes('dtmf') && clientObj && dtmfOption.toUpperCase() === 'OUTBAND') {
-      mute.call(clientObj);
-    }
-
     audioElement.currentTime = 0;
-
+    
     // function to check if the "onended" emitter got called or not. Keeps retrying
     const checkForDTMFTOne = function (retryCount: number) : void {
       if (retryCount <= 0 && !onEndedCalled) {
@@ -286,6 +252,7 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
     });
 
     if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') checkForDTMFTOne(retryCounts);
+
     // Avoids unhandled promise rejection while playing audio
     if (audioPromise !== undefined) {
       audioPromise.catch(() => {}).then(() => {});
