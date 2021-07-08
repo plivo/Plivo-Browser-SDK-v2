@@ -30,6 +30,7 @@ import {
   RingToneDevices,
 } from './media/audioDevice';
 import getBrowserDetails from './utils/browserDetection';
+import detectFramework from './utils/frameworkDetection';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -437,6 +438,12 @@ export class Client extends EventEmitter {
   didFetchInitialNetworkInfo: boolean;
 
   /**
+   * Determines which js framework sdk is running with
+   * @private
+   */
+  jsFramework: string[];
+
+  /**
    * Get current version of the SDK
    */
   public version: string;
@@ -680,6 +687,7 @@ export class Client extends EventEmitter {
 
     // store this instance as window object
     window['_PlivoInstance' as any] = this as any;
+    this.jsFramework = detectFramework();
   }
 
   // private methods
