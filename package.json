@@ -8,7 +8,7 @@
   "scripts": {
     "start": "webpack-dev-server --env.development --env.PLIVO_ENV=production",
     "build:es5": "babel lib -d types/lib",
-    "build:ts": "tsc",
+    "build:ts": "./node_modules/typescript/bin/",
     "clean:ts": "rm -rf types",
     "build:webpack": "webpack  --env.production --env.PLIVO_ENV=production",
     "build": "npm-run-all build:webpack clean:ts",
