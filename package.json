@@ -7,7 +7,7 @@
   "types": "index.d.ts",
   "scripts": {
     "start": "webpack-dev-server --env.development --env.PLIVO_ENV=production",
-    "build:es5": "babel lib -d types/lib",
+    "build:es5": "babel lib -d types/lib/tsc",
     "build:ts": "./node_modules/typescript/bin/",
     "clean:ts": "rm -rf types",
     "build:webpack": "webpack  --env.production --env.PLIVO_ENV=production",
