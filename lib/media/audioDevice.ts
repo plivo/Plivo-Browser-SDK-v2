@@ -786,10 +786,7 @@ export const checkAudioDevChange = function (): void {
                   replaceAudioTrackForFireFox(device.deviceId, client, 'added');
                 }
                 if (isWindows) {
-                  Plivo.log.debug("Setting to default mic");
-                  setTimeout(() => {
-                    if (clientObject) clientObject.audio.microphoneDevices.set('default');
-                  }, 100);
+                  if (clientObject) clientObject.audio.microphoneDevices.set('default');
                 }
               }
               if (clientObject && !isWindows) clientObject.audio.speakerDevices.set('default');
