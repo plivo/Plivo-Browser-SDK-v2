@@ -26,6 +26,8 @@ export interface StatsLocalStream {
   packetsSent?: number;
   googJitterReceived?: number;
   googRtt?: number;
+  googEchoCancellationReturnLossEnhancement?: number;
+  googEchoCancellationReturnLoss?: number;
 }
 
 export interface StatsRemoteStream {
@@ -40,6 +42,9 @@ export interface StatsRemoteStream {
   audioOutputLevel?: number;
   googJitterReceived?: number;
   googRtt?: number;
+  jitterBufferDelay?: number;
+  googJitterBufferMs?: number;
+  packetsDiscarded?: number;
 }
 
 export interface StatsObject {
@@ -60,6 +65,8 @@ export interface StatsObject {
   networkEffectiveType: string;
   networkDownlinkSpeed: number;
   statsIOUsed: boolean;
+  pdd?: number;
+  mediaSetupTime?: number;
 }
 
 interface RtpStatsStream {
@@ -408,6 +415,15 @@ const sendStats = function (statMsg: StatsObject): void {
 };
 
 /**
+ * calculate media setup time
+ * @param {Client} client
+ */
+const calculateMediaSetupTime = (
+  client: Client,
+): number => (client.timeTakenForStats.mediaSetup
+  ? client.timeTakenForStats.mediaSetup.end! - client.timeTakenForStats.mediaSetup.init : 0);
+
+/**
  * Prepare and send CALL_STATS event to Plivo stats.
  * @param {RtpStatsStream} stream - holds local and remote stat details
  */
@@ -435,6 +451,11 @@ const processStats = function (stream: RtpStatsStream): void {
       ? (navigator as any).connection.downlink
       : -1,
     statsIOUsed: getStatsRef.statsioused,
+    pdd: getStatsRef.clientScope.timeTakenForStats.pdd
+      ? getStatsRef.clientScope.timeTakenForStats.pdd.end!
+          - getStatsRef.clientScope.timeTakenForStats.pdd.init
+      : 0,
+    mediaSetupTime: calculateMediaSetupTime(getStatsRef.clientScope),
   };
 
   getStatsRef.collected.local.audioLevel = handleStat(
@@ -449,6 +470,11 @@ const processStats = function (stream: RtpStatsStream): void {
     null,
     true,
   );
+  getStatsRef.collected.remote.jitterBufferDelay = handleStat((stream.remote as any).googCurrentDelayMs, 'int', null, true);
+  getStatsRef.collected.local.googEchoCancellationReturnLoss = handleStat(stream.local.googEchoCancellationReturnLoss!, 'int', null, true);
+  getStatsRef.collected.local.googEchoCancellationReturnLossEnhancement = handleStat(stream.local.googEchoCancellationReturnLossEnhancement!, 'int', null, true);
+  getStatsRef.collected.remote.googJitterBufferMs = handleStat(stream.remote.googJitterBufferMs!, 'int', null, true);
+  getStatsRef.collected.remote.packetsDiscarded = handleStat(stream.remote.packetsDiscarded!, 'int', null, true);
   if (getStatsRef.clientScope.browserDetails.browser === 'chrome') {
     getStatsRef.collected.local.rtt = handleStat(stream.local.googRtt as number, 'float');
     getStatsRef.collected.local.jitter = handleStat(
@@ -499,7 +525,7 @@ const processStats = function (stream: RtpStatsStream): void {
  * Get RTP stats for chrome browser.
  * @param {RtpStatsStream} stream - holds local and remote stat details
  */
-export const handleChromeStats = function (stream: RtpStatsStream): void {
+export const handleChromeStats = async function (stream: RtpStatsStream): Promise<void> {
   (this as any).pc.getStats(
     (res: any) => {
       res.result().forEach((result: any) => {
@@ -524,6 +550,11 @@ export const handleChromeStats = function (stream: RtpStatsStream): void {
             stream.gotNetworkType = true;
           }
           return;
+        }
+        if (result.type === "googCandidatePair") {
+          if (result.stat('packetsDiscardedOnSend')) {
+            stream.remote.packetsDiscarded = result.stat('packetsDiscardedOnSend');
+          }
         }
         if (result.type !== 'ssrc') {
           return;

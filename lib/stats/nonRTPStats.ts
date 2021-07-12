@@ -59,6 +59,8 @@ export interface SummaryEvent {
   signalling?: any;
   mediaConnection?: any;
   audioDeviceInfo?: DeviceAudioInfo;
+  isAudioDeviceToggled?: boolean;
+  isNetworkChanged?: boolean;
 }
 
 interface CallInfoEvent {
@@ -240,6 +242,8 @@ export const sendCallSummaryEvent = function (
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
+    isAudioDeviceToggled: client.deviceToggledInCurrentSession,
+    isNetworkChanged: client.networkChangeInCurrentSession,
   };
   if (deviceInfo) {
     summaryEvent.audioDeviceInfo = deviceInfo;
