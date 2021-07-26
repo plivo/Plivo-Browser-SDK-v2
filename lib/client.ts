@@ -19,7 +19,10 @@ import { CallSession } from './managers/callSession';
 import { StatsSocket } from './stats/ws';
 import { validateFeedback, FeedbackObject } from './utils/feedback';
 import {
-  PreSignedUrlRequest, getPreSignedS3URL, uploadConsoleLogsToBucket, PreSignedUrlResponse,
+  PreSignedUrlRequest,
+  getPreSignedS3URL,
+  uploadConsoleLogsToBucket,
+  PreSignedUrlResponse,
 } from './stats/httpRequest';
 import {
   OutputDevices,
@@ -389,6 +392,51 @@ export class Client extends EventEmitter {
   networkChangeInterval: null | ReturnType<typeof setInterval>;
 
   /**
+   * Calculate time taken for different stats
+   * @private
+   */
+  timeTakenForStats: {[key:string]: {init: number, end?: number}};
+
+  /**
+   * Holds network disconnected timestamp
+   * @private
+   */
+  networkDisconnectedTimestamp: number | null;
+
+  /**
+   * Holds network reconnection timestamp
+   * @private
+   */
+  networkReconnectionTimestamp: number | null;
+
+  /**
+   * Holds current network information
+   * @private
+   */
+  currentNetworkInfo: {
+    networkType: string;
+    ip: string;
+  };
+
+  /**
+   * Determines whether any audio device got toggled during current session
+   * @private
+   */
+  deviceToggledInCurrentSession: boolean;
+
+  /**
+   * Determines whether network got changed during current session
+   * @private
+   */
+  networkChangeInCurrentSession: boolean;
+
+  /**
+   * Holds a boolean to get initial network info
+   * @private
+   */
+  didFetchInitialNetworkInfo: boolean;
+
+  /**
    * Get current version of the SDK
    */
   public version: string;
@@ -608,6 +656,12 @@ export class Client extends EventEmitter {
     this.owaLastDetect = { time: 0 as any, isOneWay: true };
     this.owaDetectTime = 3600000;
     this.statsSocket = null;
+    this.timeTakenForStats = {};
+    this.networkDisconnectedTimestamp = null;
+    this.networkReconnectionTimestamp = null;
+    this.deviceToggledInCurrentSession = false;
+    this.networkChangeInCurrentSession = false;
+    this.didFetchInitialNetworkInfo = false;
 
     audioUtil.setAudioContraints(this);
     documentUtil.setup(this, this.options);
@@ -674,6 +728,9 @@ export class Client extends EventEmitter {
   };
 
   private _call = (phoneNumber: string, extraHeaders: ExtraHeaders): boolean => {
+    this.timeTakenForStats.pdd = {
+      init: new Date().getTime(),
+    };
     Plivo.log.info('<----- OUTGOING ----->');
     Plivo.log.info(`Outgoing call initialized to : ${phoneNumber}`);
     if (!this.isLoggedIn) {
