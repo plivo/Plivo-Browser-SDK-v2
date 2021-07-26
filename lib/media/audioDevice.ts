@@ -777,6 +777,7 @@ export const checkAudioDevChange = function (): void {
           getAudioDevicesInfo.call(client).then((toggledDeviceInfo: DeviceAudioInfo) => {
             const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
             sendEvents.call(client, obj, client._currentSession);
+            client.deviceToggledInCurrentSession = true;
           });
         }
         // Check if device is newly added with devices

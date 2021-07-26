@@ -170,5 +170,4 @@ describe('ValidateOptions', () => {
     inputOptions.clientRegion = 'asia';
     expect(validateOptions(inputOptions)).toStrictEqual(inputOptions);
   });
-
 });
