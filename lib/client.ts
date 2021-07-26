@@ -687,6 +687,7 @@ export class Client extends EventEmitter {
 
     // store this instance as window object
     window['_PlivoInstance' as any] = this as any;
+
     this.jsFramework = detectFramework();
   }
 

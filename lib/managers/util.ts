@@ -70,6 +70,7 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
     isAudioDeviceToggled: client.deviceToggledInCurrentSession,
     isNetworkChanged: client.networkChangeInCurrentSession,
     jsFramework: client.jsFramework,
+
   };
   if (client._currentSession) {
     summaryEvent.signalling = client._currentSession.signallingInfo;

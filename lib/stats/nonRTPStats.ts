@@ -62,6 +62,7 @@ export interface SummaryEvent {
   isAudioDeviceToggled?: boolean;
   isNetworkChanged?: boolean;
   jsFramework: string[];
+
 }
 
 interface CallInfoEvent {

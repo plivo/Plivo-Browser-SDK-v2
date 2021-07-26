@@ -15,6 +15,7 @@ describe("GetBrowserDetails", () => {
   
   it("should be angular and jquery", () => {
     window["jQuery"] = {};
+
     expect(detectFramework()).toStrictEqual(["Angular.js", "jQuery.js"]);
   });
 });

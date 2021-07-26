@@ -20,6 +20,7 @@ const detectFramework = () => {
   if ((window as any).Vue) result.push("Vue.js");
   if ((window as any).Meteor) result.push("Meteor.js");
   if ((window as any).Zepto) result.push("Zepto.js");
+
   if ((window as any).jQuery) result.push("jQuery.js");
 
   return result;
