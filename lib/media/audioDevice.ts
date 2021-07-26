@@ -788,7 +788,10 @@ export const checkAudioDevChange = function (): void {
                 if (isWindows) {
                   Plivo.log.debug("Setting to default mic");
                   setTimeout(() => {
-                    if (clientObject) clientObject.audio.microphoneDevices.set('default');
+                    Plivo.log.debug("Setting to default mic");
+                    setTimeout(() => {
+                      if (clientObject) clientObject.audio.microphoneDevices.set('default');
+                    }, 100);
                   }, 100);
                 }
               }
