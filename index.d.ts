@@ -367,6 +367,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             didFetchInitialNetworkInfo: boolean;
             /**
+                * Determines which js framework sdk is running with
+                * @private
+                */
+            jsFramework: string[];
+            /**
                 * Get current version of the SDK
                 */
             version: string;
@@ -1210,6 +1215,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             audioDeviceInfo?: DeviceAudioInfo;
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
+            jsFramework: string[];
     }
     /**
         * Add call related information to call answered/summary stat.
