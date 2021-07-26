@@ -1215,7 +1215,6 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             audioDeviceInfo?: DeviceAudioInfo;
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
-            
             jsFramework: string[];
     }
     /**
