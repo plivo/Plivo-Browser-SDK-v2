@@ -1,7 +1,7 @@
 {
   "name": "plivo-browser-sdk",
   "title": "plivo-browser-sdk",
-  "version": "2.2.4",
+  "version": "2.2.5-beta.0",
   "description": "This library allows you to connect with plivo's voice enviroment from browser",
   "main": "./dist/plivobrowsersdk.js",
   "types": "index.d.ts",
