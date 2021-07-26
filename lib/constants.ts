@@ -20,7 +20,6 @@ export const AUDIO_CONSTRAINTS = {
 export const DEFAULT_DTMFOPTIONS = {
   sendDtmfType: ['INBAND', 'OUTBAND'],
 };
-
 // webrtc settings
 export const NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED = 50;
 export const REGISTER_EXPIRES_SECONDS = 120;

@@ -246,7 +246,6 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
     const audioElement = document.getElementById(elementId) as HTMLAudioElement;
     // Unmute audio for playing audio during call
     audioElement.muted = false;
-
     let dtmfOption:string = "";
     if (elementId.includes('dtmf')) {
       dtmfOption = getDTMFOption(clientObj?.options.dtmfOptions);
@@ -256,7 +255,6 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
     if (elementId.includes('dtmf') && clientObj && dtmfOption.toUpperCase() === 'OUTBAND') {
       mute.call(clientObj);
     }
-
     audioElement.currentTime = 0;
 
     // function to check if the "onended" emitter got called or not. Keeps retrying
