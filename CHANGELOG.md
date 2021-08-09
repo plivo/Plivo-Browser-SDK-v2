@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+
+## v2.2.5 (released@ 09-07-2021)
+**Features**
+
+* Added: New call quality metrics added in Browser SDK:
+  googEchoCancellationReturnLoss
+  googEchoCancellationReturnLossEnhancement
+  googJitterBufferMs.
+* Added: On network change, a new event, ‘CALL_NETWORK’, will now be sent to Call Insights.
+
+
+
 ## v2.2.4 (released@ 05-07-2021)
 **Bug Fixes**
 
