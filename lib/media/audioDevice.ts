@@ -647,55 +647,25 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
  */
 export const updateWindowDeviceList = function (deviceList) : void {
   const groupIdDeviceId = {};
-  const inputGroupIdDeviceId = {};
-  const labelIdDeviceId = {}
-  let outputDeviceLabels : any [] = [];
-  let defaultInputDeviceLabel = "";
   deviceList.forEach((device) => {
     if (device.kind === 'audioinput' && device.deviceId === 'default') {
       defaultInputGroupId = device.groupId;
-      let tempList = device.label.split('Default -');
-      if (tempList) defaultInputDeviceLabel = tempList[1].replace(/^\s+|\s+$/g,'') 
-
-    }
-    if(device.kind === 'audioinput') {
-      inputGroupIdDeviceId[device.groupId] = device.deviceId;
     }
     if (device.kind === 'audiooutput') {
-      outputDeviceLabels.push(device.label);
       if (device.deviceId === 'default') {
         defaultOutputGroupId = device.groupId;
       }
       groupIdDeviceId[device.groupId] = device.deviceId;
-      labelIdDeviceId[device.label] = device.deviceId;
     }
   });
-  
   if (defaultInputGroupId !== defaultOutputGroupId && setDevice) {
     settingFromWindows = true;
     if (groupIdDeviceId[defaultInputGroupId]) {
       clientObject?.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
       setByWindows = true;
       Plivo.log.debug(`Updated the windows audio device with id ${groupIdDeviceId[defaultInputGroupId]}`);
-    } else if (outputDeviceLabels.includes(defaultInputDeviceLabel)) {
-      if (labelIdDeviceId[defaultInputDeviceLabel]) {
-        clientObject?.audio.speakerDevices.set(labelIdDeviceId[defaultInputDeviceLabel]);
-        setByWindows = true;
-        Plivo.log.debug(`Updated the windows audio device with id based on label ${labelIdDeviceId[defaultInputDeviceLabel]}`);
-      }
-    } else {
-      for (let inputGroupId in inputGroupIdDeviceId) {
-        if ( inputGroupId in groupIdDeviceId ) {
-          clientObject?.audio.microphoneDevices.set(inputGroupIdDeviceId[inputGroupId]);
-          clientObject?.audio.speakerDevices.set(groupIdDeviceId[inputGroupId]);
-          setByWindows = true;
-          Plivo.log.debug(`Updated the windows audio device based on matching group ids ${labelIdDeviceId[defaultInputDeviceLabel]}`);
-          break;
-        }
-      }
     }
   }
-
 };
 
 /**
@@ -703,7 +673,7 @@ export const updateWindowDeviceList = function (deviceList) : void {
  */
 export const setAudioDeviceForForWindows = function (devices,
   lastConnectedMicDevice, lastConnectedSpeakerDevice) : void {
-  if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || settingFromWindows)) {
+  if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || setByWindows)) {
     availableAudioDevices = devices;
     updateWindowDeviceList(devices);
   }
@@ -886,7 +856,6 @@ export const checkAudioDevChange = function (): void {
           if (!isRemoved) {
             isRemoved = true;
             Plivo.log.debug("Trying to set device for windows system");
-            settingFromWindows = true;
             setAudioDeviceForForWindows(
               deviceList, newLastConnectedMicDevice, newLastActiveSpeakerDevice,
             );
