@@ -31,6 +31,7 @@ import {
 } from './media/audioDevice';
 import getBrowserDetails from './utils/browserDetection';
 import detectFramework from './utils/frameworkDetection';
+import AccessTokenInterface from './utils/token';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -237,6 +238,53 @@ export class Client extends EventEmitter {
    * @private
    */
   password: null | string;
+
+  /**
+   * Access Token  given when logging in
+   * @private
+   */
+  accessToken: null | string;
+
+  /**
+   * Access Token object given when logging in
+   * @private
+   */
+  accessTokenObject: null | any;
+
+  /**
+   * boolean that tells which type of login method is called
+   * @private
+   */
+  isAccessTokenGenerator : boolean | null;
+
+  /**
+   * boolean that tells if user logged in through access token
+   * @private
+   */
+  isAccessToken : boolean;
+
+  /**
+   * access token expiry
+   * @private
+   */
+  accessTokenExpiryInEpoch: number | null;
+  /**
+   * Access Token  Outgoing Grant
+   * @private
+   */
+  isOutgoingGrant: boolean | null;
+
+  /**
+   * Access Token  Incoming Grant
+   * @private
+   */
+  isIncomingGrant: boolean|null;
+
+  /**
+   * Access Token  abstract class that needs to be implemented
+   * @private
+   */
+  accessTokenInterface: any;
 
   /**
    * Options passed by the user while instantiating the client class
@@ -456,6 +504,18 @@ export class Client extends EventEmitter {
   public login = (username: string, password: string): boolean => this._login(username, password);
 
   /**
+   * Register using user access token.
+   * @param {String} accessToken
+   */
+  public loginWithAccessToken = (accessToken: string): boolean => this._loginWithAccessToken(accessToken);
+
+  /**
+   * Register using user access token.
+   * @param {Any} accessTokenObject
+   */
+  public loginWithAccessTokenGenerator = (accessTokenObject: any): boolean => this._loginWithAccessTokenGenerator(accessTokenObject);
+  
+  /**
    * Unregister and clear stats timer, socket.
    */
   public logout = (): boolean => this._logout();
@@ -621,6 +681,7 @@ export class Client extends EventEmitter {
     // instantiates event emitter
     EventEmitter.call(this);
 
+    this.accessTokenInterface = AccessTokenInterface;
     // Default instance flags
     this.browserDetails = getBrowserDetails();
     this.permOnClick = false;
@@ -691,6 +752,117 @@ export class Client extends EventEmitter {
     this.jsFramework = detectFramework();
   }
 
+  private getUsernameFromToken = (parsedToken: string | any): string => {
+    if (parsedToken['sub']) {
+      return parsedToken['sub'];
+    }
+    const randomTenDigitNumber = Math.floor(Math.random() * 10000000000);
+    return "puser" + randomTenDigitNumber.toString() + "jt";
+  }
+
+  private validateToken = (parsedToken: string | any): boolean => {
+    if (parsedToken == null) {
+      return false;
+    }
+    // To do : Add the token validations
+    return true;
+  }
+
+  private parseJwtToken = (accessToken: string): string | null => {
+    try {
+      let base64Url = accessToken.split('.')[1];
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      let jsonPayload = decodeURIComponent(atob(base64).split('').map (function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  private tokenLogin = (username: string, accessToken: string): boolean => {
+    if (
+      this.phone
+      && this.phone.isRegistered()
+      && this.phone.isConnected()
+      && this.userName === username
+    ) {
+      Plivo.log.warn(
+        `Already registered with the endpoint provided - ${this.userName}`,
+      );
+      return true;
+    }
+
+    const account = new Account(this, username, " ", accessToken);
+    const isValid = account.validate();
+    if (!isValid) return false;
+    account.setupUserAccount();
+    return true;
+  }
+
+  setExpiryTimeInEpoch = (timeInEpoch: number): void => {
+    this.accessTokenExpiryInEpoch = timeInEpoch;
+  };
+  
+  getTokenExpiryTimeInEpoch = (): number | null => {
+    return this.accessTokenExpiryInEpoch;
+  };
+
+  private _loginWithAccessTokenGenerator = (accessTokenObject: any): boolean => {
+    // if Token Object itself is null, return;
+    if (accessTokenObject == null) {
+      Plivo.log.error('Access token object can not be null ');
+      // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
+      this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+      return false;
+    }
+    this.isAccessTokenGenerator = true;
+    this.accessTokenObject = accessTokenObject;
+
+    accessTokenObject.getAccessToken().then(accessToken => {
+      // If accessToken  is null
+      if (accessToken == null) {
+        // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
+        this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+        Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
+        return false;
+      }
+      if (this.getTokenExpiryTimeInEpoch()) {
+        setTimeout(() => {
+          this.loginWithAccessTokenGenerator(accessTokenObject);
+        }, Number(this.getTokenExpiryTimeInEpoch()) - 5);
+      }
+      return this.loginWithAccessToken(accessToken);
+    }).catch(function (err: any) {
+      Plivo.log.error('Failed to fetch the accessToken. Try to re-login with valid accessToken', err);
+      // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
+      this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+      return false;
+    });
+    return true;
+  }
+
+  // private methods
+  private _loginWithAccessToken = (accessToken: string): boolean => {
+    this.isLoginCalled = true;
+    this.accessToken = accessToken;
+    this.isAccessToken = true;
+    let parsedToken = this.parseJwtToken(accessToken);
+    if (parsedToken) {
+      this.isOutgoingGrant = parsedToken['grants']['voice']['outgoing_allow'];
+      this.isIncomingGrant = parsedToken['grants']['voice']['outgoing_allow'];
+    }
+    const isTokenValid = this.validateToken(parsedToken);
+    if (!isTokenValid) {
+      this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+      Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
+      return false;
+    }
+    let username = this.getUsernameFromToken(parsedToken);
+    return this.tokenLogin(username, accessToken);
+  }
+
   // private methods
   private _login = (username: string, password: string): boolean => {
     this.isLoginCalled = true;
@@ -705,7 +877,7 @@ export class Client extends EventEmitter {
       );
       return true;
     }
-    const account = new Account(this, username, password);
+    const account = new Account(this, username, password, null);
     const isValid = account.validate();
     if (!isValid) return false;
     account.setupUserAccount();

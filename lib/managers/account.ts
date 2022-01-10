@@ -50,6 +50,13 @@ class Account {
   };
 
   /**
+   * Access Token Credentials object
+   */
+  private accessTokenCredentials: {
+    accessToken: string | null;
+  };
+
+  /**
    * Hold the value of number of retry counts done
    */
   private fetchIpCount: number;
@@ -84,9 +91,10 @@ class Account {
    * @param {String} password
    * @private
    */
-  constructor(clientObject: Client, userName: string, password: string) {
+  constructor(clientObject: Client, userName: string, password: string, accessToken: string | null) {
     this.cs = clientObject;
     this.credentials = { userName, password };
+    this.accessTokenCredentials = { accessToken };
     this.message = null;
     // for qa purpose
     this.reinviteCounter = 0;
@@ -167,6 +175,7 @@ class Account {
       register_expires: C.REGISTER_EXPIRES_SECONDS,
       uri: `${this.credentials.userName}@${C.DOMAIN}`,
       password: this.credentials.password,
+      token: this.accessTokenCredentials.accessToken,
       googIPv6: false,
       connection_recovery_max_interval: C.WS_RECOVERY_MAX_INTERVAL,
       connection_recovery_min_interval: C.WS_RECOVERY_MIN_INTERVAL,
@@ -325,7 +334,14 @@ class Account {
   /**
    * Triggered when the user is logged in.
    */
-  private _onRegistered = (): void => {
+  private _onRegistered = (res: any): void => {
+    // Parse the response to get the JWT expiry in epoch
+    // below is the example to get basic 120 sec expiry from response
+    // To do : This needs to be changed in case of login through access Token method
+    if (this.cs.isAccessToken) {
+      const expiryTimeInEpoch = Number(res['response']['headers']['Contact'][0]['parsed']['_parameters']['expires']);
+      this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch);
+    }
     if (!this.cs.isLoginCalled) {
       this.cs.isLoggedIn = true;
     }
@@ -343,7 +359,13 @@ class Account {
         messageCheckTimeout: C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
       });
       // get callstats key and create stats socket
-      validateCallStats(this.cs.userName, this.cs.password)
+      let passToken : string | null;
+      if (this.cs.isAccessToken) {
+        passToken = this.cs.accessToken;
+      } else {
+        passToken = this.cs.password;
+      }
+      validateCallStats(this.cs.userName, passToken, this.cs.isAccessToken)
         .then((responsebody: CallStatsValidationResponse) => {
           this.cs.callstatskey = responsebody.data;
           this.cs.rtp_enabled = responsebody.is_rtp_enabled;
