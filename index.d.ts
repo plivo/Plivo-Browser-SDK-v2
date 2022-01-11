@@ -232,6 +232,16 @@ declare module 'plivo-browser-sdk/client' {
                 */
             accessTokenInterface: any;
             /**
+                * Flag to monitor the feedback api that gets called after the token is expired
+                * @private
+                */
+            deferFeedback: null | boolean;
+            /**
+                * Flag that tells if unregister is pending or not
+                * @private
+                */
+            isUnregisterPending: null | boolean;
+            /**
                 * Options passed by the user while instantiating the client class
                 * @private
                 */

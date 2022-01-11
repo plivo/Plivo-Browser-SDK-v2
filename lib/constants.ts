@@ -131,6 +131,7 @@ export const S3BUCKET_API_URL = 'https://stats.plivo.com/v1/browser/bucketurl/';
 export const STATSSOCKET_URL = 'wss://insights.plivo.com/ws';
 export const STATS_API_URL = 'https://stats.plivo.com/v1/browser/validate/';
 export const STATS_API_URL_ACCESS_TOKEN = 'https://stats.plivo.com/v1/browser/validate/jwt/';
+export const S3BUCKET_API_URL_JWT = 'https://stats.plivo.com/v1/browser/bucketurl/jwt/';
 export const STATS_SOURCE = 'BrowserSDK';
 export const STATS_VERSION = 'v1';
 export const GETSTATS_INTERVAL = 5000;

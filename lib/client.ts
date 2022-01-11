@@ -286,6 +286,20 @@ export class Client extends EventEmitter {
    */
   accessTokenInterface: any;
 
+  // To do : Use below two flags to handle the edge case when token gets expired during
+  //  an ongoing call and user needs to send the feedback after the call hang ups
+
+  /**
+   * Flag to monitor the feedback api that gets called after the token is expired
+   * @private
+   */
+  deferFeedback: null | boolean;
+
+  /**
+   * Flag that tells if unregister is pending or not
+   * @private
+   */
+  isUnregisterPending: null | boolean;
   /**
    * Options passed by the user while instantiating the client class
    * @private
@@ -682,6 +696,8 @@ export class Client extends EventEmitter {
     EventEmitter.call(this);
 
     this.accessTokenInterface = AccessTokenInterface;
+    this.deferFeedback = null;
+    this.isUnregisterPending = null;
     // Default instance flags
     this.browserDetails = getBrowserDetails();
     this.permOnClick = false;
@@ -758,7 +774,7 @@ export class Client extends EventEmitter {
     }
     const randomTenDigitNumber = Math.floor(Math.random() * 10000000000);
     return "puser" + randomTenDigitNumber.toString() + "jt";
-  }
+  };
 
   private validateToken = (parsedToken: string | any): boolean => {
     if (parsedToken == null) {
@@ -766,7 +782,7 @@ export class Client extends EventEmitter {
     }
     // To do : Add the token validations
     return true;
-  }
+  };
 
   private parseJwtToken = (accessToken: string): string | null => {
     try {
@@ -779,7 +795,7 @@ export class Client extends EventEmitter {
     } catch (err) {
       return null;
     }
-  }
+  };
 
   private tokenLogin = (username: string, accessToken: string): boolean => {
     if (
@@ -799,12 +815,11 @@ export class Client extends EventEmitter {
     if (!isValid) return false;
     account.setupUserAccount();
     return true;
-  }
+  };
 
   setExpiryTimeInEpoch = (timeInEpoch: number): void => {
     this.accessTokenExpiryInEpoch = timeInEpoch;
   };
-  
   getTokenExpiryTimeInEpoch = (): number | null => {
     return this.accessTokenExpiryInEpoch;
   };
@@ -841,7 +856,7 @@ export class Client extends EventEmitter {
       return false;
     });
     return true;
-  }
+  };
 
   // private methods
   private _loginWithAccessToken = (accessToken: string): boolean => {
@@ -859,9 +874,9 @@ export class Client extends EventEmitter {
       Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
       return false;
     }
-    let username = this.getUsernameFromToken(parsedToken);
-    return this.tokenLogin(username, accessToken);
-  }
+    this.userName = this.getUsernameFromToken(parsedToken);
+    return this.tokenLogin(this.userName, accessToken);
+  };
 
   // private methods
   private _login = (username: string, password: string): boolean => {
@@ -889,6 +904,13 @@ export class Client extends EventEmitter {
 
   private _logout = (): boolean => {
     Plivo.log.debug('logout() triggered!');
+    // if logout is called explicitly, make all the related flags to default
+    if (this.isAccessToken) {
+      this.isAccessToken = false;
+      this.isOutgoingGrant = null;
+      this.isIncomingGrant = null;
+      this.accessToken = null;
+    }
     if (this._currentSession) {
       this._currentSession.addConnectionStage(
         `logout()@${new Date().getTime()}`,
@@ -1400,13 +1422,21 @@ export class Client extends EventEmitter {
         }
         // send console logs
         if (sendConsoleLogs === true) {
-          const preSignedUrlBody: PreSignedUrlRequest = {
-            username: this.userName as string,
-            password: this.password as string,
-            domain: C.DOMAIN,
-            calluuid: callUUID,
-          };
-          getPreSignedS3URL(preSignedUrlBody)
+          let preSignedUrlBody: PreSignedUrlRequest | any;
+          if (this.isAccessToken) {
+            preSignedUrlBody = {
+              accessToken: this.accessToken,
+              calluuid: callUUID,
+            };
+          } else {
+            preSignedUrlBody = {
+              username: this.userName as string,
+              password: this.password as string,
+              domain: C.DOMAIN,
+              calluuid: callUUID,
+            };
+          }
+          getPreSignedS3URL(preSignedUrlBody, this.isAccessToken)
             .then((responseBody: PreSignedUrlResponse) => {
               uploadConsoleLogsToBucket(responseBody, feedback)
                 .then(() => {

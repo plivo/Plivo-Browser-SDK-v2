@@ -16,6 +16,7 @@ export interface PreSignedUrlRequest {
   password: string;
   domain: string;
   calluuid: string;
+  accessToken: string;
 }
 
 export interface PreSignedUrlResponse {
@@ -100,15 +101,30 @@ export const validateCallStats = function (
  * @returns Fulfills with pre-signed s3 url or reject with error
  */
 export const getPreSignedS3URL = (
-  preSignedUrlBody: PreSignedUrlRequest,
+  preSignedUrlBody: PreSignedUrlRequest, isAccessToken: boolean,
 ): Promise<PreSignedUrlResponse | string> => {
-  const url = new URL(C.S3BUCKET_API_URL);
-  return new Promise((resolve, reject) => {
-    fetch(url as any, {
+  let url: URL;
+  let requestBody: any;
+  // prepared body in case login is through access token
+  if (isAccessToken) {
+    url = new URL(C.S3BUCKET_API_URL_JWT);
+    const formData = new FormData();
+    formData.append('jwt', preSignedUrlBody.accessToken);
+    formData.append('calluuid', preSignedUrlBody.calluuid);
+    requestBody = {
+      method: 'POST',
+      body: formData,
+    };
+  } else {
+    url = new URL(C.S3BUCKET_API_URL);
+    requestBody = {
       method: 'POST',
       headers: new Headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(preSignedUrlBody),
-    })
+    };
+  }
+  return new Promise((resolve, reject) => {
+    fetch(url as any, requestBody)
       .then((response) => {
         if (response.ok) {
           response
