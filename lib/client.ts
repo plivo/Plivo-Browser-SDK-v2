@@ -777,10 +777,24 @@ export class Client extends EventEmitter {
   };
 
   private validateToken = (parsedToken: string | any): boolean => {
+
     if (parsedToken == null) {
       return false;
     }
-    // To do : Add the token validations
+
+    let { app = undefined, lss = undefined, sub = undefined, nbf = undefined, exp = undefined, per = undefined } = parsedToken;
+    let { incoming_allow = undefined, outgoing_allow = undefined } = per.voice || undefined;
+  
+    // To do : Add the token validations [DONE]
+    if(!lss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
+      return false;
+    }
+    
+    if(typeof app !== "string" || typeof lss !== "string" || typeof sub !== "string" || typeof nbf !== "number" || 
+    typeof exp !== "number" || typeof incoming_allow !== "boolean" || typeof outgoing_allow !== "boolean") {
+      return false;
+    } 
+    
     return true;
   };
 
@@ -860,22 +874,28 @@ export class Client extends EventEmitter {
 
   // private methods
   private _loginWithAccessToken = (accessToken: string): boolean => {
-    this.isLoginCalled = true;
-    this.accessToken = accessToken;
-    this.isAccessToken = true;
-    let parsedToken = this.parseJwtToken(accessToken);
-    if (parsedToken) {
-      this.isOutgoingGrant = parsedToken['grants']['voice']['outgoing_allow'];
-      this.isIncomingGrant = parsedToken['grants']['voice']['outgoing_allow'];
+
+    try {
+      this.isLoginCalled = true;
+      this.accessToken = accessToken;
+      this.isAccessToken = true;
+      let parsedToken = this.parseJwtToken(accessToken);
+      if (parsedToken) {
+        this.isOutgoingGrant = parsedToken['per']['voice']['outgoing_allow'];
+        this.isIncomingGrant = parsedToken['per']['voice']['incoming_allow'];
+      }
+      const isTokenValid = this.validateToken(parsedToken);
+      if (!isTokenValid) {
+        this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+        Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
+        return false;
+      }
+      this.userName = this.getUsernameFromToken(parsedToken);
+      return this.tokenLogin(this.userName, accessToken);
     }
-    const isTokenValid = this.validateToken(parsedToken);
-    if (!isTokenValid) {
-      this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
-      Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
+    catch(error) {
       return false;
     }
-    this.userName = this.getUsernameFromToken(parsedToken);
-    return this.tokenLogin(this.userName, accessToken);
   };
 
   // private methods

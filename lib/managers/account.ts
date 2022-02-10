@@ -191,6 +191,12 @@ class Account {
     Plivo.log.info('Ready to login');
     this._createListeners();
     if (this.cs.phone) {
+      if(this.accessTokenCredentials.accessToken != null) {
+        this.cs.phone.registrator().setExtraHeaders([
+          `X-Plivo-Jwt: ${this.accessTokenCredentials.accessToken}`
+        ]);
+      } 
+      
       this.cs.phone.start();
     }
   };

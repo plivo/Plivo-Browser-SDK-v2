@@ -3,8 +3,11 @@
 /* eslint-disable import/no-mutable-exports */
 
 // Signalling
-export const DOMAIN = 'phone.plivo.com';
-export const WS_SERVERS = ['wss://client.plivo.com/signalling', 'wss://client-fb.plivo.com/signalling'];
+// export const DOMAIN = 'phone.plivo.com';
+// export const WS_SERVERS = ['wss://client.plivo.com/signalling', 'wss://client-fb.plivo.com/signalling'];
+
+export const DOMAIN = 'phone-qa.voice.plivodev.com'; 
+export const WS_SERVERS = ['wss://phone-qa.voice.plivodev.com:5063'];
 
 // SDK option settings
 export const DEFAULT_LOG_LEVEL = 'INFO';
