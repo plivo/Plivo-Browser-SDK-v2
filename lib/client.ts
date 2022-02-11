@@ -964,6 +964,8 @@ export class Client extends EventEmitter {
       this.emit('onCallFailed', reason);
     };
     const readyForCall = () => {
+      if(this.isAccessToken) extraHeaders['X-Plivo-Jwt'] = `${this.accessToken}`; 
+
       this.owaLastDetect.isOneWay = false;
       return OutgoingCall.makeCall(this, extraHeaders, phoneNumber);
     };
