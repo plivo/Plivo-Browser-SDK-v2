@@ -772,7 +772,7 @@ export class Client extends EventEmitter {
     if (parsedToken['sub']) {
       return parsedToken['sub'];
     }
-    const randomTenDigitNumber = Math.floor(Math.random() * 10000000000);
+    const randomTenDigitNumber = new Date().valueOf();
     return "puser" + randomTenDigitNumber.toString() + "jt";
   };
 
