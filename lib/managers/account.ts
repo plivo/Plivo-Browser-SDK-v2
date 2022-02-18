@@ -345,7 +345,7 @@ class Account {
     // below is the example to get basic 120 sec expiry from response
     // To do : This needs to be changed in case of login through access Token method
     if (this.cs.isAccessToken) {
-      const expiryTimeInEpoch = Number(res['response']['headers']['Contact'][0]['parsed']['_parameters']['expires']);
+      const expiryTimeInEpoch = Number(res['response']['headers']['Expires'][0]['raw']);
       this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch);
     }
     if (!this.cs.isLoginCalled) {
