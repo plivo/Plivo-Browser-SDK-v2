@@ -13,6 +13,7 @@ describe('StatsRequest', () => {
       password: 'secret',
       domain: 'testDomain',
       calluuid: 'fb85a852-e7be-11ea-b940-5b5a84a8b39b',
+      accessToken: ''
     };
     preSignedURLReponse = {
       data: 'https://dummy-bucket.s3.amazonaws.com/consolelogs/',
