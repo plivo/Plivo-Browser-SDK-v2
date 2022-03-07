@@ -207,6 +207,21 @@ describe('StatsRequest for JWT', () => {
     expect(uploadConsoleLogsToBucket(preSignedURLReponse, userFeedback)).rejects.toMatch(error);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+
+  it('should reject if invalid jwt passed', async () => {
+    const error = 'Invalid args: ';
+    const invalidJWT = 'eyJhbGciOiJIUzI1NiIsImN0eSI6InBsaXZvO3Y9MSIsInR5cCI6IkpXVCJ9.eyJhcHAiOiIiLCJleHAiOjE2NDYzMDEwMjUsImxzcyI6Ik1BRENIQU5EUkVTSDAyVEFOSzA2IiwibmJmIjoxNjQ2MjE0NjI1LCJwZXIiOnsidm9pY2UiOnsiaW5jb21pbmdfYWxsb3ciOmZhbHNlLCJvdXRnb2luZ19hbGxvdyI6dHJ1ZX19LCJzdWIiOiJlbml5YXZhbjEifQ.W2UhnTEap5l1xsTYIW8Hngu7oxQRAKjz2b-W9dsdsdd';
+    rejectGlobalFetch(error);
+    expect(validateCallStats('sip:testing', invalidJWT, true)).rejects.toMatch(error);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('should reject if empty jwt passed', async () => {
+    const error = 'Invalid args: ';
+    rejectGlobalFetch(error);
+    expect(validateCallStats('sip:testing', '', true)).rejects.toMatch(error);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 const resolveGlobalFetch = (isOK: boolean, data: any) => {
