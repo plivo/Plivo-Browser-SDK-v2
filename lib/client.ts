@@ -782,15 +782,15 @@ export class Client extends EventEmitter {
       return false;
     }
 
-    let { app = undefined, lss = undefined, sub = undefined, nbf = undefined, exp = undefined, per = undefined } = parsedToken;
+    let { app = undefined, Iss = undefined, sub = undefined, nbf = undefined, exp = undefined, per = undefined } = parsedToken;
     let { incoming_allow = undefined, outgoing_allow = undefined } = per.voice || undefined;
   
     // To do : Add the token validations [DONE]
-    if(!lss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
+    if(!Iss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
       return false;
     }
     
-    if(typeof app !== "string" || typeof lss !== "string" || typeof sub !== "string" || typeof nbf !== "number" || 
+    if(typeof app !== "string" || typeof Iss !== "string" || typeof sub !== "string" || typeof nbf !== "number" || 
     typeof exp !== "number" || typeof incoming_allow !== "boolean" || typeof outgoing_allow !== "boolean") {
       return false;
     } 
