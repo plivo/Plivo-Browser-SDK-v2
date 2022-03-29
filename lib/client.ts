@@ -875,6 +875,8 @@ export class Client extends EventEmitter {
       Plivo.log.warn('No call session exists to hangup');
       return false;
     }
+
+    audioUtil.stopDummyLocalStream();
     return true;
   };
 

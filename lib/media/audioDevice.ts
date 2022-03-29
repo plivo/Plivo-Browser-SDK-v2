@@ -14,6 +14,7 @@ import { Client, PlivoObject } from '../client';
 import { DeviceAudioInfo, sendEvents } from '../stats/nonRTPStats';
 import getBrowserDetails from '../utils/browserDetection';
 import { setupRemoteView } from './document';
+import { emitMetrics } from '../stats/mediaMetrics';
 
 export interface RingToneDevices {
   set: (id: string) => void;
@@ -58,6 +59,10 @@ const groupIdDeviceIdMap = {};
 let audioDevDicSetterCb: any = null;
 const activeDeviceLabelDeviceIdMap = {};
 const activeDeviceIdDeviceLabelMap = {};
+let dummyLocalStream: any | MediaStream = null;
+let lastAudioAvgUpdatedOn: any | Date = null;
+let expectedAudioUpdationDateTime: any | Date = null;
+let avgAdioDetails: any;
 
 const isSafari = /constructor/i.test((window as any).HTMLElement) || ((p) => p.toString() === '[object SafariRemoteNotification]') || (!(window as any).safari || (typeof (window as any).safari !== 'undefined' && (window as any).safari.pushNotification));
 const isWindows = navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win');
@@ -165,6 +170,14 @@ export const revealAudioDevices = function (
  * Mute the local stream.
  */
 export const mute = function (): void {
+
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        .then((stream) => {
+      dummyLocalStream = stream;
+      startDummyLocalStream.call(this);
+      resetAudioTimer();
+    })
+      
   if (currentLocalStream) {
     currentLocalStream.getAudioTracks()[0].enabled = false;
   } else {
@@ -172,6 +185,77 @@ export const mute = function (): void {
   }
   currentAudioState = false;
 };
+
+export const startDummyLocalStream = function (): void {
+
+  const client: Client = this;
+  let stream = dummyLocalStream; 
+
+  let audioContext = new AudioContext();
+  let analyser = audioContext.createAnalyser();
+  let microphone = audioContext.createMediaStreamSource(stream);
+  let javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+  analyser.smoothingTimeConstant = 0.8;
+  analyser.fftSize = 1024;
+
+  microphone.connect(analyser);
+  analyser.connect(javascriptNode);
+  javascriptNode.connect(audioContext.destination);
+  javascriptNode.onaudioprocess = function() {
+    let array = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(array);
+    let values = 0;
+                
+    let length = array.length;
+    for (let i = 0; i < length; i++) {
+      values += (array[i]);
+    }
+        
+    let average = values / length;
+    avgAdioDetails = { 
+      totalAudioAvg: avgAdioDetails.totalAudioAvg + average,
+      totalAvg: avgAdioDetails.totalAvg + 1
+    }
+                
+    if(expectedAudioUpdationDateTime < new Date() && client?._currentSession?.session?.isMuted()) {
+
+      let totalAvg = avgAdioDetails.totalAudioAvg / avgAdioDetails.totalAvg;
+
+      if(totalAvg > 1.5) {
+              
+        emitMetrics.call(
+          client,
+          'audio',
+          'warning',
+          'you_are_on_mute',
+          0,
+          'testing ...',
+          '',
+          'local',
+        );
+      }
+
+      resetAudioTimer();
+    }
+  }
+}
+
+export const resetAudioTimer = function (): void {
+  lastAudioAvgUpdatedOn = new Date();
+  expectedAudioUpdationDateTime = new Date();
+  expectedAudioUpdationDateTime.setTime(expectedAudioUpdationDateTime.getTime() + 1000 * 30);
+  avgAdioDetails = { totalAudioAvg: 0, totalAvg: 0 };
+}
+
+export const stopDummyLocalStream = function (): void {
+  let stream = dummyLocalStream; 
+
+  if(stream) {
+    stream.getAudioTracks()[0].stop();
+    stream.getTracks().forEach((track) => track.stop());
+  }
+}
 
 /**
  * Mute audio state.
@@ -880,6 +964,7 @@ export const unmute = function (): void {
   } else {
     this._currentSession.session.unmute();
   }
+  stopDummyLocalStream();
   currentAudioState = true;
 };
 
@@ -889,6 +974,7 @@ export const unmute = function (): void {
 export const updateAudioDeviceFlags = function (): void {
   if (currentLocalStream) {
     currentLocalStream.getTracks().forEach((track) => track.stop());
+    stopDummyLocalStream();
   }
   currentLocalStream = null;
 };
