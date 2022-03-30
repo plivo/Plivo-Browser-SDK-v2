@@ -21,7 +21,7 @@ import {
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
 } from '../constants';
 import { CallSession } from './callSession';
-import { checkExtraHeaderKey, checkExtraHeaderVal } from '../utils/headers';
+import { checkExtraHeaderKey, checkExtraHeaderVal, checkExtraHeaderJWTVal } from '../utils/headers';
 import { playAudio, stopAudio } from '../media/document';
 import checkCodecPreference, {
   AvailableCodecs,
@@ -372,7 +372,9 @@ const getCleanedHeaders = (extraHeaders: ExtraHeaders = {}): string[] => {
   const keys = Object.keys(extraHeaders);
   keys.forEach((key) => {
     const value = extraHeaders[key];
-    if (checkExtraHeaderKey(key) && checkExtraHeaderVal(value)) {
+    const checkHeaderVal = key.toUpperCase() == 'X-PLIVO-JWT' ? checkExtraHeaderJWTVal : checkExtraHeaderVal;
+  
+    if (checkExtraHeaderKey(key) && checkHeaderVal(value)) {
       cleanExtraHeaders.push(`${key}: ${value}`);
       outboundExtraHeaders[key] = value;
       Plivo.log.debug(`valid hdr = ${key} -> ${value}`);
