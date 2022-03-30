@@ -118,12 +118,12 @@ describe('plivoWebSdk', function () {
       }
       Client2.call(primary_user, {
         "X-Ph-Random": "true",
-        "X-Plivo-jwt": plivo_jwt
+        "X-Plivo-Jwt": plivo_jwt
       });
       Client1.on(
         "onIncomingCall",
         (callerName, extraHeaders2) => {
-          if (extraHeaders2 && extraHeaders2["X-Ph-Random"] && extraHeaders2["X-Plivo-jwt"]) {
+          if (extraHeaders2 && extraHeaders2["X-Ph-Random"] && extraHeaders2["X-Plivo-Jwt"]) {
             done();
           } else {
             done(new Error('incoming call with extra headers failed'));

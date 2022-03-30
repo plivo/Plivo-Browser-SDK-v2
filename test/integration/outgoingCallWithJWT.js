@@ -122,7 +122,7 @@ describe("plivoWebSdk", function () {
       }
       const extraHeaders = {};
       extraHeaders["X-PH-conference"] = "true";
-      extraHeaders['X-Plivo-jwt'] = plivo_jwt;
+      extraHeaders['X-Plivo-Jwt'] = plivo_jwt;
       if (Client1.isLoggedIn) {
         Client1.call(secondary_user, extraHeaders);
       } else {
