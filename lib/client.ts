@@ -31,6 +31,7 @@ import {
 } from './media/audioDevice';
 import getBrowserDetails from './utils/browserDetection';
 import detectFramework from './utils/frameworkDetection';
+import AccessTokenInterface from './utils/token';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -238,6 +239,67 @@ export class Client extends EventEmitter {
    */
   password: null | string;
 
+  /**
+   * Access Token  given when logging in
+   * @private
+   */
+  accessToken: null | string;
+
+  /**
+   * Access Token object given when logging in
+   * @private
+   */
+  accessTokenObject: null | any;
+
+  /**
+   * boolean that tells which type of login method is called
+   * @private
+   */
+  isAccessTokenGenerator : boolean | null;
+
+  /**
+   * boolean that tells if user logged in through access token
+   * @private
+   */
+  isAccessToken : boolean;
+
+  /**
+   * access token expiry
+   * @private
+   */
+  accessTokenExpiryInEpoch: number | null;
+  /**
+   * Access Token  Outgoing Grant
+   * @private
+   */
+  isOutgoingGrant: boolean | null;
+
+  /**
+   * Access Token  Incoming Grant
+   * @private
+   */
+  isIncomingGrant: boolean|null;
+
+  /**
+   * Access Token  abstract class that needs to be implemented
+   * @private
+   */
+  accessTokenInterface: any;
+
+  // To do : Use below two flags to handle the edge case when token gets expired during
+  //  an ongoing call and user needs to send the feedback after the call hang ups
+
+  /**
+   * Flag to monitor the feedback api that gets called after the token is expired
+   * @private
+   */
+  deferFeedback: null | boolean;
+
+  /**
+   * Flag that tells if unregister is pending or not
+   * @private
+   */
+  isUnregisterPending: null | boolean;
   /**
    * Options passed by the user while instantiating the client class
    * @private
@@ -456,6 +518,18 @@ export class Client extends EventEmitter {
   public login = (username: string, password: string): boolean => this._login(username, password);
 
   /**
+   * Register using user access token.
+   * @param {String} accessToken
+   */
+  public loginWithAccessToken = (accessToken: string): boolean => this._loginWithAccessToken(accessToken);
+
+  /**
+   * Register using user access token.
+   * @param {Any} accessTokenObject
+   */
+  public loginWithAccessTokenGenerator = (accessTokenObject: any): boolean => this._loginWithAccessTokenGenerator(accessTokenObject);
+  
+  /**
    * Unregister and clear stats timer, socket.
    */
   public logout = (): boolean => this._logout();
@@ -621,6 +695,9 @@ export class Client extends EventEmitter {
     // instantiates event emitter
     EventEmitter.call(this);
 
+    this.accessTokenInterface = AccessTokenInterface;
+    this.deferFeedback = null;
+    this.isUnregisterPending = null;
     // Default instance flags
     this.browserDetails = getBrowserDetails();
     this.permOnClick = false;
@@ -691,6 +768,136 @@ export class Client extends EventEmitter {
     this.jsFramework = detectFramework();
   }
 
+  private getUsernameFromToken = (parsedToken: string | any): string => {
+    if (parsedToken['sub']) {
+      return parsedToken['sub'];
+    }
+    const randomTenDigitNumber = new Date().valueOf();
+    return "puser" + randomTenDigitNumber.toString() + "jt";
+  };
+
+  private validateToken = (parsedToken: string | any): boolean => {
+
+    if (parsedToken == null) {
+      return false;
+    }
+
+    let { app = undefined, Iss = undefined, sub = undefined, nbf = undefined, exp = undefined, per = undefined } = parsedToken;
+    let { incoming_allow = undefined, outgoing_allow = undefined } = per.voice || undefined;
+  
+    // To do : Add the token validations [DONE]
+    if(!Iss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
+      return false;
+    }
+    
+    if(typeof app !== "string" || typeof Iss !== "string" || typeof sub !== "string" || typeof nbf !== "number" || 
+    typeof exp !== "number" || typeof incoming_allow !== "boolean" || typeof outgoing_allow !== "boolean") {
+      return false;
+    } 
+    
+    return true;
+  };
+
+  private parseJwtToken = (accessToken: string): string | null => {
+    try {
+      let base64Url = accessToken.split('.')[1];
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      let jsonPayload = decodeURIComponent(atob(base64).split('').map (function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (err) {
+      return null;
+    }
+  };
+
+  private tokenLogin = (username: string, accessToken: string): boolean => {
+    if (
+      this.phone
+      && this.phone.isRegistered()
+      && this.phone.isConnected()
+      && this.userName === username
+    ) {
+      Plivo.log.warn(
+        `Already registered with the endpoint provided - ${this.userName}`,
+      );
+      return true;
+    }
+
+    const account = new Account(this, username, " ", accessToken);
+    const isValid = account.validate();
+    if (!isValid) return false;
+    account.setupUserAccount();
+    return true;
+  };
+
+  setExpiryTimeInEpoch = (timeInEpoch: number): void => {
+    this.accessTokenExpiryInEpoch = timeInEpoch;
+  };
+  getTokenExpiryTimeInEpoch = (): number | null => {
+    return this.accessTokenExpiryInEpoch;
+  };
+
+  private _loginWithAccessTokenGenerator = (accessTokenObject: any): boolean => {
+    // if Token Object itself is null, return;
+    if (accessTokenObject == null) {
+      Plivo.log.error('Access token object can not be null ');
+      // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
+      this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+      return false;
+    }
+    this.isAccessTokenGenerator = true;
+    this.accessTokenObject = accessTokenObject;
+
+    accessTokenObject.getAccessToken().then(accessToken => {
+      // If accessToken  is null
+      if (accessToken == null) {
+        // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
+        this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+        Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
+        return false;
+      }
+      if (this.getTokenExpiryTimeInEpoch()) {
+        setTimeout(() => {
+          this.loginWithAccessTokenGenerator(accessTokenObject);
+        }, Number(this.getTokenExpiryTimeInEpoch()) - 5);
+      }
+      return this.loginWithAccessToken(accessToken);
+    }).catch(function (err: any) {
+      Plivo.log.error('Failed to fetch the accessToken. Try to re-login with valid accessToken', err);
+      // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
+      this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+      return false;
+    });
+    return true;
+  };
+
+  // private methods
+  private _loginWithAccessToken = (accessToken: string): boolean => {
+
+    try {
+      this.isLoginCalled = true;
+      this.accessToken = accessToken;
+      this.isAccessToken = true;
+      let parsedToken = this.parseJwtToken(accessToken);
+      if (parsedToken) {
+        this.isOutgoingGrant = parsedToken['per']['voice']['outgoing_allow'];
+        this.isIncomingGrant = parsedToken['per']['voice']['incoming_allow'];
+      }
+      const isTokenValid = this.validateToken(parsedToken);
+      if (!isTokenValid) {
+        this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+        Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
+        return false;
+      }
+      this.userName = this.getUsernameFromToken(parsedToken);
+      return this.tokenLogin(this.userName, accessToken);
+    }
+    catch(error) {
+      return false;
+    }
+  };
+
   // private methods
   private _login = (username: string, password: string): boolean => {
     this.isLoginCalled = true;
@@ -705,7 +912,7 @@ export class Client extends EventEmitter {
       );
       return true;
     }
-    const account = new Account(this, username, password);
+    const account = new Account(this, username, password, null);
     const isValid = account.validate();
     if (!isValid) return false;
     account.setupUserAccount();
@@ -717,6 +924,13 @@ export class Client extends EventEmitter {
 
   private _logout = (): boolean => {
     Plivo.log.debug('logout() triggered!');
+    // if logout is called explicitly, make all the related flags to default
+    if (this.isAccessToken) {
+      this.isAccessToken = false;
+      this.isOutgoingGrant = null;
+      this.isIncomingGrant = null;
+      this.accessToken = null;
+    }
     if (this._currentSession) {
       this._currentSession.addConnectionStage(
         `logout()@${new Date().getTime()}`,
@@ -750,6 +964,8 @@ export class Client extends EventEmitter {
       this.emit('onCallFailed', reason);
     };
     const readyForCall = () => {
+      if(this.isAccessToken) extraHeaders['X-Plivo-Jwt'] = `${this.accessToken}`; 
+
       this.owaLastDetect.isOneWay = false;
       return OutgoingCall.makeCall(this, extraHeaders, phoneNumber);
     };
@@ -1228,13 +1444,21 @@ export class Client extends EventEmitter {
         }
         // send console logs
         if (sendConsoleLogs === true) {
-          const preSignedUrlBody: PreSignedUrlRequest = {
-            username: this.userName as string,
-            password: this.password as string,
-            domain: C.DOMAIN,
-            calluuid: callUUID,
-          };
-          getPreSignedS3URL(preSignedUrlBody)
+          let preSignedUrlBody: PreSignedUrlRequest | any;
+          if (this.isAccessToken) {
+            preSignedUrlBody = {
+              accessToken: this.accessToken,
+              calluuid: callUUID,
+            };
+          } else {
+            preSignedUrlBody = {
+              username: this.userName as string,
+              password: this.password as string,
+              domain: C.DOMAIN,
+              calluuid: callUUID,
+            };
+          }
+          getPreSignedS3URL(preSignedUrlBody, this.isAccessToken)
             .then((responseBody: PreSignedUrlResponse) => {
               uploadConsoleLogsToBucket(responseBody, feedback)
                 .then(() => {

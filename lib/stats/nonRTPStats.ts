@@ -123,6 +123,16 @@ export const sendEvents = function (statMsg: any, session: CallSession): void {
   ) {
     const obj = addCallInfo(session, statMsg, client.callstatskey, client.userName as string);
     client.statsSocket.send(obj, client);
+    // To do : Initiate unregister incase when call gets extended after token expiry
+    if (client.isUnregisterPending === true) {
+      client.isUnregisterPending = false;
+      if (client.phone) {
+        client.phone.stop();
+      }
+      client.deferFeedback = true;
+      // close Stats Socket
+      client.statsSocket.disconnect();
+    }
   } else {
     Plivo.log.debug(
       'Cannot send Event ',

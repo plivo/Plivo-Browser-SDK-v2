@@ -192,6 +192,56 @@ declare module 'plivo-browser-sdk/client' {
                 */
             password: null | string;
             /**
+                * Access Token  given when logging in
+                * @private
+                */
+            accessToken: null | string;
+            /**
+                * Access Token object given when logging in
+                * @private
+                */
+            accessTokenObject: null | any;
+            /**
+                * boolean that tells which type of login method is called
+                * @private
+                */
+            isAccessTokenGenerator: boolean | null;
+            /**
+                * boolean that tells if user logged in through access token
+                * @private
+                */
+            isAccessToken: boolean;
+            /**
+                * access token expiry
+                * @private
+                */
+            accessTokenExpiryInEpoch: number | null;
+            /**
+                * Access Token  Outgoing Grant
+                * @private
+                */
+            isOutgoingGrant: boolean | null;
+            /**
+                * Access Token  Incoming Grant
+                * @private
+                */
+            isIncomingGrant: boolean | null;
+            /**
+                * Access Token  abstract class that needs to be implemented
+                * @private
+                */
+            accessTokenInterface: any;
+            /**
+                * Flag to monitor the feedback api that gets called after the token is expired
+                * @private
+                */
+            deferFeedback: null | boolean;
+            /**
+                * Flag that tells if unregister is pending or not
+                * @private
+                */
+            isUnregisterPending: null | boolean;
+            /**
                 * Options passed by the user while instantiating the client class
                 * @private
                 */
@@ -382,6 +432,16 @@ declare module 'plivo-browser-sdk/client' {
                 */
             login: (username: string, password: string) => boolean;
             /**
+                * Register using user access token.
+                * @param {String} accessToken
+                */
+            loginWithAccessToken: (accessToken: string) => boolean;
+            /**
+                * Register using user access token.
+                * @param {Any} accessTokenObject
+                */
+            loginWithAccessTokenGenerator: (accessTokenObject: any) => boolean;
+            /**
                 * Unregister and clear stats timer, socket.
                 */
             logout: () => boolean;
@@ -497,6 +557,8 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             constructor(options: ConfiguationOptions);
+            setExpiryTimeInEpoch: (timeInEpoch: number) => void;
+            getTokenExpiryTimeInEpoch: () => number | null;
     }
 }
 

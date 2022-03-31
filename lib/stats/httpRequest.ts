@@ -16,6 +16,7 @@ export interface PreSignedUrlRequest {
   password: string;
   domain: string;
   calluuid: string;
+  accessToken: string;
 }
 
 export interface PreSignedUrlResponse {
@@ -31,29 +32,45 @@ const Plivo: PlivoObject = { log: Logger };
  * @returns Fulfills with call insights key and rtp enabled status or reject with error
  */
 export const validateCallStats = function (
-  userName: string, password: string,
+  userName: string, password: any, isAccessToken: boolean,
 ): Promise<CallStatsValidationResponse | string> {
   return new Promise((resolve, reject) => {
-    const statsApiUrl = new URL(C.STATS_API_URL);
-    const statsHeaders = new Headers();
-    statsHeaders.append('Content-Type', 'application/json');
+    let statsApiUrl : URL;
+    let requestBody : any;
     // Remove the 'sip' prefix if present in the username before sending request to plivo stats
     let username = userName;
     if (userName.toLowerCase().startsWith('sip:')) {
       // eslint-disable-next-line prefer-destructuring
       username = userName.split(':')[1];
     }
-    const statsBody = {
-      username,
-      password,
-      domain: C.DOMAIN,
-    };
+    if (isAccessToken) {
+      statsApiUrl = new URL(C.STATS_API_URL_ACCESS_TOKEN);
+    } else {
+      statsApiUrl = new URL(C.STATS_API_URL);
+    }
+    if (isAccessToken) {
+      const formData = new FormData();
+      formData.append('jwt', password);
+      requestBody = {
+        method: 'POST',
+        body: formData,
+      };
+    } else {
+      const statsHeaders = new Headers();
+      statsHeaders.append('Content-Type', 'application/json');
+      const statsBody = {
+        username,
+        password,
+        domain: C.DOMAIN,
+      };
+      requestBody = {
+        method: 'POST',
+        headers: statsHeaders,
+        body: JSON.stringify(statsBody),
+      };
+    }
 
-    fetch(statsApiUrl as any, {
-      method: 'POST',
-      headers: statsHeaders,
-      body: JSON.stringify(statsBody),
-    })
+    fetch(statsApiUrl as any, requestBody)
       .then((response) => {
         if (response.ok) {
           response.text().then((responsebody: string) => {
@@ -84,15 +101,30 @@ export const validateCallStats = function (
  * @returns Fulfills with pre-signed s3 url or reject with error
  */
 export const getPreSignedS3URL = (
-  preSignedUrlBody: PreSignedUrlRequest,
+  preSignedUrlBody: PreSignedUrlRequest, isAccessToken: boolean,
 ): Promise<PreSignedUrlResponse | string> => {
-  const url = new URL(C.S3BUCKET_API_URL);
-  return new Promise((resolve, reject) => {
-    fetch(url as any, {
+  let url: URL;
+  let requestBody: any;
+  // prepared body in case login is through access token
+  if (isAccessToken) {
+    url = new URL(C.S3BUCKET_API_URL_JWT);
+    const formData = new FormData();
+    formData.append('jwt', preSignedUrlBody.accessToken);
+    formData.append('calluuid', preSignedUrlBody.calluuid);
+    requestBody = {
+      method: 'POST',
+      body: formData,
+    };
+  } else {
+    url = new URL(C.S3BUCKET_API_URL);
+    requestBody = {
       method: 'POST',
       headers: new Headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(preSignedUrlBody),
-    })
+    };
+  }
+  return new Promise((resolve, reject) => {
+    fetch(url as any, requestBody)
       .then((response) => {
         if (response.ok) {
           response
