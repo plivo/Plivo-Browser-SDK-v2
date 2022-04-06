@@ -431,6 +431,7 @@ class Account {
     // Do not have any other logic here
     // Invite Server Trasaction(ist) gives us the incoming invite timestamp.
     if (evt.transaction.type === 'ist') {
+      
       Plivo.log.info('<----- INCOMING ----->');
 
       if(this.cs.isIncomingGrant == true || this.cs.isIncomingGrant == undefined) {
