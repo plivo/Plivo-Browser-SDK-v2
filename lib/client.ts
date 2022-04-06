@@ -268,9 +268,8 @@ export class Client extends EventEmitter {
    * @private
    */
   accessTokenExpiryInEpoch: number | null;
-
   /**
-   * reduce token expiry timer
+   * Access Token  Outgoing Grant
    * @private
    */
 
