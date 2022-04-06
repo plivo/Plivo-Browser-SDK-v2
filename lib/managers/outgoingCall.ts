@@ -527,6 +527,7 @@ export const createOutgoingSession = (
     session: evt.session,
     extraHeaders: outboundExtraHeaders,
     client: cs,
+    stirShakenState: "Not_applicable",
   });
   cs.callSession = cs._currentSession.session;
   cs.callUUID = cs._currentSession.callUUID;
