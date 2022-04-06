@@ -425,18 +425,21 @@ class Account {
    * Triggered when a transaction is created.
    * @param {Any} evt - transaction details
    */
-  private _onNewTransaction = (evt: any): void => {
+ private _onNewTransaction = (evt: any): void => {
     // NOTE: This event is not documented by JsSIP.
     // Should be used to just record the timestamp of invite received only
     // Do not have any other logic here
     // Invite Server Trasaction(ist) gives us the incoming invite timestamp.
     if (evt.transaction.type === 'ist') {
       Plivo.log.info('<----- INCOMING ----->');
-      const callUUID = evt.transaction.request.getHeader('X-Calluuid') || null;
-      this.cs.incomingCallsInitiationTime.set(callUUID, getCurrentTime());
-      Plivo.log.debug('call initiation time, invite received from server');
+
+      if(this.cs.isIncomingGrant == true || this.cs.isIncomingGrant == undefined) {
+        const callUUID = evt.transaction.request.getHeader('X-Calluuid') || null;
+        this.cs.incomingCallsInitiationTime.set(callUUID, getCurrentTime());
+        Plivo.log.debug('call initiation time, invite received from server');
+      }
     }
-  };
+};
 
   /**
    * Triggered when a new call is performed/received.

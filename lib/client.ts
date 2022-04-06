@@ -274,17 +274,6 @@ export class Client extends EventEmitter {
    * @private
    */
 
-  pendingTokenExpiryInEpoch: number | 0;
-
-  /**
-   * clear token exipiry interval
-   * @private
-   */
-  clearTokenExpiryInterval: number | any;
-  /**
-   * Access Token  Outgoing Grant
-   * @private
-   */
   isOutgoingGrant: boolean | null;
 
   /**
@@ -846,28 +835,10 @@ export class Client extends EventEmitter {
 
   setExpiryTimeInEpoch = (timeInEpoch: number): void => {
     this.accessTokenExpiryInEpoch = timeInEpoch;
-    this.startTokenExipryTimer(timeInEpoch);
   };
   getTokenExpiryTimeInEpoch = (): number | null => {
     return this.accessTokenExpiryInEpoch;
   };
-
-  // 
-  private startTokenExipryTimer = (timeInEpoch: number): void => {
-    
-    this.pendingTokenExpiryInEpoch = timeInEpoch;
-
-    this.clearTokenExpiryInterval = setInterval(() => {
-
-      if(this.pendingTokenExpiryInEpoch <= 0 && this.callUUID == null) {
-        this._logout()
-        clearInterval(this.clearTokenExpiryInterval)
-      }
-
-      console.log('called', this.accessTokenExpiryInEpoch, this.pendingTokenExpiryInEpoch, timeInEpoch)
-      this.pendingTokenExpiryInEpoch -= 5;      
-    }, 5000);
-  }
 
   private _loginWithAccessTokenGenerator = (accessTokenObject: any): boolean => {
     // if Token Object itself is null, return;
