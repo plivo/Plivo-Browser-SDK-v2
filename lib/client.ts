@@ -961,6 +961,12 @@ export class Client extends EventEmitter {
       Plivo.log.warn('Must be logged in before to make a call');
       return false;
     }
+
+    if(this?.isOutgoingGrant == false) {
+      Plivo.log.warn('permission not granted to make Outgoing call');
+      return false;
+    }
+
     const onCallFailed = (reason: string) => {
       this.emit('onCallFailed', reason);
     };
