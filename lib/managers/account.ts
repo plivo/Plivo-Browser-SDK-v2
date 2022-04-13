@@ -432,13 +432,10 @@ class Account {
     // Invite Server Trasaction(ist) gives us the incoming invite timestamp.
     if (evt.transaction.type === 'ist') {
       
-      Plivo.log.info('<----- INCOMING ----->');
-
-      if(this.cs.isIncomingGrant == true || this.cs.isIncomingGrant == undefined) {
-        const callUUID = evt.transaction.request.getHeader('X-Calluuid') || null;
-        this.cs.incomingCallsInitiationTime.set(callUUID, getCurrentTime());
-        Plivo.log.debug('call initiation time, invite received from server');
-      }
+      Plivo.log.info('<----- INCOMING ----->');      
+      const callUUID = evt.transaction.request.getHeader('X-Calluuid') || null;
+      this.cs.incomingCallsInitiationTime.set(callUUID, getCurrentTime());
+      Plivo.log.debug('call initiation time, invite received from server');
     }
 };
 

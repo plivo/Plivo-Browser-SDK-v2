@@ -962,7 +962,8 @@ export class Client extends EventEmitter {
       return false;
     }
 
-    if(this?.isOutgoingGrant == false) {
+    if(this.isAccessToken && this?.isOutgoingGrant == false) {
+      this.emit('onCallFailed', 'INVALID_ACCESS_TOKEN_GRANTS');
       Plivo.log.warn('permission not granted to make Outgoing call');
       return false;
     }
