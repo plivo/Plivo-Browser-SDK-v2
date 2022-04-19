@@ -93,41 +93,43 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
 /**
  * Triggered when call is ringing.
  */
-const onProgress = (incomingCall: CallSession) => (): void => {
-  Plivo.log.debug('Incoming call in progress');
-  incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
-  incomingCall.updateSignallingInfo({
-    call_progress_time: getCurrentTime(),
-  });
-  incomingCall.setState(incomingCall.STATE.RINGING);
-  incomingCall.setPostDialDelayEndTime(getCurrentTime());
-  Plivo.log.debug('call ringing with 180 code, incoming call in progress');
-  const callerUri = incomingCall.session.remote_identity.uri.toString();
-  // Fetch the caller name
-  const callerName = incomingCall.session.remote_identity.display_name;
-  // if already on an incomingCall then do not play the ringtone
-  if (cs.ringToneFlag !== false && !cs._currentSession) {
-    Plivo.log.debug('ringtone enabled : ', cs.ringToneFlag);
-    if (!mobileBrowserCheck()) {
-      playAudio(RINGTONE_ELEMENT_ID);
-    } else if (!isBrowserInBackground) {
-      playAudio(RINGTONE_ELEMENT_ID);
+ const onProgress = (incomingCall: CallSession) => (): void => {
+   
+  // allow incomming call only if permission granted
+  Plivo.log.debug('Incoming call in progress', cs);
+    incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
+    incomingCall.updateSignallingInfo({
+      call_progress_time: getCurrentTime(),
+    });
+    incomingCall.setState(incomingCall.STATE.RINGING);
+    incomingCall.setPostDialDelayEndTime(getCurrentTime());
+    Plivo.log.debug('call ringing with 180 code, incoming call in progress');
+    const callerUri = incomingCall.session.remote_identity.uri.toString();
+    // Fetch the caller name
+    const callerName = incomingCall.session.remote_identity.display_name;
+    // if already on an incomingCall then do not play the ringtone
+    if (cs.ringToneFlag !== false && !cs._currentSession) {
+      Plivo.log.debug('ringtone enabled : ', cs.ringToneFlag);
+      if (!mobileBrowserCheck()) {
+        playAudio(RINGTONE_ELEMENT_ID);
+      } else if (!isBrowserInBackground) {
+        playAudio(RINGTONE_ELEMENT_ID);
+      }
+      isIncomingCallRinging = true;
     }
-    isIncomingCallRinging = true;
-  }
-  const callerId = `${callerUri.substring(
-    4,
-    callerUri.indexOf('@'),
-  )}@${DOMAIN}`;
-  cs.emit(
-    'onIncomingCall',
-    callerId,
-    incomingCall.extraHeaders,
-    incomingCall.getCallInfo(),
-    callerName,
-  );
-  addCloseProtectionListeners.call(cs);
-  Plivo.log.debug('Incoming Call Extra Headers : ', incomingCall.extraHeaders);
+    const callerId = `${callerUri.substring(
+      4,
+      callerUri.indexOf('@'),
+    )}@${DOMAIN}`;
+    cs.emit(
+      'onIncomingCall',
+      callerId,
+      incomingCall.extraHeaders,
+      incomingCall.getCallInfo(),
+      callerName,
+    );
+    addCloseProtectionListeners.call(cs);
+    Plivo.log.debug('Incoming Call Extra Headers : ', incomingCall.extraHeaders);
 };
 
 /**

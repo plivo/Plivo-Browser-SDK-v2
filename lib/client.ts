@@ -272,6 +272,7 @@ export class Client extends EventEmitter {
    * Access Token  Outgoing Grant
    * @private
    */
+
   isOutgoingGrant: boolean | null;
 
   /**
@@ -960,6 +961,13 @@ export class Client extends EventEmitter {
       Plivo.log.warn('Must be logged in before to make a call');
       return false;
     }
+
+    if(this.isAccessToken && this?.isOutgoingGrant == false) {
+      this.emit('onCallFailed', 'INVALID_ACCESS_TOKEN_GRANTS');
+      Plivo.log.warn('permission not granted to make Outgoing call');
+      return false;
+    }
+
     const onCallFailed = (reason: string) => {
       this.emit('onCallFailed', reason);
     };
