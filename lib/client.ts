@@ -777,6 +777,20 @@ export class Client extends EventEmitter {
     return "puser" + randomTenDigitNumber.toString() + "jt";
   };
 
+  private getNbfFromToken = (parsedToken: string | any): any => {
+    if (parsedToken['nbf']) {
+      return parsedToken['nbf'];
+    }
+    return null;
+  };
+
+  private getExpFromToken = (parsedToken: string | any): any => {
+    if (parsedToken['exp']) {
+      return parsedToken['exp'];
+    }
+    return null;
+  };
+
   private validateToken = (parsedToken: string | any): boolean => {
 
     if (parsedToken == null) {
@@ -891,6 +905,26 @@ export class Client extends EventEmitter {
         Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
         return false;
       }
+
+      let currentTimestamp = Math.floor(Date.now() / 1000);
+      let nbf = this.getNbfFromToken(parsedToken); 
+      if(nbf) {        
+        if(currentTimestamp < nbf) {
+          this.emit('onLoginFailed', 'ACCESS_TOKEN_NOT_VALID_YET');
+          Plivo.log.error('Access Token not vaild yet. Try to re-login on nbf time');
+          return false;
+        }
+      }
+
+      let exp = this.getExpFromToken(parsedToken);  
+      if(exp) {        
+        if(currentTimestamp >= exp) {
+          this.emit('onLoginFailed', 'ACCESS_TOKEN_EXPIRED');
+          Plivo.log.error('Access Token expired.');
+          return false;
+        }
+      }
+
       this.userName = this.getUsernameFromToken(parsedToken);
       return this.tokenLogin(this.userName, accessToken);
     }
