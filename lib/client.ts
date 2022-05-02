@@ -267,7 +267,7 @@ export class Client extends EventEmitter {
    * access token expiry
    * @private
    */
-  accessTokenExpiryInEpoch: number | null;
+  accessTokenExpiryInEpoch: number | null;  
   /**
    * Access Token  Outgoing Grant
    * @private
@@ -797,15 +797,15 @@ export class Client extends EventEmitter {
       return false;
     }
 
-    let { app = undefined, Iss = undefined, sub = undefined, nbf = undefined, exp = undefined, per = undefined } = parsedToken;
+    let { app = undefined, iss = undefined, sub = undefined, nbf = undefined, exp = undefined, per = undefined } = parsedToken;
     let { incoming_allow = undefined, outgoing_allow = undefined } = per.voice || undefined;
   
     // To do : Add the token validations [DONE]
-    if(!Iss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
+    if(!iss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
       return false;
     }
     
-    if(typeof app !== "string" || typeof Iss !== "string" || typeof sub !== "string" || typeof nbf !== "number" || 
+    if(typeof app !== "string" || typeof iss !== "string" || typeof sub !== "string" || typeof nbf !== "number" || 
     typeof exp !== "number" || typeof incoming_allow !== "boolean" || typeof outgoing_allow !== "boolean") {
       return false;
     } 
@@ -848,6 +848,17 @@ export class Client extends EventEmitter {
 
   setExpiryTimeInEpoch = (timeInEpoch: number): void => {
     this.accessTokenExpiryInEpoch = timeInEpoch;
+    
+    setTimeout(() => {
+      if(this.callUUID == null) {
+        this.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+        this._logout();
+      }
+      else {
+        this.accessToken = null;
+      }
+    }, Number(this.accessTokenExpiryInEpoch) * 1000);
+
   };
   getTokenExpiryTimeInEpoch = (): number | null => {
     return this.accessTokenExpiryInEpoch;
@@ -921,6 +932,7 @@ export class Client extends EventEmitter {
         if(currentTimestamp >= exp) {
           this.emit('onLoginFailed', 'ACCESS_TOKEN_EXPIRED');
           Plivo.log.error('Access Token expired.');
+          this._logout();
           return false;
         }
       }
@@ -974,7 +986,7 @@ export class Client extends EventEmitter {
       this._currentSession.session.terminate();
     }
     this.isLogoutCalled = true;
-    if (this.phone) {
+    if (this.phone && this.phone.isRegistered()) {
       this.phone.stop();
     }
 
@@ -1106,6 +1118,12 @@ export class Client extends EventEmitter {
           });
         }
         this._currentSession.session.terminate();
+        
+        if(this.isAccessToken && this.accessToken == null) {
+          this.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+          this._logout();
+        }
+        
         if (this.ringBackToneView && !this.ringBackToneView.paused) {
           documentUtil.stopAudio(C.RINGBACK_ELEMENT_ID);
         }

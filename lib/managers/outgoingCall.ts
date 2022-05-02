@@ -345,6 +345,13 @@ const onEnded = (evt: SessionEndedEvent): void => {
     Plivo.log.debug(`Outgoing call ended - ${cs._currentSession.callUUID}`);
     Plivo.log.info('Outgoing call ended');
     cs._currentSession.onEnded(cs, evt);
+
+    //  logout if logged in by token and token get expired
+    if(cs.isAccessToken && cs.accessToken == null) {
+      cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+      cs.logout();
+    }
+
     // reset back pingpong to idle state timeouts
     resetPingPong({
       client: cs,
