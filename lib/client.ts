@@ -850,8 +850,8 @@ export class Client extends EventEmitter {
     this.accessTokenExpiryInEpoch = timeInEpoch;
     
     setTimeout(() => {
+      this.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
       if(this.callUUID == null) {
-        this.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
         this._logout();
       }
       else {

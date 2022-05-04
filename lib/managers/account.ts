@@ -418,7 +418,7 @@ class Account {
     Plivo.log.debug('Login failed : ', error.cause);
     this.cs.userName = null;
     this.cs.password = null;
-    this.cs.emit('onLoginFailed', error.cause);
+    this.cs.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
   };
 
   /**
