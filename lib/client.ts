@@ -771,10 +771,10 @@ export class Client extends EventEmitter {
 
   private getUsernameFromToken = (parsedToken: string | any): string => {
     if (parsedToken['sub']) {
-      return parsedToken['sub'];
+      return `${parsedToken['sub']}_${parsedToken['iss']}`;
     }
     const randomTenDigitNumber = new Date().valueOf();
-    return "puser" + randomTenDigitNumber.toString() + "jt";
+    return `${randomTenDigitNumber.toString()}_${parsedToken['iss']}`;
   };
 
   private getNbfFromToken = (parsedToken: string | any): any => {
