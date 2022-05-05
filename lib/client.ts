@@ -774,7 +774,7 @@ export class Client extends EventEmitter {
       return `${parsedToken['sub']}_${parsedToken['iss']}`;
     }
     const randomTenDigitNumber = new Date().valueOf();
-    return `${randomTenDigitNumber.toString()}_${parsedToken['iss']}`;
+    return `puser${randomTenDigitNumber.toString()}jt_${parsedToken['iss']}`;
   };
 
   private getNbfFromToken = (parsedToken: string | any): any => {
