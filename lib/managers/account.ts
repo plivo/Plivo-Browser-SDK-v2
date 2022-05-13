@@ -401,8 +401,6 @@ class Account {
     this.cs.password = null;
     this.cs.accessToken = null;
 
-    this.cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-
     if (this.cs.isLogoutCalled === true) {
       this.cs.isLogoutCalled = false;
       this.cs.emit('onLogout');
@@ -421,12 +419,14 @@ class Account {
    * Triggered when user credentials are wrong.
    * @param {Object} error - Login failure error
    */
-  private _onRegistrationFailed = (error: { cause?: string }): void => {
+  private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
     this.cs.isLoggedIn = false;
     Plivo.log.debug('Login failed : ', error.cause);
     this.cs.userName = null;
     this.cs.password = null;
-    this.cs.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+
+    let errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw) : 401;
+    this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
   };
 
   /**

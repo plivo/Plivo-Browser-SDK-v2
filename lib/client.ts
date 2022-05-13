@@ -531,6 +531,12 @@ export class Client extends EventEmitter {
   public loginWithAccessTokenGenerator = (accessTokenObject: any): boolean => this._loginWithAccessTokenGenerator(accessTokenObject);
   
   /**
+   * get error string by error code
+   * @param {number} errorCode
+   */
+   public getErrorStringByErrorCodes = (errorCode: number): string => this._getErrorStringByErrorCodes(errorCode);
+  
+  /**
    * Unregister and clear stats timer, socket.
    */
   public logout = (): boolean => this._logout();
@@ -906,26 +912,6 @@ export class Client extends EventEmitter {
         return false;
       }
 
-      let currentTimestamp = Math.floor(Date.now() / 1000);
-      let nbf = this.getNbfFromToken(parsedToken); 
-      if(nbf) {        
-        if(currentTimestamp < nbf) {
-          this.emit('onLoginFailed', 'ACCESS_TOKEN_NOT_VALID_YET');
-          Plivo.log.error('Access Token not vaild yet. Try to re-login on nbf time');
-          return false;
-        }
-      }
-
-      let exp = this.getExpFromToken(parsedToken);  
-      if(exp) {        
-        if(currentTimestamp >= exp) {
-          this.emit('onLoginFailed', 'ACCESS_TOKEN_EXPIRED');
-          Plivo.log.error('Access Token expired.');
-          this._logout();
-          return false;
-        }
-      }
-
       this.userName = this.getUsernameFromToken(parsedToken);
       return this.tokenLogin(this.userName, accessToken);
     }
@@ -933,6 +919,23 @@ export class Client extends EventEmitter {
       return false;
     }
   };
+
+  //  private method to get error codes
+  private _getErrorStringByErrorCodes = (errorCode: number) => {
+    switch(errorCode) {
+      case 10001: return 'INVALID_ACCESS_TOKEN'; 
+      case 10002: return 'INVALID_ACCESS_TOKEN_HEADER'; 
+      case 10003: return 'INVALID_ACCESS_TOKEN_ISSUER'; 
+      case 10004: return 'INVALID_ACCESS_TOKEN_SUBJECT'; 
+      case 10005: return 'ACCESS_TOKEN_NOT_VALID_YET'; 
+      case 10006: return 'ACCESS_TOKEN_EXPIRED'; 
+      case 10007: return 'INVALID_ACCESS_TOKEN_SIGNATURE'; 
+      case 10008: return 'INVALID_ACCESS_TOKEN_GRANTS'; 
+      case 10009: return 'EXPIRATION_EXCEEDS_MAX_ALLOWED_TIME'; 
+      case 10010: return 'MAX_ALLOWED_LOGIN_REACHED'; 
+      default: return 'Unauthorised';
+    }
+  }
 
   // private methods
   private _login = (username: string, password: string): boolean => {
