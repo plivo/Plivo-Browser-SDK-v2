@@ -399,6 +399,10 @@ class Account {
     }
     this.cs.userName = null;
     this.cs.password = null;
+    this.cs.accessToken = null;
+
+    this.cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+
     if (this.cs.isLogoutCalled === true) {
       this.cs.isLogoutCalled = false;
       this.cs.emit('onLogout');
@@ -406,6 +410,10 @@ class Account {
         clearInterval(this.cs.networkChangeInterval);
       }
       this.message = null;
+    }
+
+    if(this.cs.callUUID == null) {
+      this.cs.logout();
     }
   };
 
