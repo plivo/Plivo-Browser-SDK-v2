@@ -296,6 +296,7 @@ export const createIncomingSession = (
 ): void => {
   cs = clientObject;
   const callUUID = evt.request.getHeader('X-Calluuid');
+  const stirVerificationValue = evt.request.getHeader('X-Plivo-Stir-Verification');
   Plivo.log.info(`newRTCSession for incomingCall ${callUUID}`);
   const sipCallID = evt.request.getHeader('Call-ID');
   const callerHeader = evt.request.getHeader('From');
@@ -318,6 +319,7 @@ export const createIncomingSession = (
     extraHeaders,
     call_initiation_time: callInitiationTime,
     client: cs,
+    stirShakenState: stirVerificationValue,
   });
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);
