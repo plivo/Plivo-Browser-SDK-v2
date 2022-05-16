@@ -222,6 +222,13 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
   Plivo.log.error(`Incoming call failed: ${evt.cause}`);
   handleFailureCauses(evt, incomingCall);
   incomingCall.onFailed(cs, evt);
+
+  //  logout if logged in by token and token get expired
+  if(cs.isAccessToken && cs.accessToken == null) {
+    cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+    cs.logout();
+  }
+  
   // Check whether there is another incoming call
   if (cs.incomingInvites.size < 2) {
     if (cs.ringToneView && !cs.ringToneView.paused) {

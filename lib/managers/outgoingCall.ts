@@ -327,6 +327,13 @@ const onFailed = (evt: SessionFailedEvent): void => {
   handleFailureCauses(evt);
   cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo());
   cs._currentSession.onFailed(cs, evt);
+
+  //  logout if logged in by token and token get expired
+  if(cs.isAccessToken && cs.accessToken == null) {
+    cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+    cs.logout();
+  }
+  
   if (cs.ringBackToneView && !cs.ringBackToneView.paused) {
     stopAudio(RINGBACK_ELEMENT_ID);
   }
