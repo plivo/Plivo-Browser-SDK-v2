@@ -442,6 +442,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             loginWithAccessTokenGenerator: (accessTokenObject: any) => boolean;
             /**
+                * get error string by error code
+                * @param {number} errorCode
+                */
+            getErrorStringByErrorCodes: (errorCode: number) => string;
+            /**
                 * Unregister and clear stats timer, socket.
                 */
             logout: () => boolean;
