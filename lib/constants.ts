@@ -3,8 +3,8 @@
 /* eslint-disable import/no-mutable-exports */
 
 // Signalling
-export const DOMAIN = 'phone.plivo.com';
-export const WS_SERVERS = ['wss://client.plivo.com/signalling', 'wss://client-fb.plivo.com/signalling'];
+export const DOMAIN = 'phone-qa.voice.plivodev.com';
+export const WS_SERVERS = ['wss://phone-qa.voice.plivodev.com:5063'];
 
 // SDK option settings
 export const DEFAULT_LOG_LEVEL = 'INFO';
@@ -127,11 +127,10 @@ export const DTMF_TONE_FLAG = {
 };
 
 // Stats
-export const S3BUCKET_API_URL = 'https://stats.plivo.com/v1/browser/bucketurl/';
-export const STATSSOCKET_URL = 'wss://insights.plivo.com/ws';
-export const STATS_API_URL = 'https://stats.plivo.com/v1/browser/validate/';
-export const STATS_API_URL_ACCESS_TOKEN = 'https://stats.plivo.com/v1/browser/validate/jwt/';
-export const S3BUCKET_API_URL_JWT = 'https://stats.plivo.com/v1/browser/bucketurl/jwt/';
+export const S3BUCKET_API_URL = 'https://callinsights-statsapi-service-qa.voice.plivodev.com/v1/browser/bucketurl/';
+export const STATSSOCKET_URL = 'wss://callinsights-statsws-service-qa.voice.plivodev.com/ws';
+export const STATS_API_URL = 'https://callinsights-statsapi-service-qa.voice.plivodev.com/v1/browser/validate/';
+export const SDKVERSION_API_URL = "https://callinsights-statsapi-service-qa.voice.plivodev.com/v1/browser/websdkversion/";
 export const STATS_SOURCE = 'BrowserSDK';
 export const STATS_VERSION = 'v1';
 export const GETSTATS_INTERVAL = 5000;
