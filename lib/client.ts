@@ -898,8 +898,7 @@ export class Client extends EventEmitter {
 
     try {
       this.isLoginCalled = true;
-      this.accessToken = accessToken;
-      this.isAccessToken = true;
+      
       let parsedToken = this.parseJwtToken(accessToken);
       if (parsedToken) {
         this.isOutgoingGrant = parsedToken['per']['voice']['outgoing_allow'];
@@ -913,6 +912,8 @@ export class Client extends EventEmitter {
       }
 
       this.userName = this.getUsernameFromToken(parsedToken);
+      this.accessToken = accessToken;
+      this.isAccessToken = true;
       return this.tokenLogin(this.userName, accessToken);
     }
     catch(error) {
@@ -1000,8 +1001,13 @@ export class Client extends EventEmitter {
       return false;
     }
 
-    if(this.isAccessToken && this?.isOutgoingGrant == false) {
-      this.emit('onCallFailed', 'INVALID_ACCESS_TOKEN_GRANTS');
+    
+    if(this.isAccessToken && 
+      (this.accessToken == null || 
+      this.accessToken == undefined ||  
+      this?.isOutgoingGrant == false)
+      ) {
+      this.emit('onPermissionDenied', 'INVALID_ACCESS_TOKEN_GRANTS');
       Plivo.log.warn('permission not granted to make Outgoing call');
       return false;
     }
