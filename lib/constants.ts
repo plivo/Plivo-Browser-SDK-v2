@@ -72,6 +72,7 @@ export const REGION = [
   'europe',
   'asia',
   'south_america',
+  'south_asia'
 ];
 export const DEBUG_MODES = [
   'INFO',
