@@ -864,7 +864,7 @@ export class Client extends EventEmitter {
     if (accessTokenObject == null) {
       Plivo.log.error('Access token object can not be null ');
       // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
-      this.emit('onLoginFailed', '10001 : INVALID_ACCESS_TOKEN');
+      this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
       return false;
     }
     this.isAccessTokenGenerator = true;
@@ -874,7 +874,7 @@ export class Client extends EventEmitter {
       // If accessToken  is null
       if (accessToken == null) {
         // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
-        this.emit('onLoginFailed', '10001 : INVALID_ACCESS_TOKEN');
+        this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
         Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
         return false;
       }
