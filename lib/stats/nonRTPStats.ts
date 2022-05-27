@@ -132,6 +132,13 @@ export const sendEvents = function (statMsg: any, session: CallSession): void {
       client.deferFeedback = true;
       // close Stats Socket
       client.statsSocket.disconnect();
+      client.statsSocket = null;
+    }
+
+     //  logout if logged in by token and token get expired
+     if(client.isAccessToken && client.accessToken == null) {
+      client.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+      client.logout();
     }
   } else {
     Plivo.log.debug(

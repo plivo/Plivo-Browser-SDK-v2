@@ -864,7 +864,7 @@ export class Client extends EventEmitter {
     if (accessTokenObject == null) {
       Plivo.log.error('Access token object can not be null ');
       // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
-      this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+      this.emit('onLoginFailed', '10001 : INVALID_ACCESS_TOKEN');
       return false;
     }
     this.isAccessTokenGenerator = true;
@@ -874,7 +874,7 @@ export class Client extends EventEmitter {
       // If accessToken  is null
       if (accessToken == null) {
         // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
-        this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
+        this.emit('onLoginFailed', '10001 : INVALID_ACCESS_TOKEN');
         Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
         return false;
       }
@@ -1116,11 +1116,7 @@ export class Client extends EventEmitter {
           });
         }
         this._currentSession.session.terminate();
-        
-        if(this.isAccessToken && this.accessToken == null) {
-          this.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-          this._logout();
-        }
+  
         
         if (this.ringBackToneView && !this.ringBackToneView.paused) {
           documentUtil.stopAudio(C.RINGBACK_ELEMENT_ID);

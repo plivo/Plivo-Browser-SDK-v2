@@ -328,11 +328,11 @@ const onFailed = (evt: SessionFailedEvent): void => {
   cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo());
   cs._currentSession.onFailed(cs, evt);
 
-  //  logout if logged in by token and token get expired
-  if(cs.isAccessToken && cs.accessToken == null) {
-    cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-    cs.logout();
-  }
+  // //  logout if logged in by token and token get expired
+  // if(cs.isAccessToken && cs.accessToken == null) {
+  //   cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+  //   cs.logout();
+  // }
   
   if (cs.ringBackToneView && !cs.ringBackToneView.paused) {
     stopAudio(RINGBACK_ELEMENT_ID);
@@ -353,11 +353,6 @@ const onEnded = (evt: SessionEndedEvent): void => {
     Plivo.log.info('Outgoing call ended');
     cs._currentSession.onEnded(cs, evt);
 
-    //  logout if logged in by token and token get expired
-    if(cs.isAccessToken && cs.accessToken == null) {
-      cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-      cs.logout();
-    }
 
     // reset back pingpong to idle state timeouts
     resetPingPong({
