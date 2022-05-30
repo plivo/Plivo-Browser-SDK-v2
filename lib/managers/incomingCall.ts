@@ -223,11 +223,11 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
   handleFailureCauses(evt, incomingCall);
   incomingCall.onFailed(cs, evt);
 
-  //  logout if logged in by token and token get expired
-  if(cs.isAccessToken && cs.accessToken == null) {
-    cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-    cs.logout();
-  }
+  // //  logout if logged in by token and token get expired
+  // if(cs.isAccessToken && cs.accessToken == null) {
+  //   cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+  //   cs.logout();
+  // }
   
   // Check whether there is another incoming call
   if (cs.incomingInvites.size < 2) {
@@ -247,11 +247,6 @@ const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void =>
   Plivo.log.info('Incoming call ended');
   incomingCall.onEnded(cs, evt);
 
-  //  logout if logged in by token and token get expired
-  if(cs.isAccessToken && cs.accessToken == null) {
-    cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-    cs.logout();
-  }
 
   // reset back pingpong to idle state timeouts
   resetPingPong({

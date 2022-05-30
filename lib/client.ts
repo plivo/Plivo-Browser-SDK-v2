@@ -1116,11 +1116,7 @@ export class Client extends EventEmitter {
           });
         }
         this._currentSession.session.terminate();
-        
-        if(this.isAccessToken && this.accessToken == null) {
-          this.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-          this._logout();
-        }
+  
         
         if (this.ringBackToneView && !this.ringBackToneView.paused) {
           documentUtil.stopAudio(C.RINGBACK_ELEMENT_ID);
