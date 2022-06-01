@@ -51,6 +51,8 @@ export const validateCallStats = function (
     if (isAccessToken) {
       const formData = new FormData();
       formData.append('jwt', password);
+      if(username.includes("puser"))
+        formData.append('from', username);
       requestBody = {
         method: 'POST',
         body: formData,
