@@ -346,7 +346,7 @@ class Account {
     // To do : This needs to be changed in case of login through access Token method
     if (this.cs.isAccessToken) {
       const expiryTimeInEpoch = Number(res['response']['headers']['Expires'][0]['raw']);
-      this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch);
+      this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch*1000);
     }
     if (!this.cs.isLoginCalled) {
       this.cs.isLoggedIn = true;
