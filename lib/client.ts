@@ -881,7 +881,7 @@ export class Client extends EventEmitter {
       if (this.getTokenExpiryTimeInEpoch()) {
         setTimeout(() => {
           this.loginWithAccessTokenGenerator(accessTokenObject);
-        }, Number(this.getTokenExpiryTimeInEpoch()) - 5);
+        }, Number(this.getTokenExpiryTimeInEpoch()) - (4*1000));
       }
       return this.loginWithAccessToken(accessToken);
     }).catch(function (err: any) {
