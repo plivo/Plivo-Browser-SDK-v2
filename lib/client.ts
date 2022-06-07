@@ -886,12 +886,22 @@ export class Client extends EventEmitter {
       if (parsedToken != null && parsedToken['exp'] != null) {
         let expiry = parsedToken['exp'] * 1000;
         let currentTimestamp = Math.floor((new Date()).getTime());
-        let timeout = (expiry-currentTimestamp)-(60 * 1000);
+        let timeout = (expiry - currentTimestamp) - (60 * 1000);
         setTimeout(() => {
           this.loginWithAccessTokenGenerator(accessTokenObject);
         }, Number(timeout));
       }
-      return this.loginWithAccessToken(accessToken);
+      if (this.isAccessToken) {
+        if (this.phone != null) {
+          console.log("New token added : " + accessToken);
+          this.phone.registrator().setExtraHeaders([
+            `X-Plivo-Jwt: ${accessToken}`
+          ]);
+        }
+        return true;
+      } else {
+        return this.loginWithAccessToken(accessToken);
+      }
     }).catch(function (err: any) {
       Plivo.log.error('Failed to fetch the accessToken. Try to re-login with valid accessToken', err);
       // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
