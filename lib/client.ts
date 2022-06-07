@@ -839,6 +839,7 @@ export class Client extends EventEmitter {
       && this.phone.isRegistered()
       && this.phone.isConnected()
       && this.userName === username
+      && !this.isAccessToken
     ) {
       Plivo.log.warn(
         `Already registered with the endpoint provided - ${this.userName}`,
