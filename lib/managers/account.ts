@@ -140,8 +140,8 @@ class Account {
       this.cs._currentSession.session.replaceUA(this.cs.phone);
       setTimeout(() => {
         const eventHandlers = {
-          succeeded: () => {},
-          failed: () => {},
+          succeeded: () => { },
+          failed: () => { },
         };
         // this.cs._currentSession!.session = session;
         this.reinviteCounter += 1;
@@ -191,12 +191,12 @@ class Account {
     Plivo.log.info('Ready to login');
     this._createListeners();
     if (this.cs.phone) {
-      if(this.accessTokenCredentials.accessToken != null) {
+      if (this.accessTokenCredentials.accessToken != null) {
         this.cs.phone.registrator().setExtraHeaders([
           `X-Plivo-Jwt: ${this.accessTokenCredentials.accessToken}`
         ]);
-      } 
-      
+      }
+
       this.cs.phone.start();
     }
   };
@@ -346,7 +346,7 @@ class Account {
     // To do : This needs to be changed in case of login through access Token method
     if (this.cs.isAccessToken) {
       const expiryTimeInEpoch = Number(res['response']['headers']['Expires'][0]['raw']);
-      this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch*1000);
+      this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
     }
     if (!this.cs.isLoginCalled) {
       this.cs.isLoggedIn = true;
@@ -365,7 +365,7 @@ class Account {
         messageCheckTimeout: C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
       });
       // get callstats key and create stats socket
-      let passToken : string | null;
+      let passToken: string | null;
       if (this.cs.isAccessToken) {
         passToken = this.cs.accessToken;
       } else {
@@ -410,7 +410,7 @@ class Account {
       this.message = null;
     }
 
-    if(this.cs.callUUID == null) {
+    if (this.cs.callUUID == null) {
       this.cs.logout();
     }
   };
@@ -426,26 +426,30 @@ class Account {
     this.cs.password = null;
 
     let errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw) : 401;
-    this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
+    if (this.cs.isAccessTokenGenerator) {
+      this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
+    } else {
+      this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
+    }
   };
 
   /**
    * Triggered when a transaction is created.
    * @param {Any} evt - transaction details
    */
- private _onNewTransaction = (evt: any): void => {
+  private _onNewTransaction = (evt: any): void => {
     // NOTE: This event is not documented by JsSIP.
     // Should be used to just record the timestamp of invite received only
     // Do not have any other logic here
     // Invite Server Trasaction(ist) gives us the incoming invite timestamp.
     if (evt.transaction.type === 'ist') {
-      
-      Plivo.log.info('<----- INCOMING ----->');      
+
+      Plivo.log.info('<----- INCOMING ----->');
       const callUUID = evt.transaction.request.getHeader('X-Calluuid') || null;
       this.cs.incomingCallsInitiationTime.set(callUUID, getCurrentTime());
       Plivo.log.debug('call initiation time, invite received from server');
     }
-};
+  };
 
   /**
    * Triggered when a new call is performed/received.
@@ -495,7 +499,7 @@ class Account {
       ((this.cs._currentSession || this.cs.incomingInvites.size)
         && !this.cs.options.allowMultipleIncomingCalls)
       || this.cs.incomingInvites.size
-        >= C.NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED
+      >= C.NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED
     ) {
       Plivo.log.debug('Already on call, sending busy signal.');
       const opts = {
