@@ -883,9 +883,10 @@ export class Client extends EventEmitter {
 
       let parsedToken = this.parseJwtToken(accessToken);
 
-      if (parsedToken != null && parsedToken['exp'] != null) {
-        let expiry = parsedToken['exp'] * 1000;
+      if (parsedToken != null) {
         let currentTimestamp = Math.floor((new Date()).getTime());
+        let twentyFourHours = Math.floor((new Date()).getTime() + (3600 * 1000 * 24));
+        let expiry = (parsedToken['exp'] != null) ? parsedToken['exp'] * 1000 : twentyFourHours;
         let timeout = (expiry - currentTimestamp) - (60 * 1000);
         setTimeout(() => {
           this.loginWithAccessTokenGenerator(accessTokenObject);
