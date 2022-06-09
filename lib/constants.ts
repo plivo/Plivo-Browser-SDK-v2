@@ -4,7 +4,7 @@
 
 // Signalling
 export const DOMAIN = 'phone-qa.voice.plivodev.com';
-export const WS_SERVERS = ['wss://phone-qa.voice.plivodev.com:5063'];
+export const WS_SERVERS = ['wss://client-phone-qa.voice.plivodev.com:443/signalling'];
 
 // SDK option settings
 export const DEFAULT_LOG_LEVEL = 'INFO';
