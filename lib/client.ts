@@ -32,6 +32,7 @@ import {
 import getBrowserDetails from './utils/browserDetection';
 import detectFramework from './utils/frameworkDetection';
 import AccessTokenInterface from './utils/token';
+import exp from 'constants';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -255,19 +256,19 @@ export class Client extends EventEmitter {
    * boolean that tells which type of login method is called
    * @private
    */
-  isAccessTokenGenerator : boolean | null;
+  isAccessTokenGenerator: boolean | null;
 
   /**
    * boolean that tells if user logged in through access token
    * @private
    */
-  isAccessToken : boolean;
+  isAccessToken: boolean;
 
   /**
    * access token expiry
    * @private
    */
-  accessTokenExpiryInEpoch: number | null;  
+  accessTokenExpiryInEpoch: number | null;
   /**
    * Access Token  Outgoing Grant
    * @private
@@ -279,7 +280,7 @@ export class Client extends EventEmitter {
    * Access Token  Incoming Grant
    * @private
    */
-  isIncomingGrant: boolean|null;
+  isIncomingGrant: boolean | null;
 
   /**
    * Access Token  abstract class that needs to be implemented
@@ -459,7 +460,7 @@ export class Client extends EventEmitter {
    * Calculate time taken for different stats
    * @private
    */
-  timeTakenForStats: {[key:string]: {init: number, end?: number}};
+  timeTakenForStats: { [key: string]: { init: number, end?: number } };
 
   /**
    * Holds network disconnected timestamp
@@ -529,13 +530,13 @@ export class Client extends EventEmitter {
    * @param {Any} accessTokenObject
    */
   public loginWithAccessTokenGenerator = (accessTokenObject: any): boolean => this._loginWithAccessTokenGenerator(accessTokenObject);
-  
+
   /**
    * get error string by error code
    * @param {number} errorCode
    */
-   public getErrorStringByErrorCodes = (errorCode: number): string => this._getErrorStringByErrorCodes(errorCode);
-  
+  public getErrorStringByErrorCodes = (errorCode: number): string => this._getErrorStringByErrorCodes(errorCode);
+
   /**
    * Unregister and clear stats timer, socket.
    */
@@ -805,17 +806,17 @@ export class Client extends EventEmitter {
 
     let { app = undefined, iss = undefined, sub = undefined, nbf = undefined, exp = undefined, per = undefined } = parsedToken;
     let { incoming_allow = undefined, outgoing_allow = undefined } = per.voice || undefined;
-  
+
     // To do : Add the token validations [DONE]
-    if(!iss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
+    if (!iss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
       return false;
     }
-    
-    if(typeof app !== "string" || typeof iss !== "string" || typeof sub !== "string" || typeof nbf !== "number" || 
-    typeof exp !== "number" || typeof incoming_allow !== "boolean" || typeof outgoing_allow !== "boolean") {
+
+    if (typeof app !== "string" || typeof iss !== "string" || typeof sub !== "string" || typeof nbf !== "number" ||
+      typeof exp !== "number" || typeof incoming_allow !== "boolean" || typeof outgoing_allow !== "boolean") {
       return false;
-    } 
-    
+    }
+
     return true;
   };
 
@@ -823,7 +824,7 @@ export class Client extends EventEmitter {
     try {
       let base64Url = accessToken.split('.')[1];
       let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      let jsonPayload = decodeURIComponent(atob(base64).split('').map (function(c) {
+      let jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
       }).join(''));
       return JSON.parse(jsonPayload);
@@ -838,6 +839,7 @@ export class Client extends EventEmitter {
       && this.phone.isRegistered()
       && this.phone.isConnected()
       && this.userName === username
+      && !this.isAccessToken
     ) {
       Plivo.log.warn(
         `Already registered with the endpoint provided - ${this.userName}`,
@@ -878,12 +880,29 @@ export class Client extends EventEmitter {
         Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
         return false;
       }
-      if (this.getTokenExpiryTimeInEpoch()) {
+
+      let parsedToken = this.parseJwtToken(accessToken);
+
+      if (parsedToken != null) {
+        let currentTimestamp = Math.floor((new Date()).getTime());
+        let twentyFourHours = Math.floor((new Date()).getTime() + (3600 * 1000 * 24));
+        let expiry = (parsedToken['exp'] != null) ? parsedToken['exp'] * 1000 : twentyFourHours;
+        let timeout = (expiry - currentTimestamp) - (60 * 1000);
         setTimeout(() => {
           this.loginWithAccessTokenGenerator(accessTokenObject);
-        }, Number(this.getTokenExpiryTimeInEpoch()) - (4*1000));
+        }, Number(timeout));
       }
-      return this.loginWithAccessToken(accessToken);
+      if (this.isAccessToken) {
+        if (this.phone != null) {
+          console.log("New token added : " + accessToken);
+          this.phone.registrator().setExtraHeaders([
+            `X-Plivo-Jwt: ${accessToken}`
+          ]);
+        }
+        return true;
+      } else {
+        return this.loginWithAccessToken(accessToken);
+      }
     }).catch(function (err: any) {
       Plivo.log.error('Failed to fetch the accessToken. Try to re-login with valid accessToken', err);
       // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
@@ -898,7 +917,7 @@ export class Client extends EventEmitter {
 
     try {
       this.isLoginCalled = true;
-      
+
       let parsedToken = this.parseJwtToken(accessToken);
       if (parsedToken) {
         this.isOutgoingGrant = parsedToken['per']['voice']['outgoing_allow'];
@@ -916,24 +935,24 @@ export class Client extends EventEmitter {
       this.isAccessToken = true;
       return this.tokenLogin(this.userName, accessToken);
     }
-    catch(error) {
+    catch (error) {
       return false;
     }
   };
 
   //  private method to get error codes
   private _getErrorStringByErrorCodes = (errorCode: number) => {
-    switch(errorCode) {
-      case 10001: return 'INVALID_ACCESS_TOKEN'; 
-      case 10002: return 'INVALID_ACCESS_TOKEN_HEADER'; 
-      case 10003: return 'INVALID_ACCESS_TOKEN_ISSUER'; 
-      case 10004: return 'INVALID_ACCESS_TOKEN_SUBJECT'; 
-      case 10005: return 'ACCESS_TOKEN_NOT_VALID_YET'; 
-      case 10006: return 'ACCESS_TOKEN_EXPIRED'; 
-      case 10007: return 'INVALID_ACCESS_TOKEN_SIGNATURE'; 
-      case 10008: return 'INVALID_ACCESS_TOKEN_GRANTS'; 
-      case 10009: return 'EXPIRATION_EXCEEDS_MAX_ALLOWED_TIME'; 
-      case 10010: return 'MAX_ALLOWED_LOGIN_REACHED'; 
+    switch (errorCode) {
+      case 10001: return 'INVALID_ACCESS_TOKEN';
+      case 10002: return 'INVALID_ACCESS_TOKEN_HEADER';
+      case 10003: return 'INVALID_ACCESS_TOKEN_ISSUER';
+      case 10004: return 'INVALID_ACCESS_TOKEN_SUBJECT';
+      case 10005: return 'ACCESS_TOKEN_NOT_VALID_YET';
+      case 10006: return 'ACCESS_TOKEN_EXPIRED';
+      case 10007: return 'INVALID_ACCESS_TOKEN_SIGNATURE';
+      case 10008: return 'INVALID_ACCESS_TOKEN_GRANTS';
+      case 10009: return 'EXPIRATION_EXCEEDS_MAX_ALLOWED_TIME';
+      case 10010: return 'MAX_ALLOWED_LOGIN_REACHED';
       default: return 'Unauthorised';
     }
   }
@@ -946,6 +965,7 @@ export class Client extends EventEmitter {
       && this.phone.isRegistered()
       && this.phone.isConnected()
       && this.userName === username
+      && !this.isAccessToken
     ) {
       Plivo.log.warn(
         `Already registered with the endpoint provided - ${this.userName}`,
@@ -1001,12 +1021,12 @@ export class Client extends EventEmitter {
       return false;
     }
 
-    
-    if(this.isAccessToken && 
-      (this.accessToken == null || 
-      this.accessToken == undefined ||  
-      this?.isOutgoingGrant == false)
-      ) {
+
+    if (this.isAccessToken &&
+      (this.accessToken == null ||
+        this.accessToken == undefined ||
+        this?.isOutgoingGrant == false)
+    ) {
       this.emit('onPermissionDenied', 'INVALID_ACCESS_TOKEN_GRANTS');
       Plivo.log.warn('permission not granted to make Outgoing call');
       return false;
@@ -1016,7 +1036,7 @@ export class Client extends EventEmitter {
       this.emit('onCallFailed', reason);
     };
     const readyForCall = () => {
-      if(this.isAccessToken) extraHeaders['X-Plivo-Jwt'] = `${this.accessToken}`; 
+      if (this.isAccessToken) extraHeaders['X-Plivo-Jwt'] = `${this.accessToken}`;
 
       this.owaLastDetect.isOneWay = false;
       return OutgoingCall.makeCall(this, extraHeaders, phoneNumber);
@@ -1116,8 +1136,8 @@ export class Client extends EventEmitter {
           });
         }
         this._currentSession.session.terminate();
-  
-        
+
+
         if (this.ringBackToneView && !this.ringBackToneView.paused) {
           documentUtil.stopAudio(C.RINGBACK_ELEMENT_ID);
         }
@@ -1478,12 +1498,12 @@ export class Client extends EventEmitter {
         let session;
         if (
           this._currentSession
-            && this._currentSession.callUUID === callUUID
+          && this._currentSession.callUUID === callUUID
         ) {
           session = this._currentSession;
         } else if (
           this._lastCallSession
-            && this._lastCallSession.callUUID === callUUID
+          && this._lastCallSession.callUUID === callUUID
         ) {
           session = this._lastCallSession;
         }
