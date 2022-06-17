@@ -127,9 +127,9 @@ export const DTMF_TONE_FLAG = {
 };
 
 // Stats
-export const S3BUCKET_API_URL = 'https://callinsights-statsapi-service-qa.voice.plivodev.com/v1/browser/bucketurl/';
-export const STATSSOCKET_URL = 'wss://callinsights-statsws-service-qa.voice.plivodev.com/ws';
-export const STATS_API_URL = 'https://callinsights-statsapi-service-qa.voice.plivodev.com/v1/browser/validate/';
+export const S3BUCKET_API_URL = 'https://stats.plivo.com/v1/browser/bucketurl/';
+export const STATSSOCKET_URL = 'wss://insights.plivo.com/ws';
+export const STATS_API_URL = 'https://stats.plivo.com/v1/browser/validate/';
 export const SDKVERSION_API_URL = "https://callinsights-statsapi-service-qa.voice.plivodev.com/v1/browser/websdkversion/";
 export const STATS_API_URL_ACCESS_TOKEN = 'https://callinsights-statsapi-service-qa.voice.plivodev.com/v1/browser/validate/jwt/';
 export const S3BUCKET_API_URL_JWT = 'https://stats.plivo.com/v1/browser/bucketurl/jwt/';
