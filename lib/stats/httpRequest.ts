@@ -48,29 +48,26 @@ export const validateCallStats = function (
     } else {
       statsApiUrl = new URL(C.STATS_API_URL);
     }
+    
+    let statsBody;
     if (isAccessToken) {
-      const formData = new FormData();
-      formData.append('jwt', password);
-      if(username.includes("puser"))
-        formData.append('from', username);
-      requestBody = {
-        method: 'POST',
-        body: formData,
+      statsBody = {
+        jwt:password,
+        ...(username.includes("puser") && { from: username})
       };
     } else {
-      const statsHeaders = new Headers();
-      statsHeaders.append('Content-Type', 'application/json');
-      const statsBody = {
+      statsBody = {
         username,
         password,
         domain: C.DOMAIN,
       };
-      requestBody = {
-        method: 'POST',
-        headers: statsHeaders,
-        body: JSON.stringify(statsBody),
-      };
+      
     }
+    requestBody = {
+      method: 'POST',
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(statsBody),
+    };
 
     fetch(statsApiUrl as any, requestBody)
       .then((response) => {
@@ -107,26 +104,25 @@ export const getPreSignedS3URL = (
 ): Promise<PreSignedUrlResponse | string> => {
   let url: URL;
   let requestBody: any;
+  let body: any;
   // prepared body in case login is through access token
   if (isAccessToken) {
     url = new URL(C.S3BUCKET_API_URL_JWT);
-    const formData = new FormData();
-    formData.append('jwt', preSignedUrlBody.accessToken);
-    formData.append('calluuid', preSignedUrlBody.calluuid);
-    if(preSignedUrlBody.username.includes("puser"))
-        formData.append('from', preSignedUrlBody.username);
-    requestBody = {
-      method: 'POST',
-      body: formData,
+    body = {
+      jwt: preSignedUrlBody.accessToken,
+      calluuid: preSignedUrlBody.calluuid,
+      ...(preSignedUrlBody.username.includes("puser") && { from: preSignedUrlBody.username})
     };
   } else {
     url = new URL(C.S3BUCKET_API_URL);
-    requestBody = {
-      method: 'POST',
-      headers: new Headers({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify(preSignedUrlBody),
-    };
+    body = preSignedUrlBody; 
   }
+
+  requestBody = {
+    method: 'POST',
+    headers: new Headers({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body),
+  };
   return new Promise((resolve, reject) => {
     fetch(url as any, requestBody)
       .then((response) => {
