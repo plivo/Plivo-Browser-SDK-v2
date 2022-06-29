@@ -33,7 +33,7 @@ export const ICE_RECONNECT_COUNT = 5;
 export const NETWORK_CHANGE_INTERVAL = 10000;
 export const STUN_SERVERS = [
   'stun:stun.plivo.com:3408',
-  'stun:stun1.l.google.com:19302',
+  'stun:stun.l.google.com:19302',
 ];
 
 export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
