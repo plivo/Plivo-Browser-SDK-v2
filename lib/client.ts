@@ -737,6 +737,8 @@ export class Client extends EventEmitter {
     this.isLogoutCalled = false;
     this.networkChangeInterval = null;
     this.shouldMuteCall = false;
+    this.isOutgoingGrant = false
+    this.isIncomingGrant = false
     this.audio = {
       availableDevices: audioUtil.availableDevices,
       ringtoneDevices: audioUtil.ringtoneDevices,
@@ -805,22 +807,22 @@ export class Client extends EventEmitter {
     }
 
     let { app = undefined, iss = undefined, sub = undefined, nbf = undefined, exp = undefined, per = undefined } = parsedToken;
-    let { incoming_allow = undefined, outgoing_allow = undefined } = per.voice || undefined;
 
     // To do : Add the token validations [DONE]
-    if (!iss || !nbf || !exp || !per || incoming_allow === undefined || outgoing_allow === undefined) {
+    if (!iss || !nbf || !exp) {
       return false;
     }
 
-    if (typeof app !== "string" || typeof iss !== "string" || typeof sub !== "string" || typeof nbf !== "number" ||
-      typeof exp !== "number" || typeof incoming_allow !== "boolean" || typeof outgoing_allow !== "boolean") {
+    if ((app && typeof app !== "string") || (iss && typeof iss !== "string") || (sub && typeof sub !== "string") || (nbf && typeof nbf !== "number") ||
+      (exp && typeof exp !== "number") || (per && per.voice && per.voice.incoming_allow &&  typeof per.voice.incoming_allow !== "boolean") || 
+      (per && per.voice && per.voice.outgoing_allow &&  typeof per.voice.outgoing_allow !== "boolean")) {
       return false;
     }
 
     return true;
   };
 
-  private parseJwtToken = (accessToken: string): string | null => {
+  private parseJwtToken = (accessToken: string): any | null => {
     try {
       let base64Url = accessToken.split('.')[1];
       let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -919,9 +921,9 @@ export class Client extends EventEmitter {
       this.isLoginCalled = true;
 
       let parsedToken = this.parseJwtToken(accessToken);
-      if (parsedToken) {
-        this.isOutgoingGrant = parsedToken['per']['voice']['outgoing_allow'];
-        this.isIncomingGrant = parsedToken['per']['voice']['incoming_allow'];
+      if (parsedToken && parsedToken.per && parsedToken.per.voice) {
+        this.isOutgoingGrant = parsedToken.per.voice.outgoing_allow;
+        this.isIncomingGrant = parsedToken.per.voice.incoming_allow;
       }
       const isTokenValid = this.validateToken(parsedToken);
       if (!isTokenValid) {
@@ -987,8 +989,8 @@ export class Client extends EventEmitter {
     // if logout is called explicitly, make all the related flags to default
     if (this.isAccessToken) {
       this.isAccessToken = false;
-      this.isOutgoingGrant = null;
-      this.isIncomingGrant = null;
+      this.isOutgoingGrant = false;
+      this.isIncomingGrant = false;
       this.accessToken = null;
     }
     if (this._currentSession) {
