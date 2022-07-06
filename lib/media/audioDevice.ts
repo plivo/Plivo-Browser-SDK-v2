@@ -371,8 +371,10 @@ export const inputDevices = ((): InputDevices => ({
           // eslint-disable-next-line no-param-reassign
           deviceId = groupIdDeviceIdMap[groupId];
           Plivo.log.debug(deviceId);
+          checkAudioDevChange.call(clientObject)
           replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
         } else {
+          checkAudioDevChange.call(clientObject)
           replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
         }
       }
@@ -452,6 +454,7 @@ export const outputDevices = ((): OutputDevices => ({
     if (!settingFromWindows) {
       setByWindows = false;
     }
+    checkAudioDevChange.call(clientObject)
     return true;
   },
   get() {
