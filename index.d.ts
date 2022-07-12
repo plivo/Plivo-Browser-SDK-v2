@@ -968,18 +968,6 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         */
     export const stopVolumeDataStreaming: () => void;
     /**
-        * Add getters and setters for input audio devices.
-        */
-    export const inputDevices: InputDevices;
-    /**
-        * Add getters and setters for output audio devices.
-        */
-    export const outputDevices: OutputDevices;
-    /**
-        * Add getters and setters for ringtone which is played during the call.
-        */
-    export const ringtoneDevices: RingToneDevices;
-    /**
         * Add audio device information whenever device is changed.
         * @param {Boolean} store - pass true to store information in Client object for reference
         * @returns Fulfills with audio device information or reject with error
@@ -1010,6 +998,18 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Check if input or output audio device has changed.
         */
     export const checkAudioDevChange: () => void;
+    /**
+        * Add getters and setters for input audio devices.
+        */
+    export const inputDevices: InputDevices;
+    /**
+        * Add getters and setters for output audio devices.
+        */
+    export const outputDevices: OutputDevices;
+    /**
+        * Add getters and setters for ringtone which is played during the call.
+        */
+    export const ringtoneDevices: RingToneDevices;
     /**
         * Unmute the local stream.
         */

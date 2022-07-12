@@ -93,43 +93,42 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
 /**
  * Triggered when call is ringing.
  */
- const onProgress = (incomingCall: CallSession) => (): void => {
-   
+const onProgress = (incomingCall: CallSession) => (): void => {
   // allow incomming call only if permission granted
   Plivo.log.debug('Incoming call in progress', cs);
-    incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
-    incomingCall.updateSignallingInfo({
-      call_progress_time: getCurrentTime(),
-    });
-    incomingCall.setState(incomingCall.STATE.RINGING);
-    incomingCall.setPostDialDelayEndTime(getCurrentTime());
-    Plivo.log.debug('call ringing with 180 code, incoming call in progress');
-    const callerUri = incomingCall.session.remote_identity.uri.toString();
-    // Fetch the caller name
-    const callerName = incomingCall.session.remote_identity.display_name;
-    // if already on an incomingCall then do not play the ringtone
-    if (cs.ringToneFlag !== false && !cs._currentSession) {
-      Plivo.log.debug('ringtone enabled : ', cs.ringToneFlag);
-      if (!mobileBrowserCheck()) {
-        playAudio(RINGTONE_ELEMENT_ID);
-      } else if (!isBrowserInBackground) {
-        playAudio(RINGTONE_ELEMENT_ID);
-      }
-      isIncomingCallRinging = true;
+  incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
+  incomingCall.updateSignallingInfo({
+    call_progress_time: getCurrentTime(),
+  });
+  incomingCall.setState(incomingCall.STATE.RINGING);
+  incomingCall.setPostDialDelayEndTime(getCurrentTime());
+  Plivo.log.debug('call ringing with 180 code, incoming call in progress');
+  const callerUri = incomingCall.session.remote_identity.uri.toString();
+  // Fetch the caller name
+  const callerName = incomingCall.session.remote_identity.display_name;
+  // if already on an incomingCall then do not play the ringtone
+  if (cs.ringToneFlag !== false && !cs._currentSession) {
+    Plivo.log.debug('ringtone enabled : ', cs.ringToneFlag);
+    if (!mobileBrowserCheck()) {
+      playAudio(RINGTONE_ELEMENT_ID);
+    } else if (!isBrowserInBackground) {
+      playAudio(RINGTONE_ELEMENT_ID);
     }
-    const callerId = `${callerUri.substring(
-      4,
-      callerUri.indexOf('@'),
-    )}@${DOMAIN}`;
-    cs.emit(
-      'onIncomingCall',
-      callerId,
-      incomingCall.extraHeaders,
-      incomingCall.getCallInfo(),
-      callerName,
-    );
-    addCloseProtectionListeners.call(cs);
-    Plivo.log.debug('Incoming Call Extra Headers : ', incomingCall.extraHeaders);
+    isIncomingCallRinging = true;
+  }
+  const callerId = `${callerUri.substring(
+    4,
+    callerUri.indexOf('@'),
+  )}@${DOMAIN}`;
+  cs.emit(
+    'onIncomingCall',
+    callerId,
+    incomingCall.extraHeaders,
+    incomingCall.getCallInfo(),
+    callerName,
+  );
+  addCloseProtectionListeners.call(cs);
+  Plivo.log.debug('Incoming Call Extra Headers : ', incomingCall.extraHeaders);
 };
 
 /**
@@ -228,7 +227,6 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
   //   cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
   //   cs.logout();
   // }
-  
   // Check whether there is another incoming call
   if (cs.incomingInvites.size < 2) {
     if (cs.ringToneView && !cs.ringToneView.paused) {
@@ -246,8 +244,6 @@ const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void =>
   Plivo.log.debug(`Incoming call ended - ${incomingCall.callUUID}`);
   Plivo.log.info('Incoming call ended');
   incomingCall.onEnded(cs, evt);
-
-
   // reset back pingpong to idle state timeouts
   resetPingPong({
     client: cs,

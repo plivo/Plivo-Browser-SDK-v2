@@ -36,7 +36,6 @@ export const validateCallStats = function (
 ): Promise<CallStatsValidationResponse | string> {
   return new Promise((resolve, reject) => {
     let statsApiUrl : URL;
-    let requestBody : any;
     // Remove the 'sip' prefix if present in the username before sending request to plivo stats
     let username = userName;
     if (userName.toLowerCase().startsWith('sip:')) {
@@ -48,12 +47,11 @@ export const validateCallStats = function (
     } else {
       statsApiUrl = new URL(C.STATS_API_URL);
     }
-    
     let statsBody;
     if (isAccessToken) {
       statsBody = {
-        jwt:password,
-        ...(username.includes("puser") && { from: username})
+        jwt: password,
+        ...(username.includes("puser") && { from: username }),
       };
     } else {
       statsBody = {
@@ -61,9 +59,8 @@ export const validateCallStats = function (
         password,
         domain: C.DOMAIN,
       };
-      
     }
-    requestBody = {
+    const requestBody = {
       method: 'POST',
       headers: new Headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(statsBody),
@@ -103,7 +100,6 @@ export const getPreSignedS3URL = (
   preSignedUrlBody: PreSignedUrlRequest, isAccessToken: boolean,
 ): Promise<PreSignedUrlResponse | string> => {
   let url: URL;
-  let requestBody: any;
   let body: any;
   // prepared body in case login is through access token
   if (isAccessToken) {
@@ -111,14 +107,13 @@ export const getPreSignedS3URL = (
     body = {
       jwt: preSignedUrlBody.accessToken,
       calluuid: preSignedUrlBody.calluuid,
-      ...(preSignedUrlBody.username.includes("puser") && { from: preSignedUrlBody.username})
+      ...(preSignedUrlBody.username.includes("puser") && { from: preSignedUrlBody.username }),
     };
   } else {
     url = new URL(C.S3BUCKET_API_URL);
-    body = preSignedUrlBody; 
+    body = preSignedUrlBody;
   }
-
-  requestBody = {
+  const requestBody = {
     method: 'POST',
     headers: new Headers({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),

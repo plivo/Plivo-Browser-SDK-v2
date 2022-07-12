@@ -333,7 +333,6 @@ const onFailed = (evt: SessionFailedEvent): void => {
   //   cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
   //   cs.logout();
   // }
-  
   if (cs.ringBackToneView && !cs.ringBackToneView.paused) {
     stopAudio(RINGBACK_ELEMENT_ID);
   }
@@ -352,8 +351,6 @@ const onEnded = (evt: SessionEndedEvent): void => {
     Plivo.log.debug(`Outgoing call ended - ${cs._currentSession.callUUID}`);
     Plivo.log.info('Outgoing call ended');
     cs._currentSession.onEnded(cs, evt);
-
-
     // reset back pingpong to idle state timeouts
     resetPingPong({
       client: cs,
@@ -381,8 +378,7 @@ const getCleanedHeaders = (extraHeaders: ExtraHeaders = {}): string[] => {
   const keys = Object.keys(extraHeaders);
   keys.forEach((key) => {
     const value = extraHeaders[key];
-    const checkHeaderVal = key.toUpperCase() == 'X-PLIVO-JWT' ? checkExtraHeaderJWTVal : checkExtraHeaderVal;
-  
+    const checkHeaderVal = key.toUpperCase() === 'X-PLIVO-JWT' ? checkExtraHeaderJWTVal : checkExtraHeaderVal;
     if (checkExtraHeaderKey(key) && checkHeaderVal(value)) {
       cleanExtraHeaders.push(`${key}: ${value}`);
       outboundExtraHeaders[key] = value;

@@ -12,6 +12,7 @@
   "plugins": ["@typescript-eslint"],
   "rules": {
     "quotes": "off",
+    "no-param-reassign": 0,
     "@typescript-eslint/quotes": ["off"]
   }
 }
