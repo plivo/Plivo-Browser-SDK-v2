@@ -91,7 +91,8 @@ class Account {
    * @param {String} password
    * @private
    */
-  constructor(clientObject: Client, userName: string, password: string, accessToken: string | null) {
+  constructor(clientObject: Client, userName: string, password: string,
+    accessToken: string | null) {
     this.cs = clientObject;
     this.credentials = { userName, password };
     this.accessTokenCredentials = { accessToken };
@@ -193,7 +194,7 @@ class Account {
     if (this.cs.phone) {
       if (this.accessTokenCredentials.accessToken != null) {
         this.cs.phone.registrator().setExtraHeaders([
-          `X-Plivo-Jwt: ${this.accessTokenCredentials.accessToken}`
+          `X-Plivo-Jwt: ${this.accessTokenCredentials.accessToken}`,
         ]);
       }
 
@@ -218,7 +219,6 @@ class Account {
       if (typeof ipAddress === "string") {
         sendNetworkChangeEvent(this.cs, ipAddress);
       } else if (this.fetchIpCount !== C.IP_ADDRESS_FETCH_RETRY_COUNT) {
-  
         setTimeout(() => {
           this.tiggerNetworkChangeEvent();
         }, this.fetchIpCount * 200);
@@ -227,7 +227,6 @@ class Account {
         this.fetchIpCount = 0;
       }
     });
-    
   };
 
   private _createListeners = (): void => {
@@ -321,13 +320,11 @@ class Account {
     // below is the example to get basic 120 sec expiry from response
     // To do : This needs to be changed in case of login through access Token method
     if (this.cs.isAccessToken) {
-      const expiryTimeInEpoch = res['response']['headers']['X-Plivo-Jwt'][0]['raw'].split(";")[0].split("=")[1];
+      const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
       this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
     }
-    
-
     if (!this.cs.isLoggedIn && !this.cs.isLoginCalled) {
-      //this is case of network change
+      // this is case of network change
       clearInterval(this.cs.networkChangeInterval as any);
       this.cs.networkChangeInterval = null;
       startPingPong({
@@ -354,8 +351,6 @@ class Account {
     if (!this.cs.isLoginCalled) {
       this.cs.isLoggedIn = true;
     }
-
-
     this.cs.userName = this.credentials.userName;
     this.cs.password = this.credentials.password;
     if (this.cs.isLoggedIn === false && this.cs.isLoginCalled === true) {
@@ -431,7 +426,7 @@ class Account {
     this.cs.userName = null;
     this.cs.password = null;
 
-    let errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw) : 401;
+    const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
     if (this.cs.isAccessTokenGenerator) {
       this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
     } else {
@@ -449,7 +444,6 @@ class Account {
     // Do not have any other logic here
     // Invite Server Trasaction(ist) gives us the incoming invite timestamp.
     if (evt.transaction.type === 'ist') {
-
       Plivo.log.info('<----- INCOMING ----->');
       const callUUID = evt.transaction.request.getHeader('X-Calluuid') || null;
       this.cs.incomingCallsInitiationTime.set(callUUID, getCurrentTime());

@@ -135,8 +135,8 @@ export const sendEvents = function (statMsg: any, session: CallSession): void {
       client.statsSocket = null;
     }
 
-     //  logout if logged in by token and token get expired
-     if(statMsg.msg === "CALL_SUMMARY" && client.isAccessToken && !client.isLoggedIn) {
+    //  logout if logged in by token and token get expired
+    if (statMsg.msg === "CALL_SUMMARY" && client.isAccessToken && !client.isLoggedIn) {
       client.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
       client.logout();
     }

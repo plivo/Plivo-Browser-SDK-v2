@@ -336,191 +336,6 @@ const replaceAudioTrack = function (
 };
 
 /**
- * Add getters and setters for input audio devices.
- */
-export const inputDevices = ((): InputDevices => ({
-  set(deviceId) {
-    if (typeof deviceId !== 'string') {
-      Plivo.log.error('Device id should be string');
-      return false;
-    }
-    const device = availableAudioDevices.filter((d) => d.deviceId === deviceId && d.kind === 'audioinput');
-    if (!device.length) {
-      Plivo.log.error('Invalid input device id');
-      return false;
-    }
-    if (
-      typeof Plivo.audioConstraints === 'object'
-      && 'optional' in Plivo.audioConstraints
-    ) {
-      let updated = false;
-      (Plivo.audioConstraints as any).optional.forEach((e: { sourceId: string; }) => {
-        if (e.sourceId) {
-          e.sourceId = deviceId;
-          updated = true;
-        }
-      });
-      if (!updated) {
-        (Plivo.audioConstraints as any).optional.push({ sourceId: deviceId });
-      }
-      updateGroupIdDeviceIdMap(availableAudioDevices);
-
-      if (clientObject && clientObject.getPeerConnection().pc) {
-        if (deviceId === 'default') {
-          const groupId = availableAudioDevicesDeviceIdGroupIdMap[deviceId];
-          // eslint-disable-next-line no-param-reassign
-          deviceId = groupIdDeviceIdMap[groupId];
-          Plivo.log.debug(deviceId);
-          checkAudioDevChange.call(clientObject)
-          replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
-        } else {
-          checkAudioDevChange.call(clientObject)
-          replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
-        }
-      }
-    } else if (typeof Plivo.audioConstraints === 'boolean') {
-      Plivo.audioConstraints = { deviceId };
-    } else {
-      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
-    }
-    return true;
-  },
-  get() {
-    if ((Plivo.audioConstraints as any).optional) {
-      const sourceId = (Plivo.audioConstraints as any).optional.filter(
-        (e: { sourceId: any; }) => e.sourceId,
-      );
-      if (sourceId.length > 0) {
-        return sourceId[0].sourceId;
-      }
-      return '';
-    }
-    if (Plivo.audioConstraints && Plivo.audioConstraints.deviceId) {
-      return Plivo.audioConstraints.deviceId;
-    }
-    return '';
-  },
-  reset() {
-    if ((Plivo.audioConstraints as any).optional) {
-      (Plivo.audioConstraints as any).optional = (Plivo.audioConstraints as any).optional.filter(
-        (e: { sourceId: any; }) => !e.sourceId,
-      );
-    } else if (Plivo.audioConstraints && Plivo.audioConstraints.deviceId) {
-      delete Plivo.audioConstraints.deviceId;
-    }
-    return true;
-  },
-}))();
-
-/**
- * Add getters and setters for output audio devices.
- */
-export const outputDevices = ((): OutputDevices => ({
-  set(deviceId) {
-    const device = availableAudioDevices.filter((d) => d.deviceId === deviceId && d.kind === 'audiooutput');
-    if (!device.length) {
-      Plivo.log.error('Invalid output device id');
-      return false;
-    }
-    const speakerElement = document.querySelectorAll(
-      '[data-devicetype="speakerDevice"]',
-    ) as any;
-    speakerElement.forEach((e: any) => {
-      if (typeof e.sinkId !== 'undefined') {
-        e.setSinkId(deviceId)
-          .then(() => {})
-          .catch((error) => {
-            if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
-              e.src = '';
-              e.setSinkId(deviceId)
-                .then(() => {})
-                .catch((error2) => {
-                  Plivo.log.error(error2);
-                });
-            } else {
-              let errorMessage: string = error;
-              if (error.name === AUDIO_DEVICE_SECURITY_ERROR) {
-                errorMessage = `You need to use HTTPS for selecting audio output device: ${error}`;
-              }
-              Plivo.log.error(errorMessage);
-            }
-            return false;
-          });
-      } else {
-        Plivo.log.warn('Browser does not support output device selection.');
-      }
-      return false;
-    });
-    if (!settingFromWindows) {
-      setByWindows = false;
-    }
-    checkAudioDevChange.call(clientObject)
-    return true;
-  },
-  get() {
-    const speakerElement = document.querySelector(
-      '[data-devicetype="speakerDevice"]',
-    ) as any;
-    if (speakerElement.sinkId) return speakerElement.sinkId;
-    return null;
-  },
-  reset() {
-    const speakerElement = document.querySelectorAll(
-      '[data-devicetype="speakerDevice"]',
-    ) as any;
-    speakerElement.forEach((e: any) => {
-      if (e.setSinkId) {
-        e.setSinkId('');
-      }
-    });
-    return true;
-  },
-  media(source) {
-    const sourceMap = {
-      dtmf: 'dtmfstar',
-      ringback: RINGBACK_ELEMENT_ID,
-    };
-    if (source && source in sourceMap) {
-      return document.getElementById(sourceMap[source]);
-    }
-    return document.getElementById(RINGBACK_ELEMENT_ID);
-  },
-}))();
-
-/**
- * Add getters and setters for ringtone which is played during the call.
- */
-export const ringtoneDevices = ((): RingToneDevices => ({
-  set(deviceId) {
-    const device = availableAudioDevices.filter((d) => d.deviceId === deviceId && d.kind === 'audiooutput');
-    if (!device.length) {
-      Plivo.log.error('Invalid output device id');
-      return false;
-    }
-    const ringToneElement = document.getElementById(RINGTONE_ELEMENT_ID) as any;
-    if (ringToneElement.setSinkId) {
-      ringToneElement.setSinkId(deviceId);
-    }
-    return true;
-  },
-  get() {
-    const ringToneElement = document.getElementById(RINGTONE_ELEMENT_ID) as any;
-    if (ringToneElement.sinkId) return ringToneElement.sinkId;
-    return null;
-  },
-  reset() {
-    const ringToneElement = document.getElementById(RINGTONE_ELEMENT_ID) as any;
-    if (ringToneElement.setSinkId) {
-      ringToneElement.setSinkId('');
-    }
-    return true;
-  },
-  media() {
-    return document.getElementById(RINGTONE_ELEMENT_ID);
-  },
-}))();
-
-/**
  * Add audio device information whenever device is changed.
  * @param {Boolean} store - pass true to store information in Client object for reference
  * @returns Fulfills with audio device information or reject with error
@@ -873,6 +688,191 @@ export const checkAudioDevChange = function (): void {
       Plivo.log.error('Error checkAudioDevChange() ', err);
     });
 };
+
+/**
+ * Add getters and setters for input audio devices.
+ */
+export const inputDevices = ((): InputDevices => ({
+  set(deviceId) {
+    if (typeof deviceId !== 'string') {
+      Plivo.log.error('Device id should be string');
+      return false;
+    }
+    const device = availableAudioDevices.filter((d) => d.deviceId === deviceId && d.kind === 'audioinput');
+    if (!device.length) {
+      Plivo.log.error('Invalid input device id');
+      return false;
+    }
+    if (
+      typeof Plivo.audioConstraints === 'object'
+      && 'optional' in Plivo.audioConstraints
+    ) {
+      let updated = false;
+      (Plivo.audioConstraints as any).optional.forEach((e: { sourceId: string; }) => {
+        if (e.sourceId) {
+          e.sourceId = deviceId;
+          updated = true;
+        }
+      });
+      if (!updated) {
+        (Plivo.audioConstraints as any).optional.push({ sourceId: deviceId });
+      }
+      updateGroupIdDeviceIdMap(availableAudioDevices);
+
+      if (clientObject && clientObject.getPeerConnection().pc) {
+        if (deviceId === 'default') {
+          const groupId = availableAudioDevicesDeviceIdGroupIdMap[deviceId];
+          // eslint-disable-next-line no-param-reassign
+          deviceId = groupIdDeviceIdMap[groupId];
+          Plivo.log.debug(deviceId);
+          checkAudioDevChange.call(clientObject);
+          replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
+        } else {
+          checkAudioDevChange.call(clientObject);
+          replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
+        }
+      }
+    } else if (typeof Plivo.audioConstraints === 'boolean') {
+      Plivo.audioConstraints = { deviceId };
+    } else {
+      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
+    }
+    return true;
+  },
+  get() {
+    if ((Plivo.audioConstraints as any).optional) {
+      const sourceId = (Plivo.audioConstraints as any).optional.filter(
+        (e: { sourceId: any; }) => e.sourceId,
+      );
+      if (sourceId.length > 0) {
+        return sourceId[0].sourceId;
+      }
+      return '';
+    }
+    if (Plivo.audioConstraints && Plivo.audioConstraints.deviceId) {
+      return Plivo.audioConstraints.deviceId;
+    }
+    return '';
+  },
+  reset() {
+    if ((Plivo.audioConstraints as any).optional) {
+      (Plivo.audioConstraints as any).optional = (Plivo.audioConstraints as any).optional.filter(
+        (e: { sourceId: any; }) => !e.sourceId,
+      );
+    } else if (Plivo.audioConstraints && Plivo.audioConstraints.deviceId) {
+      delete Plivo.audioConstraints.deviceId;
+    }
+    return true;
+  },
+}))();
+
+/**
+ * Add getters and setters for output audio devices.
+ */
+export const outputDevices = ((): OutputDevices => ({
+  set(deviceId) {
+    const device = availableAudioDevices.filter((d) => d.deviceId === deviceId && d.kind === 'audiooutput');
+    if (!device.length) {
+      Plivo.log.error('Invalid output device id');
+      return false;
+    }
+    const speakerElement = document.querySelectorAll(
+      '[data-devicetype="speakerDevice"]',
+    ) as any;
+    speakerElement.forEach((e: any) => {
+      if (typeof e.sinkId !== 'undefined') {
+        e.setSinkId(deviceId)
+          .then(() => {})
+          .catch((error) => {
+            if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
+              e.src = '';
+              e.setSinkId(deviceId)
+                .then(() => {})
+                .catch((error2) => {
+                  Plivo.log.error(error2);
+                });
+            } else {
+              let errorMessage: string = error;
+              if (error.name === AUDIO_DEVICE_SECURITY_ERROR) {
+                errorMessage = `You need to use HTTPS for selecting audio output device: ${error}`;
+              }
+              Plivo.log.error(errorMessage);
+            }
+            return false;
+          });
+      } else {
+        Plivo.log.warn('Browser does not support output device selection.');
+      }
+      return false;
+    });
+    if (!settingFromWindows) {
+      setByWindows = false;
+    }
+    checkAudioDevChange.call(clientObject);
+    return true;
+  },
+  get() {
+    const speakerElement = document.querySelector(
+      '[data-devicetype="speakerDevice"]',
+    ) as any;
+    if (speakerElement.sinkId) return speakerElement.sinkId;
+    return null;
+  },
+  reset() {
+    const speakerElement = document.querySelectorAll(
+      '[data-devicetype="speakerDevice"]',
+    ) as any;
+    speakerElement.forEach((e: any) => {
+      if (e.setSinkId) {
+        e.setSinkId('');
+      }
+    });
+    return true;
+  },
+  media(source) {
+    const sourceMap = {
+      dtmf: 'dtmfstar',
+      ringback: RINGBACK_ELEMENT_ID,
+    };
+    if (source && source in sourceMap) {
+      return document.getElementById(sourceMap[source]);
+    }
+    return document.getElementById(RINGBACK_ELEMENT_ID);
+  },
+}))();
+
+/**
+ * Add getters and setters for ringtone which is played during the call.
+ */
+export const ringtoneDevices = ((): RingToneDevices => ({
+  set(deviceId) {
+    const device = availableAudioDevices.filter((d) => d.deviceId === deviceId && d.kind === 'audiooutput');
+    if (!device.length) {
+      Plivo.log.error('Invalid output device id');
+      return false;
+    }
+    const ringToneElement = document.getElementById(RINGTONE_ELEMENT_ID) as any;
+    if (ringToneElement.setSinkId) {
+      ringToneElement.setSinkId(deviceId);
+    }
+    return true;
+  },
+  get() {
+    const ringToneElement = document.getElementById(RINGTONE_ELEMENT_ID) as any;
+    if (ringToneElement.sinkId) return ringToneElement.sinkId;
+    return null;
+  },
+  reset() {
+    const ringToneElement = document.getElementById(RINGTONE_ELEMENT_ID) as any;
+    if (ringToneElement.setSinkId) {
+      ringToneElement.setSinkId('');
+    }
+    return true;
+  },
+  media() {
+    return document.getElementById(RINGTONE_ELEMENT_ID);
+  },
+}))();
 
 /**
  * Unmute the local stream.
