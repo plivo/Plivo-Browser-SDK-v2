@@ -212,19 +212,22 @@ class Account {
     }
   };
 
-  private tiggerNetworkChangeEvent = async () => {
+  private tiggerNetworkChangeEvent = () => {
     this.fetchIpCount += 1;
-    const ipAddress = await fetchIPAddress(this.cs);
-    if (typeof ipAddress === "string") {
-      sendNetworkChangeEvent(this.cs, ipAddress);
-    } else if (this.fetchIpCount !== C.IP_ADDRESS_FETCH_RETRY_COUNT) {
-      setTimeout(() => {
-        this.tiggerNetworkChangeEvent();
-      }, this.fetchIpCount * 200);
-    } else {
-      Plivo.log.warn('Could not retreive ipaddress');
-      this.fetchIpCount = 0;
-    }
+    fetchIPAddress(this.cs).then((ipAddress) => {
+      if (typeof ipAddress === "string") {
+        sendNetworkChangeEvent(this.cs, ipAddress);
+      } else if (this.fetchIpCount !== C.IP_ADDRESS_FETCH_RETRY_COUNT) {
+  
+        setTimeout(() => {
+          this.tiggerNetworkChangeEvent();
+        }, this.fetchIpCount * 200);
+      } else {
+        Plivo.log.warn('Could not retreive ipaddress');
+        this.fetchIpCount = 0;
+      }
+    });
+    
   };
 
   private _createListeners = (): void => {
@@ -237,33 +240,6 @@ class Account {
       this.cs.phone.on('newTransaction' as any, this._onNewTransaction);
       this.cs.phone.on('newRTCSession', this._onNewRTCSession);
     }
-    window.addEventListener('online', () => {
-      clearInterval(this.cs.networkChangeInterval as any);
-      this.cs.networkChangeInterval = null;
-      startPingPong({
-        client: this.cs,
-        networkChangeInterval: this.cs._currentSession
-          ? C.NETWORK_CHANGE_INTERVAL_ON_CALL_STATE : C.NETWORK_CHANGE_INTERVAL_IDLE_STATE,
-        messageCheckTimeout: this.cs._currentSession
-          ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
-      });
-      if (!this.cs._currentSession) return;
-
-      // create stats socket and trigger and trigger network change event
-      // when user is in in-call state
-      if (this.cs.statsSocket) {
-        this.cs.statsSocket.disconnect();
-        this.cs.statsSocket = null;
-      }
-      this.cs.statsSocket = new StatsSocket();
-      this.cs.statsSocket.connect();
-      this.cs.networkReconnectionTimestamp = new Date().getTime();
-      this.tiggerNetworkChangeEvent();
-    });
-    window.addEventListener('offline', () => {
-      if (!this.cs._currentSession) return;
-      this.cs.networkDisconnectedTimestamp = new Date().getTime();
-    });
   };
 
   /**
@@ -348,9 +324,38 @@ class Account {
       const expiryTimeInEpoch = res['response']['headers']['X-Plivo-Jwt'][0]['raw'].split(";")[0].split("=")[1];
       this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
     }
+    
+
+    if (!this.cs.isLoggedIn && !this.cs.isLoginCalled) {
+      //this is case of network change
+      clearInterval(this.cs.networkChangeInterval as any);
+      this.cs.networkChangeInterval = null;
+      startPingPong({
+        client: this.cs,
+        networkChangeInterval: this.cs._currentSession
+          ? C.NETWORK_CHANGE_INTERVAL_ON_CALL_STATE : C.NETWORK_CHANGE_INTERVAL_IDLE_STATE,
+        messageCheckTimeout: this.cs._currentSession
+          ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
+      });
+      if (!this.cs._currentSession) return;
+
+      // create stats socket and trigger and trigger network change event
+      // when user is in in-call state
+      if (this.cs.statsSocket) {
+        this.cs.statsSocket.disconnect();
+        this.cs.statsSocket = null;
+      }
+      this.cs.statsSocket = new StatsSocket();
+      this.cs.statsSocket.connect();
+      this.cs.networkReconnectionTimestamp = new Date().getTime();
+      this.tiggerNetworkChangeEvent();
+    }
+
     if (!this.cs.isLoginCalled) {
       this.cs.isLoggedIn = true;
     }
+
+
     this.cs.userName = this.credentials.userName;
     this.cs.password = this.credentials.password;
     if (this.cs.isLoggedIn === false && this.cs.isLoginCalled === true) {
@@ -397,9 +402,10 @@ class Account {
     if (this.cs.ringBackToneView && !this.cs.ringBackToneView.paused) {
       stopAudio(C.RINGBACK_ELEMENT_ID);
     }
+
+    this.cs.networkDisconnectedTimestamp = new Date().getTime();
     this.cs.userName = null;
     this.cs.password = null;
-    this.cs.accessToken = null;
 
     if (this.cs.isLogoutCalled === true) {
       this.cs.isLogoutCalled = false;
