@@ -889,7 +889,7 @@ export class Client extends EventEmitter {
         }, Number(timeout));
       }
       if (this.isAccessToken) {
-        if (this.phone != null) {
+        if (this.phone != null && this._initJWTParams(accessToken)) {
           Plivo.log.debug("New token added : ", accessToken);
           this.phone.registrator().setExtraHeaders([
             `X-Plivo-Jwt: ${accessToken}`,
@@ -907,8 +907,7 @@ export class Client extends EventEmitter {
     return true;
   };
 
-  // private methods
-  private _loginWithAccessToken = (accessToken: string): boolean => {
+  private _initJWTParams = (accessToken: string): boolean => {
     try {
       this.isLoginCalled = true;
 
@@ -927,7 +926,19 @@ export class Client extends EventEmitter {
       this.userName = this.getUsernameFromToken(parsedToken);
       this.accessToken = accessToken;
       this.isAccessToken = true;
-      return this.tokenLogin(this.userName, accessToken);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // private methods
+  private _loginWithAccessToken = (accessToken: string): boolean => {
+    try {
+      if (this._initJWTParams(accessToken) && this.userName) {
+        return this.tokenLogin(this.userName, accessToken);
+      }
+      return false;
     } catch (error) {
       return false;
     }
