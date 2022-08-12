@@ -433,9 +433,7 @@ const getAnswerOptions = (): SessionAnswerOptions => {
     };
   } else if (!(window as any).localStream) Plivo.log.warn('no local stream attached for this call');
   opts.mediaStream = (window as any).localStream || null;
-  opts.rtcConstraints = cs.options.dscp
-    ? { optional: [{ googDscp: true }] }
-    : null;
+  // opts.rtcConstraints =  null;
   opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
   return opts;
 };

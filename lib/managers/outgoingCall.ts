@@ -409,9 +409,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     audio: cs.options.audioConstraints || true,
     video: false,
   };
-  opts.rtcConstraints = cs.options.dscp
-    ? { optional: [{ googDscp: true }] }
-    : null;
+  // opts.rtcConstraints = null;
   opts.extraHeaders = getCleanedHeaders(extraHeaders);
   opts.mediaStream = (window as any).localStream || null;
   // eslint-disable-next-line @typescript-eslint/dot-notation
