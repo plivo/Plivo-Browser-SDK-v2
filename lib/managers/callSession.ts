@@ -7,7 +7,7 @@ import {
   SessionEndedEvent,
 } from 'plivo-jssip';
 import {
-  sendCallAnsweredEvent, onIceFailure, onMediaFailure, onSDPfailure, DeviceAudioInfo,
+  sendCallAnsweredEvent, onIceFailure, onMediaFailure, onSDPfailure, DeviceAudioInfo, sendCallRingingEvent,
 } from '../stats/nonRTPStats';
 import { emitMetrics } from '../stats/mediaMetrics';
 import {
@@ -254,8 +254,8 @@ export class CallSession {
     ...this.signallingInfo,
     ...{
       post_dial_delay:
-      this.postDialDelayEndTime ? this.postDialDelayEndTime : 0
-      - (this.signallingInfo as any).call_initiation_time,
+        this.postDialDelayEndTime ? this.postDialDelayEndTime : 0
+          - (this.signallingInfo as any).call_initiation_time,
     },
   });
 
@@ -292,6 +292,12 @@ export class CallSession {
    * @param {Client} clientObject - client reference
    */
   public onAccepted = (cs: Client): void => this._onAccepted(cs);
+
+  /**
+   * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
+   * @param {Client} clientObject - client reference
+   */
+  public onRinging = (cs: Client): void => this._onRinging(cs);
 
   /**
    * Triggered when the user answers the call(Outgoing/Incoming) and got or received ACK.
@@ -418,6 +424,20 @@ export class CallSession {
     startVolumeDataStreaming(clientObject);
   };
 
+  private _onRinging = (clientObject: Client): void => {
+    const signallingInfo = this.getSignallingInfo();
+  const mediaConnectionInfo = this.getMediaConnectionInfo();
+    getAudioDevicesInfo
+      .call(clientObject)
+      .then((deviceInfo: DeviceAudioInfo) => {
+        sendCallRingingEvent.call(clientObject, deviceInfo, signallingInfo,mediaConnectionInfo,this);
+      })
+      .catch(() => {
+        sendCallRingingEvent.call(clientObject, null, signallingInfo,mediaConnectionInfo,this);
+      });
+
+  };
+
   private _onConfirmed = (clientObject: Client): void => {
     this.addConnectionStage(`confirmed@${getCurrentTime()}`);
     this.setState(this.STATE.ANSWERED);
@@ -442,9 +462,9 @@ export class CallSession {
     setTimeout(() => {
       owaNotification.bind(clientObject);
     },
-    3000,
-    this.session.connection,
-    clientObject);
+      3000,
+      this.session.connection,
+      clientObject);
   };
 
   private _onIceCandidate = (
