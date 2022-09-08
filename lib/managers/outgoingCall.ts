@@ -226,6 +226,7 @@ const handleProgressTone = (evt: SessionProgressEvent): void => {
 const OnProgress = (evt: SessionProgressEvent): void => {
   cs.timeTakenForStats.pdd.end = new Date().getTime();
   if (cs._currentSession && evt.response) {
+    cs._currentSession.onRinging(cs);
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
     cs._currentSession.setState(cs._currentSession.STATE.RINGING);
