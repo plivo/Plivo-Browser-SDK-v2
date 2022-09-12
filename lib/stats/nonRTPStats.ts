@@ -42,6 +42,29 @@ export interface DeviceAudioInfo {
   activeOutputAudioDevice: string;
 }
 
+export interface RingingEvent {
+  msg: string;
+  userAgent: string;
+  clientVersionMajor: string;
+  clientVersionMinor: string;
+  clientVersionPatch: string;
+  sdkName: string;
+  sdkVersionMajor: number;
+  sdkVersionMinor: number;
+  sdkVersionPatch: number;
+  clientName: string;
+  devicePlatform: string;
+  deviceOs: string;
+  setupOptions: ConfiguationOptions;
+  signalling?: any;
+  mediaConnection?: any;
+  audioDeviceInfo?: DeviceAudioInfo;
+  isAudioDeviceToggled?: boolean;
+  isNetworkChanged?: boolean;
+  jsFramework: string[];
+
+}
+
 export interface SummaryEvent {
   msg: string;
   userAgent: string;
@@ -115,6 +138,9 @@ export const addCallInfo = function (
  */
 export const sendEvents = function (statMsg: any, session: CallSession): void {
   const client: Client = this;
+  console.log("sendEvents | socket : ",client.statsSocket);
+  console.log("sendEvents | session : ",session);
+  console.log("sendEvents | sipCallId : ",session.sipCallID);
   if (
     client.statsSocket
     && client.callstatskey
@@ -269,6 +295,51 @@ export const sendCallSummaryEvent = function (
     summaryEvent.audioDeviceInfo = deviceInfo;
   }
   sendEvents.call(client, summaryEvent, session);
+};
+
+export const sendCallRingingEvent = function (
+  deviceInfo: DeviceAudioInfo,
+  signallingInfo: SignallingInfo,
+  mediaConnectionInfo: MediaConnectionInformation,
+  session: CallSession,
+): void {
+  console.log("@@ sendCallRingingEvent");
+  const client: Client = this;
+  if (!client.callstatskey) {
+    console.log("@@callstatekey not available");
+    return;
+  }
+  console.log("@@ sendCallRingingEvent | callstatekey available");
+  const clientVersionParse = device.getClientVersion() as SemverParserVersion;
+  const sdkVersionParse = device.getSDKVersion();
+  const deviceOs = device.getOS();
+  const ringingEvent: RingingEvent = {
+    msg: 'CALL_RINGING',
+    signalling: signallingInfo,
+    mediaConnection: mediaConnectionInfo,
+    clientName: getBrowserDetails().browser,
+    userAgent: navigator.userAgent,
+    clientVersionMajor:
+      clientVersionParse.major || clientVersionParse[0] || '0',
+    clientVersionMinor:
+      clientVersionParse.minor || clientVersionParse[1] || '0',
+    clientVersionPatch:
+      clientVersionParse.patch || clientVersionParse[2] || '0',
+    sdkName: pkg.name,
+    sdkVersionMajor: sdkVersionParse.major,
+    sdkVersionMinor: sdkVersionParse.minor,
+    sdkVersionPatch: sdkVersionParse.patch,
+    devicePlatform: navigator.platform,
+    deviceOs,
+    setupOptions: client.options,
+    isAudioDeviceToggled: client.deviceToggledInCurrentSession,
+    isNetworkChanged: client.networkChangeInCurrentSession,
+    jsFramework: client.jsFramework,
+  };
+  if (deviceInfo) {
+    ringingEvent.audioDeviceInfo = deviceInfo;
+  }
+  sendEvents.call(client, ringingEvent, session);
 };
 
 /**
