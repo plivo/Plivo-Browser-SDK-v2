@@ -461,13 +461,13 @@ const processStats = function (stream: RtpStatsStream): void {
   getStatsRef.collected.local.audioLevel = handleStat(
     stream.local.audioInputLevel as number,
     'int',
-    null,
+    Number(-100),
     true,
   );
   getStatsRef.collected.remote.audioLevel = handleStat(
     stream.remote.audioOutputLevel as number,
     'int',
-    null,
+    Number(-100),
     true,
   );
   getStatsRef.collected.remote.jitterBufferDelay = handleStat((stream.remote as any).googCurrentDelayMs, 'int', null, true);
