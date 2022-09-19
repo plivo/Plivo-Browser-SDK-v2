@@ -799,6 +799,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 */
             onAccepted: (cs: Client) => void;
             /**
+                * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
+                * @param {Client} clientObject - client reference
+                */
+            onRinging: (cs: Client) => void;
+            /**
                 * Triggered when the user answers the call(Outgoing/Incoming) and got or received ACK.
                 * @param {Client} clientObject - client reference
                 */
@@ -1270,6 +1275,27 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             activeInputAudioDevice: string;
             activeOutputAudioDevice: string;
     }
+    export interface RingingEvent {
+            msg: string;
+            userAgent: string;
+            clientVersionMajor: string;
+            clientVersionMinor: string;
+            clientVersionPatch: string;
+            sdkName: string;
+            sdkVersionMajor: number;
+            sdkVersionMinor: number;
+            sdkVersionPatch: number;
+            clientName: string;
+            devicePlatform: string;
+            deviceOs: string;
+            setupOptions: ConfiguationOptions;
+            signalling?: any;
+            mediaConnection?: any;
+            audioDeviceInfo?: DeviceAudioInfo;
+            isAudioDeviceToggled?: boolean;
+            isNetworkChanged?: boolean;
+            jsFramework: string[];
+    }
     export interface SummaryEvent {
             msg: string;
             userAgent: string;
@@ -1326,6 +1352,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
         * @param {CallSession} session - call session information
         */
     export const sendCallSummaryEvent: (deviceInfo: DeviceAudioInfo, signallingInfo: SignallingInfo, mediaConnectionInfo: MediaConnectionInformation, session: CallSession) => void;
+    export const sendCallRingingEvent: (deviceInfo: DeviceAudioInfo, signallingInfo: SignallingInfo, mediaConnectionInfo: MediaConnectionInformation, session: CallSession) => void;
     /**
             * Send user feedback to plivo stats.
             * @param {CallSession} callSession - call information
