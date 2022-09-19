@@ -7,7 +7,12 @@ import {
   SessionEndedEvent,
 } from 'plivo-jssip';
 import {
-  sendCallAnsweredEvent, onIceFailure, onMediaFailure, onSDPfailure, DeviceAudioInfo, sendCallRingingEvent,
+  sendCallAnsweredEvent,
+  onIceFailure,
+  onMediaFailure,
+  onSDPfailure,
+  DeviceAudioInfo,
+  sendCallRingingEvent,
 } from '../stats/nonRTPStats';
 import { emitMetrics } from '../stats/mediaMetrics';
 import {
@@ -426,16 +431,19 @@ export class CallSession {
 
   private _onRinging = (clientObject: Client): void => {
     const signallingInfo = this.getSignallingInfo();
-  const mediaConnectionInfo = this.getMediaConnectionInfo();
+    const mediaConnectionInfo = this.getMediaConnectionInfo();
     getAudioDevicesInfo
       .call(clientObject)
       .then((deviceInfo: DeviceAudioInfo) => {
-        sendCallRingingEvent.call(clientObject, deviceInfo, signallingInfo,mediaConnectionInfo,this);
+        sendCallRingingEvent.call(clientObject,
+          deviceInfo,
+          signallingInfo,
+          mediaConnectionInfo,
+          this);
       })
       .catch(() => {
-        sendCallRingingEvent.call(clientObject, null, signallingInfo,mediaConnectionInfo,this);
+        sendCallRingingEvent.call(clientObject, null, signallingInfo, mediaConnectionInfo, this);
       });
-
   };
 
   private _onConfirmed = (clientObject: Client): void => {
@@ -462,9 +470,9 @@ export class CallSession {
     setTimeout(() => {
       owaNotification.bind(clientObject);
     },
-      3000,
-      this.session.connection,
-      clientObject);
+    3000,
+    this.session.connection,
+    clientObject);
   };
 
   private _onIceCandidate = (

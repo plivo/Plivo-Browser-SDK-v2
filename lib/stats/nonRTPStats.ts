@@ -138,9 +138,6 @@ export const addCallInfo = function (
  */
 export const sendEvents = function (statMsg: any, session: CallSession): void {
   const client: Client = this;
-  console.log("sendEvents | socket : ",client.statsSocket);
-  console.log("sendEvents | session : ",session);
-  console.log("sendEvents | sipCallId : ",session.sipCallID);
   if (
     client.statsSocket
     && client.callstatskey
@@ -303,13 +300,10 @@ export const sendCallRingingEvent = function (
   mediaConnectionInfo: MediaConnectionInformation,
   session: CallSession,
 ): void {
-  console.log("@@ sendCallRingingEvent");
   const client: Client = this;
   if (!client.callstatskey) {
-    console.log("@@callstatekey not available");
     return;
   }
-  console.log("@@ sendCallRingingEvent | callstatekey available");
   const clientVersionParse = device.getClientVersion() as SemverParserVersion;
   const sdkVersionParse = device.getSDKVersion();
   const deviceOs = device.getOS();

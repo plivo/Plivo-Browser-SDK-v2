@@ -94,6 +94,8 @@ describe('RTPStats', () => {
             expected.pdd = 0;
             expected.remote.googJitterBufferMs= null;
             expected.remote.packetsDiscarded= null;
+            expected.local.audioLevel = -100;
+            expected.remote.audioLevel = -100;
             expect(context.collected).toStrictEqual(expected);
             res();
         }, 100))
@@ -115,6 +117,8 @@ describe('RTPStats', () => {
       expected.pdd = 0;
       expected.remote.googJitterBufferMs= null;
       expected.remote.packetsDiscarded= null;
+      expected.local.audioLevel = -100;
+      expected.remote.audioLevel = -100;
       expect(context.collected).toStrictEqual(expected);
       res();
     }, 100));
@@ -158,6 +162,8 @@ describe('RTPStats', () => {
       expected.pdd = 0;
       expected.remote.googJitterBufferMs= null;
       expected.remote.packetsDiscarded= null;
+      expected.local.audioLevel = -100;
+      expected.remote.audioLevel = -100;
       expect(context.collected).toStrictEqual(expected);
       res();
     }, 100));

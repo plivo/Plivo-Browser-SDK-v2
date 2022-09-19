@@ -203,7 +203,7 @@ export class StatsSocket {
         retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
         retrySecondsCount = C.SOCKET_SEND_STATS_RETRY_SECONDS_COUNT;
         Plivo.log.error('Error in sending call summary event');
-        return false;
+        // return false;
       }
     }
     setTimeout(() => {
