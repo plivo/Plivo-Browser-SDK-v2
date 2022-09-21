@@ -28,8 +28,8 @@ const plivo_jwt = process.env.PLIVO_JWT || '';
 const plivo_jwt_without_outbound_access = process.env.PLIVO_JWT_WITHOUT_OUTBOUND_ACCESS || '';   //  jwt with no outbound access  
 
 // eslint-disable-next-line no-undef
-describe("plivoWebSdk", function () {
-  const GLOBAL_TIMEOUT = 240000;
+describe("plivoWebSdk JWT", function () {
+  const GLOBAL_TIMEOUT = 20000;
   this.timeout(GLOBAL_TIMEOUT);
   const TIMEOUT = 20000;
   let bailTimer;
@@ -188,11 +188,11 @@ describe("plivoWebSdk", function () {
       if (bail) {
         done(new Error("bailing"));
       }
-      Client2.reject();
       Client1.call(secondary_user, {});
+      Client2.reject();
       bailTimer = setTimeout(() => {
         Client1.hangup();
-      }, 2000);
+      }, 5000);
       waitUntilOutgoingCall(events.onCallFailed, done, 500);
       bailTimer = setTimeout(() => {
         bail = true;
@@ -292,6 +292,7 @@ describe("plivoWebSdk", function () {
       "onCallAnswered",
       "onCallTerminated",
       "onCalling",
+      "onPermissionDenied"
     ];
 
     clientEvents.forEach((i) => {
@@ -318,6 +319,7 @@ describe("plivoWebSdk", function () {
 
     // eslint-disable-next-line no-undef
     before(() => {
+      console.log("token is: ", plivo_jwt_without_outbound_access);
       Client1.loginWithAccessToken(plivo_jwt_without_outbound_access);
       Client2.login(secondary_user, secondary_pass);
       
@@ -336,6 +338,9 @@ describe("plivoWebSdk", function () {
       Client1.on("onCalling", () => {
         events.onCalling.status = true;
       }); // done
+      Client1.on("onPermissionDenied", () => {
+        events.onPermissionDenied.status = true;
+      }); // done
     });
 
     // eslint-disable-next-line no-undef
@@ -353,7 +358,7 @@ describe("plivoWebSdk", function () {
     after(() => {
       Client1.logout();
       Client2.logout();
-      spyOnSocket.restore();
+      // spyOnSocket.restore();
     });
 
     // #14
@@ -373,31 +378,13 @@ describe("plivoWebSdk", function () {
           Client1.call(secondary_user, extraHeaders);
         });
       }
-      const checkCallFailed = () => {
-        waitUntilOutgoingCall(events.onCallFailed, done, 500);
-      };
-      waitUntilOutgoingCall(events.onCalling, checkCallFailed, 500);
+      waitUntilOutgoingCall(events.onPermissionDenied, done, 500);
 
       bailTimer = setTimeout(() => {
         bail = false;
         done(new Error("outgoing call failed"));
       }, TIMEOUT);
     });
-
-    // #16
-    // eslint-disable-next-line no-undef
-    it("outbound call should be hungup", (done) => {
-      if (bail) {
-        done(new Error("bailing"));
-      }
-      Client1.hangup();
-      waitUntilOutgoingCall(events.onCallTerminated, done, 500);
-      bailTimer = setTimeout(() => {
-        bail = true;
-        done(new Error("outgoing call hangup failed"));
-      }, TIMEOUT);
-    });
-
 
   });  
 });
