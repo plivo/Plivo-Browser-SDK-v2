@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 
 import { CONSOLE_LOGS_BUFFER_SIZE } from './constants';
+import Storage from './storage';
 
 /* eslint-disable no-undef */
 const consoleLogsArr: string[] = [];
@@ -107,6 +108,7 @@ class PlivoLogger {
       if (logHierarchy.indexOf(ucFilter) > logHierarchy.indexOf(this.logMethod)) {
         return;
       }
+      Storage.getInstance().setData(premsg, arg1, arg2);
       switch (ucFilter) {
         case 'OFF':
           // do nothing
