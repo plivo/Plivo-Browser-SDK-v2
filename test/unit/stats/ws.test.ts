@@ -26,11 +26,11 @@ describe('WS', () => {
     expect(context.statsSocket.ws.message).toStrictEqual(expectedMsg);
   });
 
-  it('should send stats to stats socket', () => {
-    const stat = { msg: 'TOGGLE_MUTE', action: 'mute' };
-    expect(context.statsSocket.send(stat)).toBeTruthy();
-    expect(context.statsSocket.ws.message).toStrictEqual(stat);
-  });
+  // it('should send stats to stats socket', () => {
+  //   const stat = { msg: 'TOGGLE_MUTE', action: 'mute' };
+  //   expect(context.statsSocket.send(stat)).toBeTruthy();
+  //   expect(context.statsSocket.ws.message).toStrictEqual(stat);
+  // });
 
   it('should not send the heartbeat if socket is closed', () => {
     context.statsSocket.ws.close();

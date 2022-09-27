@@ -21,7 +21,7 @@ import {
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
 } from '../constants';
 import { CallSession } from './callSession';
-import { checkExtraHeaderKey, checkExtraHeaderVal } from '../utils/headers';
+import { checkExtraHeaderKey, checkExtraHeaderVal, checkExtraHeaderJWTVal } from '../utils/headers';
 import { playAudio, stopAudio } from '../media/document';
 import checkCodecPreference, {
   AvailableCodecs,
@@ -226,6 +226,7 @@ const handleProgressTone = (evt: SessionProgressEvent): void => {
 const OnProgress = (evt: SessionProgressEvent): void => {
   cs.timeTakenForStats.pdd.end = new Date().getTime();
   if (cs._currentSession && evt.response) {
+    cs._currentSession.onRinging(cs);
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
     cs._currentSession.setState(cs._currentSession.STATE.RINGING);
@@ -327,6 +328,12 @@ const onFailed = (evt: SessionFailedEvent): void => {
   handleFailureCauses(evt);
   cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo());
   cs._currentSession.onFailed(cs, evt);
+
+  // //  logout if logged in by token and token get expired
+  // if(cs.isAccessToken && cs.accessToken == null) {
+  //   cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+  //   cs.logout();
+  // }
   if (cs.ringBackToneView && !cs.ringBackToneView.paused) {
     stopAudio(RINGBACK_ELEMENT_ID);
   }
@@ -372,7 +379,8 @@ const getCleanedHeaders = (extraHeaders: ExtraHeaders = {}): string[] => {
   const keys = Object.keys(extraHeaders);
   keys.forEach((key) => {
     const value = extraHeaders[key];
-    if (checkExtraHeaderKey(key) && checkExtraHeaderVal(value)) {
+    const checkHeaderVal = key.toUpperCase() === 'X-PLIVO-JWT' ? checkExtraHeaderJWTVal : checkExtraHeaderVal;
+    if (checkExtraHeaderKey(key) && checkHeaderVal(value)) {
       cleanExtraHeaders.push(`${key}: ${value}`);
       outboundExtraHeaders[key] = value;
       Plivo.log.debug(`valid hdr = ${key} -> ${value}`);
@@ -402,9 +410,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     audio: cs.options.audioConstraints || true,
     video: false,
   };
-  opts.rtcConstraints = cs.options.dscp
-    ? { optional: [{ googDscp: true }] }
-    : null;
+  // opts.rtcConstraints = null;
   opts.extraHeaders = getCleanedHeaders(extraHeaders);
   opts.mediaStream = (window as any).localStream || null;
   // eslint-disable-next-line @typescript-eslint/dot-notation
@@ -525,6 +531,7 @@ export const createOutgoingSession = (
     session: evt.session,
     extraHeaders: outboundExtraHeaders,
     client: cs,
+    stirShakenState: "Not_applicable",
   });
   cs.callSession = cs._currentSession.session;
   cs.callUUID = cs._currentSession.callUUID;
