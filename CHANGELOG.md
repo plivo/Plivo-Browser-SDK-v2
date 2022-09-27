@@ -5,6 +5,12 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.7 (released@ 06-06-2022)
+**Features**
+
+* Added: New Client Region South-Asia to the existing Client Region list.
+* Fixed: The call summary stats are not pushed to Plivo when the call is answered and hung up before the stats socket is open.
+
 ## v2.2.6 (released@ 13-10-2021)
 **Features**
 
