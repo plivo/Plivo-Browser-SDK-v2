@@ -42,29 +42,6 @@ export interface DeviceAudioInfo {
   activeOutputAudioDevice: string;
 }
 
-export interface RingingEvent {
-  msg: string;
-  userAgent: string;
-  clientVersionMajor: string;
-  clientVersionMinor: string;
-  clientVersionPatch: string;
-  sdkName: string;
-  sdkVersionMajor: number;
-  sdkVersionMinor: number;
-  sdkVersionPatch: number;
-  clientName: string;
-  devicePlatform: string;
-  deviceOs: string;
-  setupOptions: ConfiguationOptions;
-  signalling?: any;
-  mediaConnection?: any;
-  audioDeviceInfo?: DeviceAudioInfo;
-  isAudioDeviceToggled?: boolean;
-  isNetworkChanged?: boolean;
-  jsFramework: string[];
-
-}
-
 export interface SummaryEvent {
   msg: string;
   userAgent: string;
@@ -146,23 +123,6 @@ export const sendEvents = function (statMsg: any, session: CallSession): void {
   ) {
     const obj = addCallInfo(session, statMsg, client.callstatskey, client.userName as string);
     client.statsSocket.send(obj, client);
-    // To do : Initiate unregister incase when call gets extended after token expiry
-    if (client.isUnregisterPending === true) {
-      client.isUnregisterPending = false;
-      if (client.phone) {
-        client.phone.stop();
-      }
-      client.deferFeedback = true;
-      // close Stats Socket
-      client.statsSocket.disconnect();
-      client.statsSocket = null;
-    }
-
-    //  logout if logged in by token and token get expired
-    if (statMsg.msg === "CALL_SUMMARY" && client.isAccessToken && !client.isLoggedIn) {
-      client.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-      client.logout();
-    }
   } else {
     Plivo.log.debug(
       'Cannot send Event ',
@@ -292,48 +252,6 @@ export const sendCallSummaryEvent = function (
     summaryEvent.audioDeviceInfo = deviceInfo;
   }
   sendEvents.call(client, summaryEvent, session);
-};
-
-export const sendCallRingingEvent = function (
-  deviceInfo: DeviceAudioInfo,
-  signallingInfo: SignallingInfo,
-  mediaConnectionInfo: MediaConnectionInformation,
-  session: CallSession,
-): void {
-  const client: Client = this;
-  if (!client.callstatskey) {
-    return;
-  }
-  const clientVersionParse = device.getClientVersion() as SemverParserVersion;
-  const sdkVersionParse = device.getSDKVersion();
-  const deviceOs = device.getOS();
-  const ringingEvent: RingingEvent = {
-    msg: 'CALL_RINGING',
-    signalling: signallingInfo,
-    mediaConnection: mediaConnectionInfo,
-    clientName: getBrowserDetails().browser,
-    userAgent: navigator.userAgent,
-    clientVersionMajor:
-      clientVersionParse.major || clientVersionParse[0] || '0',
-    clientVersionMinor:
-      clientVersionParse.minor || clientVersionParse[1] || '0',
-    clientVersionPatch:
-      clientVersionParse.patch || clientVersionParse[2] || '0',
-    sdkName: pkg.name,
-    sdkVersionMajor: sdkVersionParse.major,
-    sdkVersionMinor: sdkVersionParse.minor,
-    sdkVersionPatch: sdkVersionParse.patch,
-    devicePlatform: navigator.platform,
-    deviceOs,
-    setupOptions: client.options,
-    isAudioDeviceToggled: client.deviceToggledInCurrentSession,
-    isNetworkChanged: client.networkChangeInCurrentSession,
-    jsFramework: client.jsFramework,
-  };
-  if (deviceInfo) {
-    ringingEvent.audioDeviceInfo = deviceInfo;
-  }
-  sendEvents.call(client, ringingEvent, session);
 };
 
 /**

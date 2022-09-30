@@ -115,10 +115,10 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-      Client1.login(primary_user, primary_pass);      
+      Client1.login(primary_user, primary_pass);
       Client1.on('onConnectionChange', (obj) => {
         if (obj.state === 'connected') {
-          waitUntilEmitter(true, done, 1000);
+          done();
         } else {
           done(new Error('failed to emit onConnectionChange connected'));
         }
@@ -137,7 +137,7 @@ describe('plivoWebSdk', function () {
       Client1.logout();
       Client1.on('onConnectionChange', (obj) => {
         if (obj.state === 'disconnected') {
-          waitUntilEmitter(true, done, 1000);
+          done();
         } else {
           done(new Error('failed to emit onConnectionChange disconnected'));
         }
@@ -158,7 +158,7 @@ describe('plivoWebSdk', function () {
         const extraHeaders = {};
         extraHeaders['X-PH-conference'] = 'true';
         Client1.on('onMediaConnected', () => {
-          waitUntilEmitter(true, done, 1000);
+          done();
         });
         Client1.call(secondary_user, extraHeaders);
       });

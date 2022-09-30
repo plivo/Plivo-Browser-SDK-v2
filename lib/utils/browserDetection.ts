@@ -20,7 +20,7 @@ const getBrowserDetails = (): BrowserDetails => {
     browserDetails.browser = 'firefox';
     return browserDetails;
   }
-  if (/constructor/i.test(window.HTMLElement as unknown as string) || (((p) => p.toString() === '[object SafariRemoteNotification]')(!(window as any).safari || (typeof safari !== 'undefined' && safari.pushNotification)))
+  if (/constructor/i.test(window.HTMLElement as unknown as string) || (function (p) { return p.toString() === '[object SafariRemoteNotification]'; }(!(window as any).safari || (typeof safari !== 'undefined' && safari.pushNotification)))
   ) {
     // Safari 3.0+ "[object HTMLElementConstructor]"
     browserDetails.browser = 'safari';

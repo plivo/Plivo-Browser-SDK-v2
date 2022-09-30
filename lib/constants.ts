@@ -32,8 +32,8 @@ export const ICE_RECONNECT_INTERVAL = 2000;
 export const ICE_RECONNECT_COUNT = 5;
 export const NETWORK_CHANGE_INTERVAL = 10000;
 export const STUN_SERVERS = [
-  'stun:stun.plivo.com:3408',
   'stun:stun.l.google.com:19302',
+  'stun:stun1.l.google.com:19302',
 ];
 
 export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
@@ -72,7 +72,7 @@ export const REGION = [
   'europe',
   'asia',
   'south_america',
-  'south_asia',
+  'south_asia'
 ];
 export const DEBUG_MODES = [
   'INFO',
@@ -131,9 +131,6 @@ export const DTMF_TONE_FLAG = {
 export const S3BUCKET_API_URL = 'https://stats.plivo.com/v1/browser/bucketurl/';
 export const STATSSOCKET_URL = 'wss://insights.plivo.com/ws';
 export const STATS_API_URL = 'https://stats.plivo.com/v1/browser/validate/';
-export const SDKVERSION_API_URL = "https://stats.plivo.com/v1/browser/websdkversion/";
-export const STATS_API_URL_ACCESS_TOKEN = 'https://stats.plivo.com/v1/browser/validate/jwt/';
-export const S3BUCKET_API_URL_JWT = 'https://stats.plivo.com/v1/browser/bucketurl/jwt/';
 export const STATS_SOURCE = 'BrowserSDK';
 export const STATS_VERSION = 'v1';
 export const GETSTATS_INTERVAL = 5000;

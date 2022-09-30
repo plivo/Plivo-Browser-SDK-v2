@@ -94,9 +94,7 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
  * Triggered when call is ringing.
  */
 const onProgress = (incomingCall: CallSession) => (): void => {
-  // allow incomming call only if permission granted
-  incomingCall.onRinging(cs);
-  Plivo.log.debug('Incoming call in progress', cs);
+  Plivo.log.debug('Incoming call in progress');
   incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
   incomingCall.updateSignallingInfo({
     call_progress_time: getCurrentTime(),
@@ -222,12 +220,6 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
   Plivo.log.error(`Incoming call failed: ${evt.cause}`);
   handleFailureCauses(evt, incomingCall);
   incomingCall.onFailed(cs, evt);
-
-  // //  logout if logged in by token and token get expired
-  // if(cs.isAccessToken && cs.accessToken == null) {
-  //   cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
-  //   cs.logout();
-  // }
   // Check whether there is another incoming call
   if (cs.incomingInvites.size < 2) {
     if (cs.ringToneView && !cs.ringToneView.paused) {
@@ -304,7 +296,6 @@ export const createIncomingSession = (
 ): void => {
   cs = clientObject;
   const callUUID = evt.request.getHeader('X-Calluuid');
-  const stirVerificationValue = evt.request.getHeader('X-Plivo-Stir-Verification');
   Plivo.log.info(`newRTCSession for incomingCall ${callUUID}`);
   const sipCallID = evt.request.getHeader('Call-ID');
   const callerHeader = evt.request.getHeader('From');
@@ -327,7 +318,6 @@ export const createIncomingSession = (
     extraHeaders,
     call_initiation_time: callInitiationTime,
     client: cs,
-    stirShakenState: stirVerificationValue,
   });
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);
@@ -434,7 +424,9 @@ const getAnswerOptions = (): SessionAnswerOptions => {
     };
   } else if (!(window as any).localStream) Plivo.log.warn('no local stream attached for this call');
   opts.mediaStream = (window as any).localStream || null;
-  // opts.rtcConstraints =  null;
+  opts.rtcConstraints = cs.options.dscp
+    ? { optional: [{ googDscp: true }] }
+    : null;
   opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
   return opts;
 };

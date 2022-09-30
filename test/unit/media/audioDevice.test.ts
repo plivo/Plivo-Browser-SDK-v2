@@ -286,7 +286,7 @@ describe('AudioDevice', () => {
 
   it('should get audio device info for call stats', () => {
     const expected = {
-      activeInputAudioDevice: 'Default - MacBook Pro Microphone (Built-in)',
+      activeInputAudioDevice: 'Default - MacBook Pro Speakers (Built-in)',
       activeOutputAudioDevice: 'Default - MacBook Pro Speakers (Built-in)',
       audioInputGroupIds: 'default ,',
       audioInputIdSet: '',

@@ -5,13 +5,13 @@
  */
 export const checkExtraHeaderKey = function (key: string): boolean {
   const keyUppercase = key.toUpperCase();
-  if (keyUppercase.startsWith('X-PH') || keyUppercase === 'X-PLIVO-JWT') {
-    // key only contain [A-Z], [a-z] and [0-9], max length = 24
-    // 19 = 24 - 5
-    const keyRegex = /^([a-z0-9A-Z-]){1,19}$/; // - added to Customer headers key as per close.io request
-    return keyRegex.test(key.substr(5)) !== false;
+  if (!keyUppercase.startsWith('X-PH')) {
+    return false;
   }
-  return false;
+  // key only contain [A-Z], [a-z] and [0-9], max length = 24
+  // 19 = 24 - 5
+  const keyRegex = /^([a-z0-9A-Z-]){1,19}$/; // - added to Customer headers key as per close.io request
+  return keyRegex.test(key.substr(5)) !== false;
 };
 
 /**
@@ -20,17 +20,7 @@ export const checkExtraHeaderKey = function (key: string): boolean {
  */
 export const checkExtraHeaderVal = function (value: string): boolean {
   // value only contain [A-Z], [a-z], [0-9] and '%', max length = 48
-  const valRegex = /^([a-z0-9A-Z_\-+()%.]){1,120}$/; // +-_() added to Customer headers as per close.io request
-  return valRegex.test(value) !== false;
-};
-
-/**
- * Check if extra header jwt value is valid.
- * @param {String} key - extra header jwt value
- */
-export const checkExtraHeaderJWTVal = function (value: string): boolean {
-  // value only contain [A-Z], [a-z], [0-9] and '%', max length = 48
-  const valRegex = /^([a-z0-9A-Z_\-+()%.]){1,500}$/; // +-_() added to Customer headers as per close.io request
+  const valRegex = /^([a-z0-9A-Z_\-+()%]){1,120}$/; // +-_() added to Customer headers as per close.io request
   return valRegex.test(value) !== false;
 };
 
@@ -44,10 +34,7 @@ export const receiveExtraHeader = function (request: any, headers: any): any {
   const keys = Object.keys(headers);
   keys.forEach((key) => {
     const val = request.getHeader(key);
-    const checkHeaderKey = checkExtraHeaderKey;
-    const checkHeaderVal = key.toUpperCase() === 'X-PLIVO-JWT' ? checkExtraHeaderJWTVal : checkExtraHeaderVal;
-
-    if (checkHeaderKey(key) && checkHeaderVal(val)) {
+    if (checkExtraHeaderKey(key) && checkExtraHeaderVal(val)) {
       cleanExtraHeaders[key] = val;
     }
   });
