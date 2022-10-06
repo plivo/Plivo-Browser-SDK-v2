@@ -48,6 +48,7 @@ module.exports = function (config) {
             },
         },
         client: {
+            captureConsole: true,
             mocha: {
                 timeout: '60000'
             },
