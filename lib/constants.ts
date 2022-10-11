@@ -97,6 +97,13 @@ export const DEFAULT_COMMENTS = {
   ROBOTIC_AUDIO: 'robotic_audio',
 };
 
+export const LOGCAT = {
+  INIT: 'INIT',
+  LOGIN: 'LOGIN',
+  CALL: 'CALL_COMPLETION',
+  LOGOUT: 'LOGOUT',
+};
+
 // Media
 export const RINGTONE_URL = 'https://cdn.plivo.com/sdk/browser/audio/us-ring.mp3';
 // same url with a parameter for workaround for chrome bug

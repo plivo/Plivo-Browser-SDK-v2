@@ -770,10 +770,7 @@ export class Client extends EventEmitter {
       this.audioDevDic = d;
     });
     audioUtil.audioDevDictionary(true);
-    Plivo.log.info(
-      `PlivoWebSdk initialized in ${Plivo.log.level()} mode, version: PLIVO_LIB_VERSION`,
-    );
-    Plivo.log.debug('PlivoWebSdk initialized with ', JSON.stringify(options));
+    Plivo.log.debug(C.LOGCAT.INIT, 'PlivoWebSdk initialized with ', JSON.stringify(options), `in ${Plivo.log.level()} mode`);
 
     // store this instance as window object
     window['_PlivoInstance' as any] = this as any;
@@ -839,7 +836,7 @@ export class Client extends EventEmitter {
       && !this.isAccessToken
     ) {
       Plivo.log.warn(
-        `Already registered with the endpoint provided - ${this.userName}`,
+        `${C.LOGCAT.LOGIN} | Already registered with the endpoint provided - ${this.userName}`,
       );
       return true;
     }
@@ -860,7 +857,7 @@ export class Client extends EventEmitter {
   private _loginWithAccessTokenGenerator = (accessTokenObject: any): boolean => {
     // if Token Object itself is null, return;
     if (accessTokenObject == null) {
-      Plivo.log.error('Access token object can not be null ');
+      Plivo.log.error(`${C.LOGCAT.LOGIN} | Access token object can not be null`);
       // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
       this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
       return false;
@@ -868,12 +865,13 @@ export class Client extends EventEmitter {
     this.isAccessTokenGenerator = true;
     this.accessTokenObject = accessTokenObject;
 
+    Plivo.log.info(`${C.LOGCAT.LOGIN} | Login with access token generator initiated`);
     accessTokenObject.getAccessToken().then((accessToken) => {
       // If accessToken  is null
       if (accessToken == null) {
         // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
         this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
-        Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
+        Plivo.log.error(`${C.LOGCAT.LOGIN} | Access Token found null. Try to re-login with valid accessToken`);
         return false;
       }
 
@@ -899,7 +897,7 @@ export class Client extends EventEmitter {
       }
       return this.loginWithAccessToken(accessToken);
     }).catch((err: any) => {
-      Plivo.log.error('Failed to fetch the accessToken. Try to re-login with valid accessToken', err);
+      Plivo.log.error(`${C.LOGCAT.LOGIN} | Failed to fetch the accessToken. Try to re-login with valid accessToken`, err);
       // this.emit('onLoginFailedWithError',constants.ERRORS.get(10001));
       this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
       return false;
@@ -919,7 +917,7 @@ export class Client extends EventEmitter {
       const isTokenValid = this.validateToken(parsedToken);
       if (!isTokenValid) {
         this.emit('onLoginFailed', 'INVALID_ACCESS_TOKEN');
-        Plivo.log.error('Access Token found null. Try to re-login with valid accessToken');
+        Plivo.log.error(`${C.LOGCAT.LOGIN} | Access Token found null. Try to re-login with valid accessToken`);
         return false;
       }
 
@@ -936,6 +934,7 @@ export class Client extends EventEmitter {
   private _loginWithAccessToken = (accessToken: string): boolean => {
     try {
       if (this._initJWTParams(accessToken) && this.userName) {
+        Plivo.log.debug(C.LOGCAT.LOGIN, 'Login with accessToken initiated: ', accessToken);
         return this.tokenLogin(this.userName, accessToken);
       }
       return false;
@@ -972,13 +971,14 @@ export class Client extends EventEmitter {
       && !this.isAccessToken
     ) {
       Plivo.log.warn(
-        `Already registered with the endpoint provided - ${this.userName}`,
+        `${C.LOGCAT.LOGIN} | Already registered with the endpoint provided - ${this.userName}`,
       );
       return true;
     }
     const account = new Account(this, username, password, null);
     const isValid = account.validate();
     if (!isValid) return false;
+    Plivo.log.info(`${C.LOGCAT.LOGIN} | Endpoint login initiated`);
     account.setupUserAccount();
     if (this.browserDetails.browser === 'safari') {
       documentUtil.playAudio(C.SILENT_TONE_ELEMENT_ID);
@@ -987,7 +987,7 @@ export class Client extends EventEmitter {
   };
 
   private _logout = (): boolean => {
-    Plivo.log.debug('logout() triggered!');
+    Plivo.log.debug(C.LOGCAT.LOGOUT, 'logout() triggered!');
     // if logout is called explicitly, make all the related flags to default
     if (this.isAccessToken) {
       this.isAccessToken = false;
@@ -1031,11 +1031,12 @@ export class Client extends EventEmitter {
       || this?.isOutgoingGrant === false)
     ) {
       this.emit('onPermissionDenied', 'INVALID_ACCESS_TOKEN_GRANTS');
-      Plivo.log.warn('permission not granted to make Outgoing call');
+      Plivo.log.warn(`${C.LOGCAT.LOGIN} | Permission not granted to make Outgoing call`);
       return false;
     }
 
     const onCallFailed = (reason: string) => {
+      Plivo.log.error(`${C.LOGCAT.CALL} | On call failed`, reason);
       this.emit('onCallFailed', reason);
     };
     const readyForCall = () => {
@@ -1240,6 +1241,7 @@ export class Client extends EventEmitter {
       }
       // update state and clear session
       IncomingCall.handleIgnoreState(incomingCall);
+      Plivo.log.debug(`${C.LOGCAT.CALL} | On incoming call ignored`, incomingCall.getCallInfo());
       this.emit('onIncomingCallIgnored', incomingCall.getCallInfo());
       return true;
     }

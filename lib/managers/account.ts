@@ -112,13 +112,13 @@ class Account {
         && (this.credentials.userName.length <= 0
           || (this.credentials.password as string).length <= 0))
     ) {
-      Plivo.log.error('username and password cannot be null.');
+      Plivo.log.error(`${C.LOGCAT.LOGIN} | username and password cannot be null.`);
       this.cs.emit('onLoginFailed', 'Username and password must be filled out');
       return false;
     }
     if (this.cs._currentSession) {
       Plivo.log.warn(
-        `Cannot login when there is an ongoing call ${this.cs._currentSession.callUUID}`,
+        `${C.LOGCAT.LOGIN} | Cannot login when there is an ongoing call ${this.cs._currentSession.callUUID}`,
       );
       this.cs.emit(
         'onLoginFailed',
