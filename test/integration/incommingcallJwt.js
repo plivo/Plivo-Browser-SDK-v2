@@ -113,7 +113,7 @@ describe('plivoWebSdk', function () {
 
     // #5
     // eslint-disable-next-line no-undef
-    it('inbound call should come through with extra headers', (done) => {
+    it('inbound call should come through JWT with extra headers', (done) => {
       if (bail) {
         done(new Error('bailing'));
       }
