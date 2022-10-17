@@ -3,6 +3,7 @@
 /* eslint-disable no-underscore-dangle */
 import * as SipLib from 'plivo-jssip';
 import { Client } from '../client';
+import { LOGCAT } from '../constants';
 import { Logger } from '../logger';
 import { sendEvents } from '../stats/nonRTPStats';
 import { createStatsSocket } from '../stats/setup';
@@ -43,6 +44,7 @@ export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) 
     reconnectionTimestamp: client.networkReconnectionTimestamp,
     disconnectionTimestamp: client.networkDisconnectedTimestamp,
   };
+  Plivo.log.info(`${LOGCAT.CALL} | The network changed from ${obj.previousNetworkInfo} to ${obj.newNetworkInfo}`);
   sendEvents.call(client, obj, client._currentSession!);
   // update current network info
   client.currentNetworkInfo = {

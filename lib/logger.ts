@@ -1,7 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable no-console */
 
-import { CONSOLE_LOGS_BUFFER_SIZE } from './constants';
+import { CONSOLE_LOGS_BUFFER_SIZE, LOGCAT } from './constants';
 import Storage from './storage';
 
 /* eslint-disable no-undef */
@@ -85,6 +85,19 @@ class PlivoLogger {
     }
   };
 
+  private _appendToQueue = (premsg, arg1, arg2) => {
+    let flag : boolean = false;
+
+    if (premsg.includes(LOGCAT.INIT)) flag = true;
+    if (premsg.includes(LOGCAT.CALL)) flag = true;
+    if (premsg.includes(LOGCAT.LOGIN)) flag = true;
+    if (premsg.includes(LOGCAT.LOGOUT)) flag = true;
+    if (premsg.includes(LOGCAT.CRASH)) flag = true;
+    if (premsg.includes(LOGCAT.CALL_QUALITY)) flag = true;
+
+    if (flag) Storage.getInstance().setData(premsg, arg1, arg2); else console.log("*** LOG SKIPPED ***");
+  };
+
   /**
    * Add console logs in memory and achieve log hierarchy.
    * @param {AvailableLogMethods} filter - log type
@@ -108,7 +121,7 @@ class PlivoLogger {
       if (logHierarchy.indexOf(ucFilter) > logHierarchy.indexOf(this.logMethod)) {
         return;
       }
-      Storage.getInstance().setData(premsg, arg1, arg2);
+      this._appendToQueue(premsg, arg1, arg2);
       switch (ucFilter) {
         case 'OFF':
           // do nothing

@@ -201,6 +201,7 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
  * @param {SessionFailedEvent} evt - rtcsession failed information
  */
 const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession): void => {
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause}`);
   if (evt.cause === JSSIP_C.causes.CANCELED) {
     incomingCall.setState(incomingCall.STATE.CANCELED);
     cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo());

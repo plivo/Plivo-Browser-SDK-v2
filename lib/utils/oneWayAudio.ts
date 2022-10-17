@@ -3,7 +3,7 @@
 import { emitMetrics } from '../stats/mediaMetrics';
 import { Logger } from '../logger';
 import { Client } from '../client';
-import { C } from '../managers/util';
+import { LOGCAT } from '../constants';
 import getBrowserDetails from './browserDetection';
 
 const Plivo = { log: Logger };
@@ -37,6 +37,7 @@ const remoteOffer = function (
       if (sdp.type === 'offer') {
         pc.createAnswer()
           .then((description) => {
+            Plivo.log.info(`${LOGCAT.CALL} | SDP Answer created: ${description}`);
             pc.setLocalDescription(description)
               .then(() => {})
               .catch(errHandler);
@@ -56,7 +57,7 @@ const localOffer = function (pc: any): void {
   pc.addStream(localStream);
   pc.createOffer()
     .then((des: RTCSessionDescriptionInit) => {
-      Plivo.log.info(`${C.LOGCAT.CALL} | SDP Offer created:- ${des}`);
+      Plivo.log.info(`${LOGCAT.CALL} | SDP Offer created:- ${des}`);
       pc.setLocalDescription(des)
         .then(() => {
           remoteOffer(pc2, des);

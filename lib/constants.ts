@@ -100,8 +100,10 @@ export const DEFAULT_COMMENTS = {
 export const LOGCAT = {
   INIT: 'INIT',
   LOGIN: 'LOGIN',
-  CALL: 'CALL_COMPLETION',
+  CALL: 'CALLING',
   LOGOUT: 'LOGOUT',
+  CRASH: 'CRASH',
+  CALL_QUALITY: 'CALL_QUALITY_FEEDBACK',
 };
 
 // Media
