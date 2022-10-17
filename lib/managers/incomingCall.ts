@@ -17,6 +17,7 @@ import {
   NETWORK_CHANGE_INTERVAL_ON_CALL_STATE,
   MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
+  LOGCAT,
 } from '../constants';
 import { CallSession } from './callSession';
 import { receiveExtraHeader } from '../utils/headers';
@@ -96,7 +97,7 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
 const onProgress = (incomingCall: CallSession) => (): void => {
   // allow incomming call only if permission granted
   incomingCall.onRinging(cs);
-  Plivo.log.debug('Incoming call in progress', cs);
+  Plivo.log.debug(`Incoming call registeration initiated with`, cs);
   incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
   incomingCall.updateSignallingInfo({
     call_progress_time: getCurrentTime(),
@@ -153,7 +154,7 @@ const onSDP = (evt: SessionSdpEvent): void => {
  */
 const onAccepted = (incomingCall: CallSession) => (): void => {
   isIncomingCallRinging = false;
-  Plivo.log.info('Incoming call accepted');
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call Answered`);
   // reset ping pong service with on-call timeouts
   resetPingPong({
     client: cs,
@@ -219,7 +220,7 @@ const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession)
  */
 const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void => {
   isIncomingCallRinging = false;
-  Plivo.log.error(`Incoming call failed: ${evt.cause}`);
+  Plivo.log.error(`${LOGCAT.CALL} | Incoming call failed: ${evt.cause}`);
   handleFailureCauses(evt, incomingCall);
   incomingCall.onFailed(cs, evt);
 
@@ -243,7 +244,7 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
 const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void => {
   isIncomingCallRinging = false;
   Plivo.log.debug(`Incoming call ended - ${incomingCall.callUUID}`);
-  Plivo.log.info('Incoming call ended');
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call Hangup`);
   incomingCall.onEnded(cs, evt);
   // reset back pingpong to idle state timeouts
   resetPingPong({
@@ -305,7 +306,7 @@ export const createIncomingSession = (
   cs = clientObject;
   const callUUID = evt.request.getHeader('X-Calluuid');
   const stirVerificationValue = evt.request.getHeader('X-Plivo-Stir-Verification');
-  Plivo.log.info(`newRTCSession for incomingCall ${callUUID}`);
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call initiated for ${cs.userName} with header:- ${evt.request.getHeaders}`);
   const sipCallID = evt.request.getHeader('Call-ID');
   const callerHeader = evt.request.getHeader('From');
   const callerRegex = callerHeader.match(/:(.*)@/i);
