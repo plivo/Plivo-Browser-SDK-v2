@@ -422,7 +422,7 @@ class Account {
    */
   private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
     this.cs.isLoggedIn = false;
-    Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause);
+    Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause, error.response);
     this.cs.userName = null;
     this.cs.password = null;
 
