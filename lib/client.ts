@@ -1028,7 +1028,7 @@ export class Client extends EventEmitter {
     this.timeTakenForStats.pdd = {
       init: new Date().getTime(),
     };
-    Plivo.log.info(`${C.LOGCAT.CALL} | Outgoing call initiated for ${phoneNumber} with header:- ${extraHeaders}`);
+    Plivo.log.info(`${C.LOGCAT.CALL} | Outgoing call initiated with header:- ${extraHeaders}`);
     if (!this.isLoggedIn) {
       Plivo.log.warn('Must be logged in before to make a call');
       return false;
@@ -1040,7 +1040,7 @@ export class Client extends EventEmitter {
       || this?.isOutgoingGrant === false)
     ) {
       this.emit('onPermissionDenied', 'INVALID_ACCESS_TOKEN_GRANTS');
-      Plivo.log.warn(`${C.LOGCAT.LOGIN} | Permission not granted to make Outgoing call`);
+      Plivo.log.warn(`${C.LOGCAT.LOGIN} | Outgoing call permission not granted`);
       return false;
     }
 

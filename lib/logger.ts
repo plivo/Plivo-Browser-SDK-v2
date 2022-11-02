@@ -95,7 +95,7 @@ class PlivoLogger {
     if (premsg.includes(LOGCAT.CRASH)) flag = true;
     if (premsg.includes(LOGCAT.CALL_QUALITY)) flag = true;
 
-    if (flag) Storage.getInstance().setData(premsg, arg1, arg2); else console.log("*** LOG SKIPPED ***");
+    if (flag) Storage.getInstance().setData(premsg, arg1, arg2);
   };
 
   /**
