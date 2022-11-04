@@ -173,7 +173,6 @@ class PlivoLogger {
     Storage.getInstance().clear();
     const parsedData = JSON.parse(data);
     const arr = parsedData.split("\n");
-    // console.log("Username", client.userName, "Parsed data :: ", arr);
 
     if (!client.userName) return;
 
