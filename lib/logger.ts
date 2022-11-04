@@ -159,8 +159,6 @@ class PlivoLogger {
  */
   send = function (): void {
     const client: Client = this;
-    // const client: Client = this;
-    console.log("**SEND**", client);
 
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
@@ -186,9 +184,6 @@ class PlivoLogger {
 
     if (client.isAccessToken) body.jwt = client.accessToken;
 
-    const raw = JSON.stringify(body);
-
-    console.log("Raw :: ", raw);
     const requestOptions:RequestInit = {
       method: 'POST',
       headers: myHeaders,
