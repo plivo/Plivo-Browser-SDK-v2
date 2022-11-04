@@ -3,6 +3,7 @@
 /* eslint-disable prefer-promise-reject-errors */
 /* eslint func-names: ["error", "as-needed"] */
 import * as C from '../constants';
+// eslint-disable-next-line import/no-cycle
 import { Logger } from '../logger';
 
 export interface FeedbackObject {

@@ -1,9 +1,12 @@
 /* eslint func-names: ["error", "as-needed"] */
 import * as SipLib from 'plivo-jssip';
 import * as C from '../constants';
+
+// eslint-disable-next-line import/no-cycle
 import { Logger } from '../logger';
 // eslint-disable-next-line import/no-cycle
 import { Client, PlivoObject } from '../client';
+// eslint-disable-next-line import/no-cycle
 import { FeedbackObject } from '../utils/feedback';
 
 export interface CallStatsValidationResponse {

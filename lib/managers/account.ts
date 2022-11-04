@@ -381,6 +381,7 @@ class Account {
 
       // initialize callstats.io
       initCallStatsIO.call(this.cs);
+      Plivo.log.send.call(this.cs);
     }
   };
 

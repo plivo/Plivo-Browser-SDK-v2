@@ -1,6 +1,8 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable no-console */
 
+// eslint-disable-next-line import/no-cycle
+import { Client } from './client';
 import { CONSOLE_LOGS_BUFFER_SIZE, LOGCAT } from './constants';
 import Storage from './storage';
 
@@ -21,6 +23,12 @@ interface LoggerOptions{
   enableDate?: boolean,
   loggingName?: 'PlivoSDK',
   logMethod?: AvailableLogMethods
+}
+
+interface Body{
+  username: string | null,
+  logs: string[],
+  jwt?: string | null,
 }
 
 /**
@@ -49,6 +57,8 @@ class PlivoLogger {
   public level = (): string => this.logMethod;
 
   public consolelogs = (): string[] => consoleLogsArr;
+
+  // public send = (): void => this._send();
 
   /**
    * Enable sip logs if log level is ALL.
@@ -88,12 +98,12 @@ class PlivoLogger {
   private _appendToQueue = (premsg, arg1, arg2) => {
     let flag : boolean = false;
 
-    if (premsg.includes(LOGCAT.INIT)) flag = true;
-    if (premsg.includes(LOGCAT.CALL)) flag = true;
-    if (premsg.includes(LOGCAT.LOGIN)) flag = true;
-    if (premsg.includes(LOGCAT.LOGOUT)) flag = true;
-    if (premsg.includes(LOGCAT.CRASH)) flag = true;
-    if (premsg.includes(LOGCAT.CALL_QUALITY)) flag = true;
+    if (arg1.includes(LOGCAT.INIT)) flag = true;
+    if (arg1.includes(LOGCAT.CALL)) flag = true;
+    if (arg1.includes(LOGCAT.LOGIN)) flag = true;
+    if (arg1.includes(LOGCAT.LOGOUT)) flag = true;
+    if (arg1.includes(LOGCAT.CRASH)) flag = true;
+    if (arg1.includes(LOGCAT.CALL_QUALITY)) flag = true;
 
     if (flag) Storage.getInstance().setData(premsg, arg1, arg2);
   };
@@ -142,6 +152,55 @@ class PlivoLogger {
           console.log(premsg, arg1, arg2);
       }
     }
+  };
+
+  /**
+ * Send logs to Plivo kibana.
+ */
+  send = function (): void {
+    const client: Client = this;
+    // const client: Client = this;
+    console.log("**SEND**", client);
+
+    const myHeaders = new Headers();
+    myHeaders.append("Content-Type", "application/json");
+
+    const data = Storage.getInstance().getData();
+
+    if (!data) {
+      console.log("No data to send");
+      return;
+    }
+
+    Storage.getInstance().clear();
+    const parsedData = JSON.parse(data);
+    const arr = parsedData.split("\n");
+    // console.log("Username", client.userName, "Parsed data :: ", arr);
+
+    if (!client.userName) return;
+
+    const body : Body = {
+      username: client.userName,
+      logs: arr,
+    };
+
+    if (client.isAccessToken) body.jwt = client.accessToken;
+
+    const raw = JSON.stringify(body);
+
+    console.log("Raw :: ", raw);
+    const requestOptions:RequestInit = {
+      method: 'POST',
+      headers: myHeaders,
+      body: JSON.stringify(body),
+      redirect: 'follow',
+    };
+
+    const url = `https://callinsights-nimbus-service-qa.voice.plivodev.com/collect/logs/${(client.isAccessToken) ? 'jwt/' : ''}`;
+    fetch(url.trimEnd(), requestOptions)
+      .then((response) => response.text())
+      .then((result) => console.log(result))
+      .catch((error) => console.log('error', error));
   };
 }
 

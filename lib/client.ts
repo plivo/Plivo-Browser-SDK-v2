@@ -3,7 +3,6 @@
 import { EventEmitter } from 'events';
 import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
 import * as C from './constants';
-import Store from './storage';
 import {
   Logger, AvailableLogMethods, AvailableFlagValues, DtmfOptions,
 } from './logger';
@@ -996,9 +995,10 @@ export class Client extends EventEmitter {
   };
 
   private _logout = (): boolean => {
-    Plivo.log.debug(C.LOGCAT.LOGOUT, 'logout() triggered!');
-    Store.getInstance().clear();
+    Plivo.log.debug(C.LOGCAT.LOGOUT, 'logout() triggered!', this.userName);
+    // Store.getInstance().clear();
     // if logout is called explicitly, make all the related flags to default
+    Plivo.log.send.call(this);
     if (this.isAccessToken) {
       this.isAccessToken = false;
       this.isOutgoingGrant = false;
@@ -1521,6 +1521,7 @@ export class Client extends EventEmitter {
           session = this._lastCallSession;
         }
         if (session) {
+          Plivo.log.send.call(this);
           if (this.statsSocket) {
             nonRTPStats.sendFeedbackEvent.call(this, session, feedback);
           } else {
