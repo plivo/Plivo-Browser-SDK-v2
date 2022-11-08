@@ -3,8 +3,11 @@
 
 // eslint-disable-next-line import/no-cycle
 import { Client } from './client';
-import { CONSOLE_LOGS_BUFFER_SIZE, LOGCAT } from './constants';
+import {
+  CONSOLE_LOGS_BUFFER_SIZE, LOGCAT, LOG_COLLECTION, LOG_COLLECTION_JWT,
+} from './constants';
 import Storage from './storage';
+import { getOS, getSDKVersion } from './utils/device';
 
 /* eslint-disable no-undef */
 const consoleLogsArr: string[] = [];
@@ -29,6 +32,9 @@ interface Body{
   username: string | null,
   logs: string[],
   jwt?: string | null,
+  sdk_v: string,
+  sdk_name: string,
+  user_agent: string,
 }
 
 /**
@@ -170,15 +176,20 @@ class PlivoLogger {
       return;
     }
 
-    Storage.getInstance().clear();
     const parsedData = JSON.parse(data);
     const arr = parsedData.split("\n");
 
     if (!client.userName) return;
 
+    const sdkVersionParse = getSDKVersion();
+    const deviceOs = getOS();
+
     const body : Body = {
       username: client.userName,
       logs: arr,
+      sdk_v: sdkVersionParse.version,
+      sdk_name: "BrowserSDK",
+      user_agent: deviceOs,
     };
 
     if (client.isAccessToken) body.jwt = client.accessToken;
@@ -190,9 +201,12 @@ class PlivoLogger {
       redirect: 'follow',
     };
 
-    const url = `https://callinsights-nimbus-service-qa.voice.plivodev.com/collect/logs/${(client.isAccessToken) ? 'jwt/' : ''}`;
+    const url = (client.isAccessToken) ? LOG_COLLECTION_JWT : LOG_COLLECTION;
     fetch(url.trimEnd(), requestOptions)
-      .then((response) => response.text())
+      .then((response) => {
+        Storage.getInstance().clear();
+        response.text();
+      })
       .then((result) => console.log(result))
       .catch((error) => console.log('error', error));
   };

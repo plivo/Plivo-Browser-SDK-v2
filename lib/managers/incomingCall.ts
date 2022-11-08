@@ -97,7 +97,7 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
 const onProgress = (incomingCall: CallSession) => (): void => {
   // allow incomming call only if permission granted
   incomingCall.onRinging(cs);
-  Plivo.log.debug(`Incoming call registeration initiated with`, cs);
+  Plivo.log.debug(`${LOGCAT.CALL} | Incoming call registeration initiated with`, cs);
   incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
   incomingCall.updateSignallingInfo({
     call_progress_time: getCurrentTime(),
