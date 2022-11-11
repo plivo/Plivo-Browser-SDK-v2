@@ -1537,7 +1537,7 @@ export class Client extends EventEmitter {
             preSignedUrlBody = {
               username: this.userName as string,
               accessToken: this.accessToken,
-              call_uuid: callUUID,
+              calluuid: callUUID,
             };
           } else {
             preSignedUrlBody = {

@@ -111,7 +111,7 @@ export const getPreSignedS3URL = (
     url = new URL(C.S3BUCKET_API_URL_JWT);
     body = {
       jwt: preSignedUrlBody.accessToken,
-      calluuid: preSignedUrlBody.calluuid,
+      call_uuid: preSignedUrlBody.calluuid,
       ...(preSignedUrlBody.username.includes("puser") && { from: preSignedUrlBody.username }),
     };
   } else {
