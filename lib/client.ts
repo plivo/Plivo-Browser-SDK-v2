@@ -1535,8 +1535,9 @@ export class Client extends EventEmitter {
           let preSignedUrlBody: PreSignedUrlRequest | any;
           if (this.isAccessToken) {
             preSignedUrlBody = {
+              username: this.userName as string,
               accessToken: this.accessToken,
-              calluuid: callUUID,
+              call_uuid: callUUID,
             };
           } else {
             preSignedUrlBody = {
