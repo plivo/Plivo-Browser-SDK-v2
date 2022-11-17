@@ -221,7 +221,7 @@ const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession)
  */
 const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void => {
   isIncomingCallRinging = false;
-  Plivo.log.error(`${LOGCAT.CALL} | Incoming call failed: ${evt.cause}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | Incoming call failed: ${evt.cause}`);
   handleFailureCauses(evt, incomingCall);
   incomingCall.onFailed(cs, evt);
 

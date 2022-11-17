@@ -925,7 +925,7 @@ export class Client extends EventEmitter {
         return false;
       }
 
-      Plivo.log.info(`${C.LOGCAT.LOGIN} | Parsed JWT with params:- ${parsedToken}`);
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | Parsed JWT with params:- `, parsedToken);
       this.userName = this.getUsernameFromToken(parsedToken);
       this.accessToken = accessToken;
       this.isAccessToken = true;
@@ -1028,7 +1028,7 @@ export class Client extends EventEmitter {
     this.timeTakenForStats.pdd = {
       init: new Date().getTime(),
     };
-    Plivo.log.info(`${C.LOGCAT.CALL} | Outgoing call initiated with header:- ${extraHeaders}`);
+    Plivo.log.info(`${C.LOGCAT.CALL} | Outgoing call initiated with header:- `, extraHeaders);
     if (!this.isLoggedIn) {
       Plivo.log.warn('Must be logged in before to make a call');
       return false;
