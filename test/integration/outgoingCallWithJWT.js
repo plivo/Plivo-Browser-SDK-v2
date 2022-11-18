@@ -292,7 +292,7 @@ describe("plivoWebSdk JWT", function () {
       "onCallAnswered",
       "onCallTerminated",
       "onCalling",
-      "onPermissionDenied"
+      "onPermissionDenied",
     ];
 
     clientEvents.forEach((i) => {

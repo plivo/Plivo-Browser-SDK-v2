@@ -79,12 +79,12 @@ export const validateCallStats = function (
               reject('Call insights is not enabled');
             } else {
               const parsedResponseBody = JSON.parse(responsebody);
-              Plivo.log.info(`${C.LOGCAT.LOGIN} | Call Stats key generated - ${parsedResponseBody}`);
+              Plivo.log.info(`${C.LOGCAT.LOGIN} | Call Stats key generated - `, parsedResponseBody);
               resolve(parsedResponseBody);
             }
           });
         } else {
-          Plivo.log.info(`${C.LOGCAT.LOGIN} | Call Stats key generation failed - ${response}`);
+          Plivo.log.info(`${C.LOGCAT.LOGIN} | Call Stats key generation failed - `, response);
           // eslint-disable-next-line prefer-promise-reject-errors
           reject('Incorrect response code');
         }
@@ -111,7 +111,7 @@ export const getPreSignedS3URL = (
     url = new URL(C.S3BUCKET_API_URL_JWT);
     body = {
       jwt: preSignedUrlBody.accessToken,
-      calluuid: preSignedUrlBody.calluuid,
+      call_uuid: preSignedUrlBody.calluuid,
       ...(preSignedUrlBody.username.includes("puser") && { from: preSignedUrlBody.username }),
     };
   } else {
