@@ -10,9 +10,9 @@ export default class Storage {
     return this.instance;
   }
 
-  public setData(data: string, arg1: string, arg2: string) {
+  public setData(data, arg1, arg2) {
     const oldLog = this.getData();
-    const newLog = `${data}  ${arg1}  ${arg2}`;
+    const newLog = data + arg1 + arg2;
     const log = (oldLog) ? `${JSON.parse(oldLog)}\n${newLog}` : newLog;
     const finalLog = JSON.stringify(log);
     window.localStorage.setItem(this.TAG, finalLog);

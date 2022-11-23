@@ -869,7 +869,7 @@ export class Client extends EventEmitter {
     this.isAccessTokenGenerator = true;
     this.accessTokenObject = accessTokenObject;
 
-    Plivo.log.info(`${C.LOGCAT.LOGIN} | Login initiated with Access Token Generator - `);
+    Plivo.log.info(`${C.LOGCAT.LOGIN} | Login initiated with Access Token Generator`);
     accessTokenObject.getAccessToken().then((accessToken) => {
       // If accessToken  is null
       if (accessToken == null) {
@@ -1028,7 +1028,7 @@ export class Client extends EventEmitter {
     this.timeTakenForStats.pdd = {
       init: new Date().getTime(),
     };
-    Plivo.log.info(`${C.LOGCAT.CALL} | Outgoing call initiated with header:- `, extraHeaders);
+
     if (!this.isLoggedIn) {
       Plivo.log.warn('Must be logged in before to make a call');
       return false;
