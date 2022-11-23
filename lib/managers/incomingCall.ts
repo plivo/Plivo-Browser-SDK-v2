@@ -316,7 +316,11 @@ export const createIncomingSession = (
     (evt.request as any).headers,
   );
 
-  Plivo.log.info(`${LOGCAT.CALL} | Incoming call initiated for ${cs.userName} with header:- `, evt.request.toString());
+  const headers = {
+    call_uuid: callUUID,
+    sip_call_id: sipCallID,
+  };
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call initiated for ${cs.userName} with header:- `, JSON.stringify(headers));
   const callInitiationTime = cs.incomingCallsInitiationTime.get(callUUID);
   if (callInitiationTime) cs.incomingCallsInitiationTime.delete(callUUID);
 
