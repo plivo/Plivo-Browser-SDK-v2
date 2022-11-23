@@ -44,7 +44,7 @@ export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) 
     reconnectionTimestamp: client.networkReconnectionTimestamp,
     disconnectionTimestamp: client.networkDisconnectedTimestamp,
   };
-  Plivo.log.info(`${LOGCAT.CALL} | The network changed from ${obj.previousNetworkInfo} to ${obj.newNetworkInfo}`);
+  Plivo.log.info(`${LOGCAT.CALL} | The network changed from ${JSON.stringify(obj.previousNetworkInfo)} to ${JSON.stringify(obj.newNetworkInfo)}`);
   sendEvents.call(client, obj, client._currentSession!);
   // update current network info
   client.currentNetworkInfo = {

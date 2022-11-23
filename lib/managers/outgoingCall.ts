@@ -352,6 +352,7 @@ const onFailed = (evt: SessionFailedEvent): void => {
  */
 const onEnded = (evt: SessionEndedEvent): void => {
   if (cs._currentSession) {
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call - ${evt.cause} - ${evt.originator}`);
     Plivo.log.debug(`Outgoing call ended - ${cs._currentSession.callUUID}`);
     Plivo.log.info('Outgoing call ended');
     cs._currentSession.onEnded(cs, evt);
