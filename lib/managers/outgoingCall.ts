@@ -527,7 +527,10 @@ export const createOutgoingSession = (
 ): void => {
   const sipCallID = evt.request.getHeader('Call-ID') || null;
 
-  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call initiated with header:- `, evt.request.toString());
+  const headers = {
+    sip_call_id: sipCallID,
+  };
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call initiated with header:- `, headers);
   cs._currentSession = new CallSession({
     sipCallID,
     direction: 'outgoing',
