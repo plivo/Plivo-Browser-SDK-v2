@@ -244,6 +244,7 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
  */
 const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void => {
   isIncomingCallRinging = false;
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause} - ${evt.originator}`);
   Plivo.log.debug(`Incoming call ended - ${incomingCall.callUUID}`);
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call Hangup`);
   incomingCall.onEnded(cs, evt);
