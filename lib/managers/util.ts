@@ -88,7 +88,7 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
  */
 export const setErrorCollector = () => {
   window.onerror = (message) => {
-    Plivo.log.error(`${LOGCAT.CRASH} | ${message} | ${new Error().stack}`);
+    Plivo.log.error(`${LOGCAT.CRASH} | ${message} |`, new Error().stack);
   };
 };
 
@@ -119,6 +119,7 @@ export const addCloseProtectionListeners = function (): void {
         client._currentSession.session.terminate();
       }
       Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+      Plivo.log.send.call(client);
     };
   });
 };

@@ -352,6 +352,7 @@ const onFailed = (evt: SessionFailedEvent): void => {
  */
 const onEnded = (evt: SessionEndedEvent): void => {
   if (cs._currentSession) {
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call - ${evt.cause} - ${evt.originator}`);
     Plivo.log.debug(`Outgoing call ended - ${cs._currentSession.callUUID}`);
     Plivo.log.info('Outgoing call ended');
     cs._currentSession.onEnded(cs, evt);
@@ -526,6 +527,12 @@ export const createOutgoingSession = (
   evt: UserAgentNewRtcSessionEvent,
 ): void => {
   const sipCallID = evt.request.getHeader('Call-ID') || null;
+
+  const headers = {
+    sip_call_id: sipCallID,
+    extra_headers: outboundExtraHeaders,
+  };
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call initiated with header:- `, JSON.stringify(headers));
   cs._currentSession = new CallSession({
     sipCallID,
     direction: 'outgoing',

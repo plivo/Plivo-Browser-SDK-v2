@@ -279,7 +279,7 @@ class Account {
    * @param {UserAgentDisconnectedEvent} evt
    */
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
-    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed`, evt);
+    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed`, evt.reason);
     if (this.isPlivoSocketConnected) {
       // 1000 is normal websocket closed event,
       // others codes 1003,1006,1011 etc are for abnormal termination

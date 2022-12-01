@@ -97,7 +97,7 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
 const onProgress = (incomingCall: CallSession) => (): void => {
   // allow incomming call only if permission granted
   incomingCall.onRinging(cs);
-  Plivo.log.debug(`${LOGCAT.CALL} | Incoming call registeration initiated with`, cs);
+  Plivo.log.debug(`${LOGCAT.CALL} | Incoming call registeration initiated`);
   incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
   incomingCall.updateSignallingInfo({
     call_progress_time: getCurrentTime(),
@@ -244,6 +244,7 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
  */
 const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void => {
   isIncomingCallRinging = false;
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause} - ${evt.originator}`);
   Plivo.log.debug(`Incoming call ended - ${incomingCall.callUUID}`);
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call Hangup`);
   incomingCall.onEnded(cs, evt);
@@ -307,7 +308,6 @@ export const createIncomingSession = (
   cs = clientObject;
   const callUUID = evt.request.getHeader('X-Calluuid');
   const stirVerificationValue = evt.request.getHeader('X-Plivo-Stir-Verification');
-  Plivo.log.info(`${LOGCAT.CALL} | Incoming call initiated for ${cs.userName} with header:- ${evt.request.getHeaders}`);
   const sipCallID = evt.request.getHeader('Call-ID');
   const callerHeader = evt.request.getHeader('From');
   const callerRegex = callerHeader.match(/:(.*)@/i);
@@ -316,6 +316,12 @@ export const createIncomingSession = (
     evt.request,
     (evt.request as any).headers,
   );
+
+  const headers = {
+    call_uuid: callUUID,
+    sip_call_id: sipCallID,
+  };
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call initiated for ${cs.userName} with header:- `, JSON.stringify(headers));
   const callInitiationTime = cs.incomingCallsInitiationTime.get(callUUID);
   if (callInitiationTime) cs.incomingCallsInitiationTime.delete(callUUID);
 

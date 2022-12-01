@@ -79,7 +79,7 @@ export const validateCallStats = function (
               reject('Call insights is not enabled');
             } else {
               const parsedResponseBody = JSON.parse(responsebody);
-              Plivo.log.info(`${C.LOGCAT.LOGIN} | Call Stats key generated - `, parsedResponseBody);
+              Plivo.log.info(`${C.LOGCAT.LOGIN} | Call Stats key generated - `, parsedResponseBody.data);
               resolve(parsedResponseBody);
             }
           });

@@ -286,7 +286,7 @@ const replaceAudioTrack = function (
         currentLocalStream = null;
       }
       if (sender) {
-        Plivo.log.debug(`replaced sender : ${sender}`);
+        Plivo.log.debug(`replaced sender : `, sender);
         currentLocalStream = stream;
         if (currentAudioState === false) {
           updateAudioState(client);
