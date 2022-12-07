@@ -1012,7 +1012,7 @@ export class Client extends EventEmitter {
   };
 
   private _logout = (): boolean => {
-    Plivo.log.debug(C.LOGCAT.LOGOUT, 'Logout successful!', this.userName);
+    Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Logout successful!', this.userName);
     // Store.getInstance().clear();
     // if logout is called explicitly, make all the related flags to default
     Plivo.log.send.call(this);
