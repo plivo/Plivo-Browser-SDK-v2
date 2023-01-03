@@ -595,10 +595,6 @@ declare module 'plivo-browser-sdk/logger' {
                 * @param {AvailableLogMethods} debugLevel - passed by user while initializing client
                 */
             enableSipLogs: (debugLevel: AvailableLogMethods) => void;
-            /**
-            * Send logs to Plivo kibana.
-            */
-            send: () => void;
     }
     export const Logger: PlivoLogger;
     export {};
@@ -841,7 +837,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @param {Client} clientObject - client reference
                 * @param {Error} err - reason for issue
                 */
-            onGetUserMediaFailed: (cs: Client, error: Error ) => void;
+            onGetUserMediaFailed: (cs: Client, error: Error) => void;
             /**
                 * Triggered when peer connection issues(creating offer, answer and setting description) occur.
                 * @param {Client} clientObject - client reference
