@@ -24,8 +24,47 @@ const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 const secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME;
 const secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
 
-const plivo_jwt = process.env.PLIVO_JWT || '';
-const plivo_jwt_without_outbound_access = process.env.PLIVO_JWT_WITHOUT_OUTBOUND_ACCESS || '';   //  jwt with no outbound access  
+let plivo_jwt = '';
+let plivo_jwt_without_outbound_access = ''
+
+const auth_id = process.env.PLIVO_JWT_AUTHID;
+const basic_auth = process.env.PLIVO_JWT_BASIC_AUTH;
+
+async function getJWTToken(outgoing, incoming) {
+  var tokenGenServerURI = new URL(`https://api.plivo.com/v1/Account/${auth_id}/JWT/Token`);
+
+  const payload = {
+    "iss": auth_id,
+    "per": {
+      "voice": {
+        "incoming_allow": incoming,
+        "outgoing_allow": outgoing,
+      }
+    },
+    "sub": "Test9034"
+  }
+  let requestBody = {
+    method: 'POST',
+    headers: new Headers({
+      'Content-Type': 'application/json',
+      'Authorization': basic_auth
+    }),
+    body: JSON.stringify(payload),
+  };
+
+  let res = await fetch(tokenGenServerURI, requestBody).catch(function (err) {
+    console.error("Error in fetching the token ", err);
+    return null
+  });
+
+  try {
+    let myJson = await res.json()
+    return (myJson['token'])
+  } catch (error) {
+    console.error("Error : " + error);
+    return null
+  }
+}
 
 // eslint-disable-next-line no-undef
 describe("plivoWebSdk JWT", function () {
@@ -72,9 +111,7 @@ describe("plivoWebSdk JWT", function () {
     }
 
     // eslint-disable-next-line no-undef
-    before(() => {
-      Client1.loginWithAccessToken(plivo_jwt);
-      Client2.login(secondary_user, secondary_pass);
+    before(async () => {
       Client1.on("onCallRemoteRinging", () => {
         events.onCallRemoteRinging.status = true;
       }); // done
@@ -89,7 +126,13 @@ describe("plivoWebSdk JWT", function () {
       }); // done
       Client1.on("onCalling", () => {
         events.onCalling.status = true;
-      }); // done
+      });
+      let token = await getJWTToken(true, true)
+      console.log("token is ", token)
+      plivo_jwt = token
+      Client1.loginWithAccessToken(plivo_jwt);
+      Client2.login(secondary_user, secondary_pass);
+
     });
 
     // eslint-disable-next-line no-undef
@@ -318,11 +361,7 @@ describe("plivoWebSdk JWT", function () {
     }
 
     // eslint-disable-next-line no-undef
-    before(() => {
-      console.log("token is: ", plivo_jwt_without_outbound_access);
-      Client1.loginWithAccessToken(plivo_jwt_without_outbound_access);
-      Client2.login(secondary_user, secondary_pass);
-      
+    before(async () => {
       Client1.on("onCallRemoteRinging", () => {
         events.onCallRemoteRinging.status = true;
       }); // done
@@ -341,6 +380,12 @@ describe("plivoWebSdk JWT", function () {
       Client1.on("onPermissionDenied", () => {
         events.onPermissionDenied.status = true;
       }); // done
+
+      let token = await getJWTToken(false, true)
+      console.log("token is ", token)
+      plivo_jwt_without_outbound_access = token
+      Client1.loginWithAccessToken(plivo_jwt_without_outbound_access);
+      Client2.login(secondary_user, secondary_pass);
     });
 
     // eslint-disable-next-line no-undef
@@ -369,7 +414,7 @@ describe("plivoWebSdk JWT", function () {
       }
       const extraHeaders = {};
       extraHeaders["X-PH-conference"] = "true";
-      extraHeaders['X-Plivo-Jwt'] = plivo_jwt;
+      extraHeaders['X-Plivo-Jwt'] = plivo_jwt_without_outbound_access;
 
       if (Client1.isLoggedIn) {
         Client1.call(secondary_user, extraHeaders);
@@ -386,5 +431,5 @@ describe("plivoWebSdk JWT", function () {
       }, TIMEOUT);
     });
 
-  });  
+  });
 });

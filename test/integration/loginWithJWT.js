@@ -18,7 +18,46 @@ const Client1 = new Client(options);
 
 const primary_user = process.env.PLIVO_ENDPOINT1_USERNAME;
 const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
-const plivo_jwt = process.env.PLIVO_JWT || '';
+let plivo_jwt = '';
+
+const auth_id = process.env.PLIVO_JWT_AUTHID;
+const basic_auth = process.env.PLIVO_JWT_BASIC_AUTH;
+
+async function getJWTToken(outgoing, incoming) {
+  var tokenGenServerURI = new URL(`https://api.plivo.com/v1/Account/${auth_id}/JWT/Token`);
+
+  const payload = {
+    "iss": auth_id,
+    "per": {
+      "voice": {
+        "incoming_allow": incoming,
+        "outgoing_allow": outgoing,
+      }
+    },
+    "sub": "Test9034"
+  }
+  let requestBody = {
+    method: 'POST',
+    headers: new Headers({
+      'Content-Type': 'application/json',
+      'Authorization': basic_auth
+    }),
+    body: JSON.stringify(payload),
+  };
+
+  let res = await fetch(tokenGenServerURI, requestBody).catch(function (err) {
+    console.error("Error in fetching the token ", err);
+    reject(null);
+  });
+
+  try {
+    let myJson = await res.json()
+    return (myJson['token'])
+  } catch (error) {
+    console.error("Error : " + error);
+    return null
+  }
+}
 
 function waitUntilLogin(boolObj, callback, delay) {
   // if delay is undefined or is not an integer
@@ -56,7 +95,7 @@ describe("plivoWebSdk", function () {
     let bail = false;
 
     // eslint-disable-next-line no-undef
-    before(() => {
+    before(async () => {
       Client1.on("onLogin", () => {
         events.onLogin.status = true;
       }); // done
@@ -66,6 +105,9 @@ describe("plivoWebSdk", function () {
       Client1.on("onLoginFailed", () => {
         events.onLoginFailed.status = true;
       }); // done
+      let token = await getJWTToken(true, true)
+      console.log("token is ", token)
+      plivo_jwt = token
     });
 
     // eslint-disable-next-line no-undef
