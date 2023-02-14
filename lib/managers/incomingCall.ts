@@ -258,15 +258,15 @@ const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void =>
  * Triggered when DTMF is received.
  * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
  */
-  const newDTMF = (incomingCall: CallSession) => (evt: SessionNewDtmfEvent): void => {
+const newDTMF = (evt: SessionNewDtmfEvent): void => {
   if (cs._currentSession && evt.originator === 'remote') {
-    console.log('emitting onDtmfReceived with digit: ', evt.dtmf.tone)
-    let dtmfData = {
+    console.log('emitting onDtmfReceived with digit: ', evt.dtmf.tone);
+    const dtmfData = {
       tone: evt.dtmf.tone,
-      duration: evt.dtmf.duration
-    }
+      duration: evt.dtmf.duration,
+    };
     cs.emit('onDtmfReceived', dtmfData);
-  } 
+  }
 };
 
 /**
@@ -281,7 +281,7 @@ export const createIncomingCallListeners = (incomingCall: CallSession): void => 
   incomingCall.session.on('failed', onFailed(incomingCall));
   incomingCall.session.on('ended', onEnded(incomingCall));
   incomingCall.session.on('noCall' as any, onEnded(incomingCall));
-  incomingCall.session.on('newDTMF', newDTMF(incomingCall));
+  incomingCall.session.on('newDTMF', newDTMF);
   incomingCall.session.on('icecandidate', (event) => incomingCall.onIceCandidate(cs, event));
   incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err as Error));
   incomingCall.session.on('peerconnection:createofferfailed', (err) => incomingCall.handlePeerConnectionFailures(

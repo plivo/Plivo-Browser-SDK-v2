@@ -374,13 +374,13 @@ const onEnded = (evt: SessionEndedEvent): void => {
  */
 const newDTMF = (evt: SessionNewDtmfEvent): void => {
   if (cs._currentSession && evt.originator === 'remote') {
-    console.log('emitting onDtmfReceived with digit: ', evt.dtmf.tone)
-    let dtmfData = {
+    console.log('emitting onDtmfReceived with digit: ', evt.dtmf.tone);
+    const dtmfData = {
       tone: evt.dtmf.tone,
-      duration: evt.dtmf.duration
-    }
+      duration: evt.dtmf.duration,
+    };
     cs.emit('onDtmfReceived', dtmfData);
-  } 
+  }
 };
 
 /**
@@ -437,7 +437,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     accepted: onAccepted,
     confirmed: onConfirmed,
     noCall: onEnded,
-    newDTMF: newDTMF,
+    newDTMF,
     icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
     && cs._currentSession.onIceCandidate(cs, event),
     icetimeout: (sec: number) => cs._currentSession
