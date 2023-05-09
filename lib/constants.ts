@@ -14,7 +14,7 @@ export const LOCALONLY = 'LOCALONLY';
 export const REMOTEONLY = 'REMOTEONLY';
 export const AUDIO_CONSTRAINTS = {
   optional: [{
-    googAutoGainControl: false,
+    googAutoGainControl: true,
   }],
 };
 export const DEFAULT_DTMFOPTIONS = {
