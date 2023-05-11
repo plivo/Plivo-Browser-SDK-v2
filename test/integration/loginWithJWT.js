@@ -21,10 +21,10 @@ const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 let plivo_jwt = '';
 
 async function getJWTToken(outgoing, incoming) {
-  var tokenGenServerURI = new URL("https://api.plivo.com/v1/Account/MAY2RJNZKZNJMWOTG4NT/JWT/Token");
+  var tokenGenServerURI = new URL("https://api.plivo.com/v1/Account/MAMTDLMDHIMDYXMTK5NT/JWT/Token");
 
   const payload = {
-    "iss": "MAY2RJNZKZNJMWOTG4NT",
+    "iss": "MAMTDLMDHIMDYXMTK5NT",
     "per": {
       "voice": {
         "incoming_allow": incoming,
@@ -37,7 +37,7 @@ async function getJWTToken(outgoing, incoming) {
     method: 'POST',
     headers: new Headers({
       'Content-Type': 'application/json',
-      'Authorization': 'Basic TUFZMlJKTlpLWk5KTVdPVEc0TlQ6WWpJM1pXVmpPV0poTW1Kak5USXhNakJtTkdJeVlUUmtZVGd3TUdSaA=='
+      'Authorization': 'Basic TUFNVERMTURISU1EWVhNVEs1TlQ6TlRNMk16UTJZbVU0Tm1GaE1EWmtZakV5T0RnMU1qRXdZVE0wT1dZMQ=='
     }),
     body: JSON.stringify(payload),
   };

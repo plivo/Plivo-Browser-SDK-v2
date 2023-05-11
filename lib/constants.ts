@@ -65,6 +65,8 @@ export const DTMF_OPTIONS = ['INBAND', 'OUTBAND'];
 export const CONSOLE_LOGS_BUFFER_SIZE = 900;
 export const MAX_AVERAGE_BITRATE = 48000;
 export const MIN_AVERAGE_BITRATE = 8000;
+export const MIN_REGISTRATION_REFRESH_TIMER = 60;
+export const MAX_REGISTRATION_REFRESH_TIMER = 60 * 60 * 24;
 export const REGION = [
   'usa_west',
   'usa_east',

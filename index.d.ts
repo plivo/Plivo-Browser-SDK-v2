@@ -43,6 +43,7 @@ declare module 'plivo-browser-sdk/client' {
             allowMultipleIncomingCalls?: boolean;
             closeProtection?: boolean;
             maxAverageBitrate?: number;
+            registrationRefreshTimer?: number;
             dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
