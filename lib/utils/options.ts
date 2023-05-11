@@ -31,6 +31,7 @@ const _options: ConfiguationOptions = {
   closeProtection: false,
   maxAverageBitrate: C.MAX_AVERAGE_BITRATE,
   dtmfOptions: C.DEFAULT_DTMFOPTIONS,
+  registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
 };
 
 /**
@@ -224,6 +225,22 @@ const validateOptions = function (
 
         case 'appId':
           _options.appId = options[key];
+          break;
+
+        case 'registrationRefreshTimer':
+          if (isNumber(key, options[key])) {
+            if (options[key]! >= C.MIN_REGISTRATION_REFRESH_TIMER
+              && options[key]! <= C.MAX_REGISTRATION_REFRESH_TIMER) {
+              _options.registrationRefreshTimer = options[key];
+            } else {
+              Plivo.log.error(
+                `registrationRefreshTimer should be an integer in between ${
+                  C.MIN_REGISTRATION_REFRESH_TIMER
+                } and ${
+                  C.MAX_REGISTRATION_REFRESH_TIMER}`,
+              );
+            }
+          }
           break;
 
         case 'registrationDomainSocket':
