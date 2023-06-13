@@ -42,6 +42,11 @@ class Account {
   isFailedMessageTriggered: boolean;
 
   /**
+   * Holds the boolean whether failed event is triggered
+   */
+  registerRefreshTimer: number;
+
+  /**
    * Credentials object
    */
   private credentials: {
@@ -92,11 +97,12 @@ class Account {
    * @private
    */
   constructor(clientObject: Client, userName: string, password: string,
-    accessToken: string | null) {
+    accessToken: string | null, registerRefreshtimer: number) {
     this.cs = clientObject;
     this.credentials = { userName, password };
     this.accessTokenCredentials = { accessToken };
     this.message = null;
+    this.registerRefreshTimer = registerRefreshtimer;
     // for qa purpose
     this.reinviteCounter = 0;
     this.isPlivoSocketConnected = false;
@@ -173,7 +179,7 @@ class Account {
     this.cs.plivoSocket = new SipLib.WebSocketInterface(wsServers[urlIndex]) as any;
     const sipConfig = {
       sockets: [this.cs.plivoSocket],
-      register_expires: C.REGISTER_EXPIRES_SECONDS,
+      register_expires: this.registerRefreshTimer,
       uri: `${this.credentials.userName}@${C.DOMAIN}`,
       password: this.credentials.password,
       token: this.accessTokenCredentials.accessToken,

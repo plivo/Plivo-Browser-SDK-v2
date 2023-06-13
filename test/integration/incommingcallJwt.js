@@ -21,8 +21,44 @@ const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 const secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME;
 const secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
 
-const plivo_jwt = process.env.PLIVO_JWT || '';
-const plivo_jwt_without_inbound_access = process.env.PLIVO_JWT_WITHOUT_INBOUND_ACCESS || '';   //  jwt with no inbound access  
+let plivo_jwt = '';
+let plivo_jwt_without_inbound_access = '';   //  jwt with no inbound access  
+
+async function getJWTToken(outgoing, incoming) {
+  var tokenGenServerURI = new URL("https://api.plivo.com/v1/Account/MAMTDLMDHIMDYXMTK5NT/JWT/Token");
+
+  const payload = {
+    "iss": "MAMTDLMDHIMDYXMTK5NT",
+    "per": {
+      "voice": {
+        "incoming_allow": incoming,
+        "outgoing_allow": outgoing,
+      }
+    },
+    "sub": "Test9034"
+  }
+  let requestBody = {
+    method: 'POST',
+    headers: new Headers({
+      'Content-Type': 'application/json',
+      'Authorization': 'Basic TUFNVERMTURISU1EWVhNVEs1TlQ6TlRNMk16UTJZbVU0Tm1GaE1EWmtZakV5T0RnMU1qRXdZVE0wT1dZMQ=='
+    }),
+    body: JSON.stringify(payload),
+  };
+
+  let res = await fetch(tokenGenServerURI, requestBody).catch(function (err) {
+    console.error("Error in fetching the token ", err);
+    return null
+  });
+
+  try {
+    let myJson = await res.json()
+    return (myJson['token'])
+  } catch (error) {
+    console.error("Error : " + error);
+    return null
+  }
+}
 
 // eslint-disable-next-line no-undef
 describe('plivoWebSdk', function () {
@@ -67,11 +103,6 @@ describe('plivoWebSdk', function () {
 
     // eslint-disable-next-line no-undef
     before((done) => {
-      Client1.login(primary_user, primary_pass);
-      Client2.loginWithAccessToken(plivo_jwt);
-      Client2.on("onLogin", () => {
-        done();
-      });
       Client1.on('onIncomingCallCanceled', () => {
         events.onIncomingCallCanceled.status = true;
       });
@@ -87,6 +118,16 @@ describe('plivoWebSdk', function () {
       Client1.on('onIncomingCall', () => {
         events.onIncomingCall.status = true;
       });
+      getJWTToken(true, true).then((token) => {
+        console.log("token is ", token)
+        plivo_jwt = token
+        Client1.login(primary_user, primary_pass);
+        Client2.loginWithAccessToken(plivo_jwt);
+        Client2.on("onLogin", () => {
+          done();
+        });
+      })
+
     });
 
     // eslint-disable-next-line no-undef

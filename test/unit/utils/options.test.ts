@@ -24,6 +24,7 @@ describe('ValidateOptions', () => {
       allowMultipleIncomingCalls: false,
       closeProtection: false,
       maxAverageBitrate: 48000,
+      registrationRefreshTimer: 120,
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
       }
@@ -52,6 +53,31 @@ describe('ValidateOptions', () => {
     const inputOptions = { ...options };
     inputOptions.maxAverageBitrate = 12345678;
     expect(validateOptions(inputOptions)).toStrictEqual(options);
+  });
+
+  it('should check if refreshRegistrationTimer is 120 when timer value is invalid', () => {
+    const inputOptions = { ...options };
+    inputOptions.registrationRefreshTimer = 10;
+    expect(validateOptions(inputOptions).registrationRefreshTimer).toStrictEqual(120);
+    inputOptions.registrationRefreshTimer = 864000;
+    expect(validateOptions(inputOptions).registrationRefreshTimer).toStrictEqual(120);
+    inputOptions.registrationRefreshTimer = "1200";
+    expect(validateOptions(inputOptions).registrationRefreshTimer).toStrictEqual(120);
+
+    inputOptions.registrationRefreshTimer = true;
+    expect(validateOptions(inputOptions).registrationRefreshTimer).toStrictEqual(120);
+
+    inputOptions.registrationRefreshTimer = undefined;
+    expect(validateOptions(inputOptions).registrationRefreshTimer).toStrictEqual(120);
+
+    inputOptions.registrationRefreshTimer = null;
+    expect(validateOptions(inputOptions).registrationRefreshTimer).toStrictEqual(120);
+  });
+
+  it('should check if refreshRegistrationTimer is valid', () => {
+    const inputOptions = { ...options };
+    inputOptions.registrationRefreshTimer = 3600;
+    expect(validateOptions(inputOptions).registrationRefreshTimer).toStrictEqual(3600);
   });
 
   it('should validate invalid options', () => {

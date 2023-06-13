@@ -9,6 +9,7 @@ import {
   SessionFailedEvent,
   SessionEndedEvent,
   SessionIceCandidateEvent,
+  SessionNewDtmfEvent,
 } from 'plivo-jssip';
 import {
   SESSION_TIMERS_EXPIRES,
@@ -372,6 +373,21 @@ const onEnded = (evt: SessionEndedEvent): void => {
 };
 
 /**
+ * Triggered when DTMF is received.
+ * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
+ */
+const newDTMF = (evt: SessionNewDtmfEvent): void => {
+  if (cs._currentSession && evt.originator === 'remote') {
+    console.log('emitting onDtmfReceived with digit: ', evt.dtmf.tone);
+    const dtmfData = {
+      tone: evt.dtmf.tone,
+      duration: evt.dtmf.duration,
+    };
+    cs.emit('onDtmfReceived', dtmfData);
+  }
+};
+
+/**
  * Remove headers which are not having `X-PH` prefix.
  * @param {ExtraHeaders} extraHeaders - Custom headers which are passed in the INVITE.
  * They should start with 'X-PH'
@@ -425,6 +441,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     accepted: onAccepted,
     confirmed: onConfirmed,
     noCall: onEnded,
+    newDTMF,
     icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
     && cs._currentSession.onIceCandidate(cs, event),
     icetimeout: (sec: number) => cs._currentSession

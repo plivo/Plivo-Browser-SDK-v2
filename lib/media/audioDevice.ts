@@ -14,6 +14,7 @@ import { Client, PlivoObject } from '../client';
 import { DeviceAudioInfo, sendEvents } from '../stats/nonRTPStats';
 import getBrowserDetails from '../utils/browserDetection';
 import { setupRemoteView } from './document';
+import { AudioLevel } from './audioLevel';
 
 export interface RingToneDevices {
   set: (id: string) => void;
@@ -291,6 +292,15 @@ const replaceAudioTrack = function (
         if (currentAudioState === false) {
           updateAudioState(client);
         }
+
+        // update the local stream to calculate the correct audio level.
+        if (client._currentSession && client._currentSession.stats) {
+          client._currentSession.stats.senderMediaStream = stream;
+          client._currentSession.stats.localAudioLevelHelper = new AudioLevel(
+            client._currentSession.stats.senderMediaStream,
+          );
+        }
+
         sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {
           const pc2 = clientObject?.getPeerConnection().pc;
           // eslint-disable-next-line

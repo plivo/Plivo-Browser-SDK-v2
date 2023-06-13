@@ -43,6 +43,7 @@ declare module 'plivo-browser-sdk/client' {
             allowMultipleIncomingCalls?: boolean;
             closeProtection?: boolean;
             maxAverageBitrate?: number;
+            registrationRefreshTimer?: number;
             dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
@@ -837,7 +838,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @param {Client} clientObject - client reference
                 * @param {Error} err - reason for issue
                 */
-            onGetUserMediaFailed: (cs: Client, error: Error | DOMError) => void;
+            onGetUserMediaFailed: (cs: Client, error: Error) => void;
             /**
                 * Triggered when peer connection issues(creating offer, answer and setting description) occur.
                 * @param {Client} clientObject - client reference
@@ -845,7 +846,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @param {Function} callStatscb - callstats.io callback for each issue
                 * @param {Error} err - reason for issue
                 */
-            handlePeerConnectionFailures: (cs: Client, msg: string | Error | DOMError, callStatscb: () => void, err: Error | DOMError) => void;
+            handlePeerConnectionFailures: (cs: Client, msg: string | Error, callStatscb: () => void, err: Error) => void;
             /**
                 * @constructor
                 * @param {CallSessionOptions} options - call(Outgoing/Incoming) information

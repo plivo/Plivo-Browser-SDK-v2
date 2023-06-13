@@ -348,7 +348,7 @@ export class CallSession {
    */
   public onGetUserMediaFailed = (
     cs: Client,
-    error: Error | DOMError,
+    error: Error,
   ): void => this._onGetUserMediaFailed(cs, error);
 
   /**
@@ -360,9 +360,9 @@ export class CallSession {
    */
   public handlePeerConnectionFailures = (
     cs: Client,
-    msg: string | Error | DOMError,
+    msg: string | Error,
     callStatscb: () => void,
-    err: Error | DOMError,
+    err: Error,
   ): void => this._handlePeerConnectionFailures(cs, msg, callStatscb, err);
 
   /**
@@ -565,7 +565,7 @@ export class CallSession {
 
   private _onGetUserMediaFailed = (
     clientObject: Client,
-    err: Error | DOMError,
+    err: Error,
   ): void => {
     Plivo.log.error(`getusermediafailed: ${err}`);
     if (clientObject.userName && clientObject.callStats) {
@@ -583,9 +583,9 @@ export class CallSession {
 
   private _handlePeerConnectionFailures = (
     clientObject: Client,
-    msg: string | Error | DOMError,
+    msg: string | Error,
     callStatscb: () => void,
-    err: Error | DOMError,
+    err: Error,
   ): void => {
     if (clientObject.userName && clientObject.callStats && callStatscb) {
       // eslint-disable-next-line no-param-reassign

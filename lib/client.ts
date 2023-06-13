@@ -67,6 +67,7 @@ export interface ConfiguationOptions {
   allowMultipleIncomingCalls?: boolean;
   closeProtection?: boolean;
   maxAverageBitrate?: number;
+  registrationRefreshTimer?: number;
   dtmfOptions?: DtmfOptions;
 }
 
@@ -862,7 +863,7 @@ export class Client extends EventEmitter {
       return true;
     }
 
-    const account = new Account(this, username, " ", accessToken);
+    const account = new Account(this, username, " ", accessToken, this.options.registrationRefreshTimer ?? C.REGISTER_EXPIRES_SECONDS);
     const isValid = account.validate();
     if (!isValid) return false;
     account.setupUserAccount();
@@ -1001,7 +1002,8 @@ export class Client extends EventEmitter {
       );
       return true;
     }
-    const account = new Account(this, username, password, null);
+    const account = new Account(this, username, password, null,
+      this.options.registrationRefreshTimer ?? C.REGISTER_EXPIRES_SECONDS);
     const isValid = account.validate();
     if (!isValid) return false;
     account.setupUserAccount();

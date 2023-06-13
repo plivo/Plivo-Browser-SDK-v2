@@ -6,6 +6,7 @@ import {
   SessionSdpEvent,
   SessionFailedEvent,
   SessionEndedEvent,
+  SessionNewDtmfEvent,
   C as JSSIP_C,
 } from 'plivo-jssip';
 import {
@@ -257,6 +258,21 @@ const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void =>
 };
 
 /**
+ * Triggered when DTMF is received.
+ * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
+ */
+const newDTMF = (evt: SessionNewDtmfEvent): void => {
+  if (cs._currentSession && evt.originator === 'remote') {
+    console.log('emitting onDtmfReceived with digit: ', evt.dtmf.tone);
+    const dtmfData = {
+      tone: evt.dtmf.tone,
+      duration: evt.dtmf.duration,
+    };
+    cs.emit('onDtmfReceived', dtmfData);
+  }
+};
+
+/**
  * Creates incoming call event listeners.
  */
 export const createIncomingCallListeners = (incomingCall: CallSession): void => {
@@ -268,31 +284,32 @@ export const createIncomingCallListeners = (incomingCall: CallSession): void => 
   incomingCall.session.on('failed', onFailed(incomingCall));
   incomingCall.session.on('ended', onEnded(incomingCall));
   incomingCall.session.on('noCall' as any, onEnded(incomingCall));
+  incomingCall.session.on('newDTMF', newDTMF);
   incomingCall.session.on('icecandidate', (event) => incomingCall.onIceCandidate(cs, event));
-  incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err));
+  incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err as Error));
   incomingCall.session.on('peerconnection:createofferfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'createofferfailed',
     cs.callStats ? cs.callStats.webRTCFunctions.createOffer : null,
-    err,
+    err as Error,
   ));
   incomingCall.session.on('peerconnection:createanswerfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'createanswerfailed',
     cs.callStats ? cs.callStats.webRTCFunctions.createAnswer : null,
-    err,
+    err as Error,
   ));
   incomingCall.session.on('peerconnection:setlocaldescriptionfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'setlocaldescriptionfailed',
     cs.callStats ? cs.callStats.webRTCFunctions.setLocalDescription : null,
-    err,
+    err as Error,
   ));
   incomingCall.session.on('peerconnection:setremotedescriptionfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'setremotedescriptionfailed',
     cs.callStats ? cs.callStats.webRTCFunctions.setRemoteDescription : null,
-    err,
+    err as Error,
   ));
 };
 
