@@ -596,6 +596,10 @@ declare module 'plivo-browser-sdk/logger' {
                 * @param {AvailableLogMethods} debugLevel - passed by user while initializing client
                 */
             enableSipLogs: (debugLevel: AvailableLogMethods) => void;
+            /**
+            * Send logs to Plivo kibana.
+            */
+            send: () => void;
     }
     export const Logger: PlivoLogger;
     export {};

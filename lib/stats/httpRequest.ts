@@ -1,9 +1,12 @@
 /* eslint func-names: ["error", "as-needed"] */
 import * as SipLib from 'plivo-jssip';
 import * as C from '../constants';
+
+// eslint-disable-next-line import/no-cycle
 import { Logger } from '../logger';
 // eslint-disable-next-line import/no-cycle
 import { Client, PlivoObject } from '../client';
+// eslint-disable-next-line import/no-cycle
 import { FeedbackObject } from '../utils/feedback';
 
 export interface CallStatsValidationResponse {
@@ -76,10 +79,12 @@ export const validateCallStats = function (
               reject('Call insights is not enabled');
             } else {
               const parsedResponseBody = JSON.parse(responsebody);
+              Plivo.log.info(`${C.LOGCAT.LOGIN} | Call Stats key generated - `, parsedResponseBody.data);
               resolve(parsedResponseBody);
             }
           });
         } else {
+          Plivo.log.info(`${C.LOGCAT.LOGIN} | Call Stats key generation failed - `, response);
           // eslint-disable-next-line prefer-promise-reject-errors
           reject('Incorrect response code');
         }
@@ -106,7 +111,7 @@ export const getPreSignedS3URL = (
     url = new URL(C.S3BUCKET_API_URL_JWT);
     body = {
       jwt: preSignedUrlBody.accessToken,
-      calluuid: preSignedUrlBody.calluuid,
+      call_uuid: preSignedUrlBody.calluuid,
       ...(preSignedUrlBody.username.includes("puser") && { from: preSignedUrlBody.username }),
     };
   } else {

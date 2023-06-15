@@ -25,7 +25,7 @@ import { Logger } from '../logger';
 import { Client } from '../client';
 import { CallSession } from './callSession';
 import {
-  STATS_ANALYSIS_WAIT_TIME, DEFAULT_MDNS_CANDIDATE,
+  STATS_ANALYSIS_WAIT_TIME, DEFAULT_MDNS_CANDIDATE, LOGCAT,
 } from '../constants';
 import getBrowserDetails from '../utils/browserDetection';
 
@@ -83,6 +83,16 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
 };
 
 /**
+ * Prepare summary event when browser tab is about to close
+ * @returns Summary event
+ */
+export const setErrorCollector = () => {
+  window.onerror = (message) => {
+    Plivo.log.error(`${LOGCAT.CRASH} | ${message} |`, new Error().stack);
+  };
+};
+
+/**
  * Check for closeProtection option and show a
  * dialog prompt when closing a page which has an active connection
  */
@@ -109,6 +119,7 @@ export const addCloseProtectionListeners = function (): void {
         client._currentSession.session.terminate();
       }
       Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+      Plivo.log.send.call(client);
     };
   });
 };

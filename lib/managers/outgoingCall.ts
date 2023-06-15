@@ -20,6 +20,7 @@ import {
   NETWORK_CHANGE_INTERVAL_ON_CALL_STATE,
   MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
+  LOGCAT,
 } from '../constants';
 import { CallSession } from './callSession';
 import { checkExtraHeaderKey, checkExtraHeaderVal, checkExtraHeaderJWTVal } from '../utils/headers';
@@ -227,6 +228,7 @@ const handleProgressTone = (evt: SessionProgressEvent): void => {
 const OnProgress = (evt: SessionProgressEvent): void => {
   cs.timeTakenForStats.pdd.end = new Date().getTime();
   if (cs._currentSession && evt.response) {
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing`);
     cs._currentSession.onRinging(cs);
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
@@ -266,7 +268,7 @@ const onAccepted = (evt: SessionAcceptedEvent): void => {
   if (evt.response && cs._currentSession) {
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
-    Plivo.log.info('Outgoing call accepted');
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Answered`);
     cs._currentSession.onAccepted(cs);
     cs._currentSession.setPostDialDelayEndTime(getCurrentTime());
     addCallstatsIOFabric.call(
@@ -305,6 +307,7 @@ const onConfirmed = (): void => {
  * @param {SessionFailedEvent} evt - rtcsession failed information
  */
 const handleFailureCauses = (evt: SessionFailedEvent): void => {
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call - ${evt.cause}`);
   if (cs._currentSession) {
     if (evt.cause === 'Rejected') {
       cs._currentSession.setState(cs._currentSession.STATE.REJECTED);
@@ -350,6 +353,7 @@ const onFailed = (evt: SessionFailedEvent): void => {
  */
 const onEnded = (evt: SessionEndedEvent): void => {
   if (cs._currentSession) {
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call - ${evt.cause} - ${evt.originator}`);
     Plivo.log.debug(`Outgoing call ended - ${cs._currentSession.callUUID}`);
     Plivo.log.info('Outgoing call ended');
     cs._currentSession.onEnded(cs, evt);
@@ -540,6 +544,12 @@ export const createOutgoingSession = (
   evt: UserAgentNewRtcSessionEvent,
 ): void => {
   const sipCallID = evt.request.getHeader('Call-ID') || null;
+
+  const headers = {
+    sip_call_id: sipCallID,
+    extra_headers: outboundExtraHeaders,
+  };
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call initiated with header:- `, JSON.stringify(headers));
   cs._currentSession = new CallSession({
     sipCallID,
     direction: 'outgoing',

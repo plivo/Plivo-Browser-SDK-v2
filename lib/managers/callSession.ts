@@ -524,6 +524,7 @@ export class CallSession {
   };
 
   private _onFailed = (clientObject: Client, evt: SessionFailedEvent): void => {
+    Plivo.log.send.call(clientObject);
     this.addConnectionStage(`failed@${getCurrentTime()}`);
     this.updateSignallingInfo({
       hangup_time: getCurrentTime(),
@@ -536,6 +537,7 @@ export class CallSession {
   };
 
   private _onEnded = (clientObject: Client, evt: SessionEndedEvent): void => {
+    Plivo.log.send.call(clientObject);
     this.addConnectionStage(`ended@${getCurrentTime()}`);
     this.setState(this.STATE.ENDED);
     this.updateSignallingInfo({
