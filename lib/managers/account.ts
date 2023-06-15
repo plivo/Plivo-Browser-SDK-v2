@@ -118,13 +118,13 @@ class Account {
         && (this.credentials.userName.length <= 0
           || (this.credentials.password as string).length <= 0))
     ) {
-      Plivo.log.error('username and password cannot be null.');
+      Plivo.log.error(`${C.LOGCAT.LOGIN} | username and password cannot be null.`);
       this.cs.emit('onLoginFailed', 'Username and password must be filled out');
       return false;
     }
     if (this.cs._currentSession) {
       Plivo.log.warn(
-        `Cannot login when there is an ongoing call ${this.cs._currentSession.callUUID}`,
+        `${C.LOGCAT.LOGIN} | Cannot login when there is an ongoing call ${this.cs._currentSession.callUUID}`,
       );
       this.cs.emit(
         'onLoginFailed',
@@ -285,7 +285,7 @@ class Account {
    * @param {UserAgentDisconnectedEvent} evt
    */
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
-    Plivo.log.info('websocket connection closed', evt);
+    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed`, evt.reason);
     if (this.isPlivoSocketConnected) {
       // 1000 is normal websocket closed event,
       // others codes 1003,1006,1011 etc are for abnormal termination
@@ -363,7 +363,7 @@ class Account {
       this.cs.isLoggedIn = true;
       this.cs.isLoginCalled = false;
       this.cs.emit('onLogin');
-      Plivo.log.debug('logged in');
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | User logged in successfully`);
       // in firefox and safari web socket re-establishes automatically after network change
       startPingPong({
         client: this.cs,
@@ -387,6 +387,7 @@ class Account {
 
       // initialize callstats.io
       initCallStatsIO.call(this.cs);
+      Plivo.log.send.call(this.cs);
     }
   };
 
@@ -428,7 +429,7 @@ class Account {
    */
   private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
     this.cs.isLoggedIn = false;
-    Plivo.log.debug('Login failed : ', error.cause);
+    Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause, error.response);
     this.cs.userName = null;
     this.cs.password = null;
 

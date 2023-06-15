@@ -1,6 +1,7 @@
 /* eslint-disable max-classes-per-file */
 // Based on https://github.com/otalk/hark and https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode
 
+// eslint-disable-next-line import/no-cycle
 import { Logger } from '../logger';
 
 /**

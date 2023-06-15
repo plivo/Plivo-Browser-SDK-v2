@@ -99,6 +99,15 @@ export const DEFAULT_COMMENTS = {
   ROBOTIC_AUDIO: 'robotic_audio',
 };
 
+export const LOGCAT = {
+  INIT: 'INIT',
+  LOGIN: 'LOGIN',
+  CALL: 'CALLING',
+  LOGOUT: 'LOGOUT',
+  CRASH: 'CRASH',
+  CALL_QUALITY: 'CALL_QUALITY_FEEDBACK',
+};
+
 // Media
 export const RINGTONE_URL = 'https://cdn.plivo.com/sdk/browser/audio/us-ring.mp3';
 // same url with a parameter for workaround for chrome bug
@@ -136,6 +145,8 @@ export const STATS_API_URL = 'https://stats.plivo.com/v1/browser/validate/';
 export const SDKVERSION_API_URL = "https://stats.plivo.com/v1/browser/websdkversion/";
 export const STATS_API_URL_ACCESS_TOKEN = 'https://stats.plivo.com/v1/browser/validate/jwt/';
 export const S3BUCKET_API_URL_JWT = 'https://stats.plivo.com/v1/browser/bucketurl/jwt/';
+export const LOG_COLLECTION = 'https://nimbus.plivo.com/collect/logs/';
+export const LOG_COLLECTION_JWT = 'https://nimbus.plivo.com/collect/logs/jwt/';
 export const STATS_SOURCE = 'BrowserSDK';
 export const STATS_VERSION = 'v1';
 export const GETSTATS_INTERVAL = 5000;

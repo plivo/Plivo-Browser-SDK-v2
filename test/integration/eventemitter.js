@@ -181,7 +181,7 @@ describe('plivoWebSdk', function () {
       Client2.answer();
       Client1.sendDtmf("2");
 
-      waitUntilEmitter(spy.calledWith("sending dtmf digit 2"), done, 500);
+      waitUntilEmitter(spy.calledWith("CALLING | DTMF send 2"), done, 500);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('send dtmf failed'));
