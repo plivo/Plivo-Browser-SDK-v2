@@ -13,7 +13,7 @@ import { createOutgoingSession } from './outgoingCall';
 import { getCurrentTime, addMidAttribute } from './util';
 import { stopAudio } from '../media/document';
 import { Client } from '../client';
-import { sendNetworkChangeEvent, startPingPong } from '../utils/networkManager';
+import { sendNetworkChangeEvent, startPingPong, getNetworkData } from '../utils/networkManager';
 import { StatsSocket } from '../stats/ws';
 
 const Plivo = { log: Logger };
@@ -214,7 +214,7 @@ class Account {
       this.cs.phone = new SipLib.UA(sipConfig);
       return true;
     } catch (e) {
-      Plivo.log.debug(`Failed to create user agent${e}`);
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Failed to create user agent${e.message}`);
       return false;
     }
   };
@@ -229,7 +229,7 @@ class Account {
           this.tiggerNetworkChangeEvent();
         }, this.fetchIpCount * 200);
       } else {
-        Plivo.log.warn('Could not retreive ipaddress');
+        Plivo.log.warn(`${C.LOGCAT.NETWORK_CHANGE} | Could not retreive ipaddress`);
         this.fetchIpCount = 0;
       }
     });
@@ -340,7 +340,22 @@ class Account {
         messageCheckTimeout: this.cs._currentSession
           ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
       });
-      if (!this.cs._currentSession) return;
+      if (!this.cs._currentSession) {
+        // network changed when call is not active. sending network change stats to nimbus.
+        fetchIPAddress(this.cs).then((ipAddress) => {
+          const networkInfo = getNetworkData(this.cs, ipAddress);
+
+          Plivo.log.info(`${C.LOGCAT.NETWORK_CHANGE} | Network changed from ${JSON.stringify(networkInfo.previousNetworkInfo)}
+          to ${JSON.stringify(networkInfo.newNetworkInfo)} in idle state`);
+
+          this.cs.currentNetworkInfo = {
+            networkType: networkInfo.newNetworkInfo.networkType,
+            ip: typeof ipAddress === "string" ? ipAddress : "",
+          };
+        });
+        this.cs.isLoggedIn = true;
+        return;
+      }
 
       // create stats socket and trigger and trigger network change event
       // when user is in in-call state
@@ -387,7 +402,7 @@ class Account {
 
       // initialize callstats.io
       initCallStatsIO.call(this.cs);
-      Plivo.log.send.call(this.cs);
+      Plivo.log.send(this.cs);
     }
   };
 
@@ -396,7 +411,14 @@ class Account {
    * @param {Object} reason - Unregistration reason
    */
   private _onUnRegistered = (): void => {
-    Plivo.log.debug('Plivo client unregistered');
+    if (this.cs.isNetworkChangedInIdle) {
+      Plivo.log.info(`${C.LOGCAT.NETWORK_CHANGE} | UA unregistered after network switch`);
+      this.cs.isNetworkChangedInIdle = false;
+      this.cs.isLoggedIn = false;
+      return;
+    }
+
+    Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  Plivo client unregistered`);
     this.cs.isLoggedIn = false;
     if (this.cs.ringToneView && !this.cs.ringToneView.paused) {
       stopAudio(C.RINGTONE_ELEMENT_ID);
@@ -409,17 +431,15 @@ class Account {
     this.cs.userName = null;
     this.cs.password = null;
 
-    if (this.cs.isLogoutCalled === true) {
-      this.cs.isLogoutCalled = false;
+    if (this.cs.isLogoutCalled === true || this.cs.callUUID == null) {
       this.cs.emit('onLogout');
       if (this.cs.networkChangeInterval) {
         clearInterval(this.cs.networkChangeInterval);
+        this.cs.networkChangeInterval = null;
       }
-      this.message = null;
-    }
-
-    if (this.cs.callUUID == null) {
       this.cs.logout();
+      this.message = null;
+      this.cs.isLogoutCalled = false;
     }
   };
 
@@ -488,7 +508,7 @@ class Account {
       && this.cs._currentSession.session.connection
       && this.cs._currentSession.session.connection.signalingState === 'closed'
     ) {
-      Plivo.log.warn('Previous call did not end properly');
+      Plivo.log.warn(`${C.LOGCAT.CALL} | Previous call did not end properly`);
       this.cs._currentSession = null;
       this.cs.callSession = null;
       this.cs.callUUID = null;
@@ -508,7 +528,7 @@ class Account {
       || this.cs.incomingInvites.size
       >= C.NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED
     ) {
-      Plivo.log.debug('Already on call, sending busy signal.');
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Already on call, sending busy signal.`);
       const opts = {
         status_code: 486,
         reason_phrase: 'Busy Here',

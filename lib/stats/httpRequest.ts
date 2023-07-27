@@ -90,7 +90,7 @@ export const validateCallStats = function (
         }
       })
       .catch((err) => {
-        Plivo.log.error('Error in getting token from call stats', err);
+        Plivo.log.error(`${C.LOGCAT.LOGIN} | Error in getting token from call stats`, err.message);
         reject(err);
       });
   });
@@ -194,7 +194,7 @@ export const uploadConsoleLogsToBucket = function (
         resolve('done');
       })
       .catch((err) => {
-        Plivo.log.error('Log file was not uploaded to server', err);
+        Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Log file was not uploaded to server`, err.message);
         // eslint-disable-next-line prefer-promise-reject-errors
         reject('Log file was not uploaded to server');
       });

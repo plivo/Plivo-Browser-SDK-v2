@@ -186,7 +186,7 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
   const remoteStream: MediaStream = incomingCall.session.connection
     ? (incomingCall.session.connection as any).getRemoteStreams()[0] : null;
   if (!remoteStream) {
-    Plivo.log.error('Incoming call: remote stream does not exist');
+    Plivo.log.error(`${LOGCAT.CALL} | Incoming call: remote stream does not exist`);
   }
   cs.remoteView.srcObject = remoteStream;
   addCallstatsIOFabric.call(
@@ -263,7 +263,7 @@ const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void =>
  */
 const newDTMF = (evt: SessionNewDtmfEvent): void => {
   if (cs._currentSession && evt.originator === 'remote') {
-    console.log('emitting onDtmfReceived with digit: ', evt.dtmf.tone);
+    Plivo.log.info(`${LOGCAT.CALL} | emitting onDtmfReceived with digit: `, evt.dtmf.tone);
     const dtmfData = {
       tone: evt.dtmf.tone,
       duration: evt.dtmf.duration,
@@ -373,7 +373,7 @@ export const getCurrentIncomingCall = (
   } else if (clientObject.lastIncomingCall) {
     curIncomingCall = clientObject.lastIncomingCall;
     if (callUUID && clientObject.options.allowMultipleIncomingCalls) {
-      Plivo.log.error(`No incomingCall with callUUID - ${callUUID}`);
+      Plivo.log.error(`${LOGCAT.CALL} | No incomingCall with callUUID - ${callUUID}`);
       return null;
     }
   }
@@ -489,7 +489,7 @@ export const answerIncomingCall = (
     cs.callUUID = cs._currentSession.callUUID;
     cs.callDirection = cs._currentSession.direction;
   } catch (err) {
-    Plivo.log.error('error in answering : ', err);
+    Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
     curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
     cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo());
   }

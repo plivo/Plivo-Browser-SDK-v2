@@ -492,7 +492,7 @@ export class CallSession {
       if (connection && connection.iceGatheringState !== 'complete') {
         event.ready();
         Plivo.log.debug(
-          `ice gathering taking more than ${C.ICE_GATHERING_TIMEOUT / 1000} sec ${connection.iceGatheringState}`,
+          `${C.LOGCAT.CALL} | ice gathering taking more than ${C.ICE_GATHERING_TIMEOUT / 1000} sec ${connection.iceGatheringState}`,
         );
         Plivo.emitMetrics.call(
           clientObject,
@@ -509,7 +509,7 @@ export class CallSession {
   };
 
   private _onIceTimeout = (clientObject: Client, sec: number): void => {
-    Plivo.log.debug('ice gathering timed out');
+    Plivo.log.debug(`${C.LOGCAT.CALL} | ice gathering timed out`);
     Plivo.emitMetrics.call(
       clientObject,
       'network',
@@ -524,7 +524,7 @@ export class CallSession {
   };
 
   private _onFailed = (clientObject: Client, evt: SessionFailedEvent): void => {
-    Plivo.log.send.call(clientObject);
+    Plivo.log.send(clientObject);
     this.addConnectionStage(`failed@${getCurrentTime()}`);
     this.updateSignallingInfo({
       hangup_time: getCurrentTime(),
@@ -537,7 +537,7 @@ export class CallSession {
   };
 
   private _onEnded = (clientObject: Client, evt: SessionEndedEvent): void => {
-    Plivo.log.send.call(clientObject);
+    Plivo.log.send(clientObject);
     this.addConnectionStage(`ended@${getCurrentTime()}`);
     this.setState(this.STATE.ENDED);
     this.updateSignallingInfo({
@@ -567,7 +567,7 @@ export class CallSession {
     clientObject: Client,
     err: Error,
   ): void => {
-    Plivo.log.error(`getusermediafailed: ${err}`);
+    Plivo.log.error(`${C.LOGCAT.CALL} | getusermediafailed: ${err.message}`);
     if (clientObject.userName && clientObject.callStats) {
       // eslint-disable-next-line no-param-reassign
       (err as Error).message = 'getusermediafailed';

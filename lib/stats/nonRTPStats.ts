@@ -165,7 +165,7 @@ export const sendEvents = function (statMsg: any, session: CallSession): void {
     }
   } else {
     Plivo.log.debug(
-      'Cannot send Event ',
+      `${C.LOGCAT.CALL} | Cannot send event `,
       statMsg,
       ' mandatory parameters (statsSocket, sipCallID, callstatskey) not defined ',
     );

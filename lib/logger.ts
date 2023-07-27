@@ -110,6 +110,8 @@ class PlivoLogger {
     if (arg1.includes(LOGCAT.LOGOUT)) flag = true;
     if (arg1.includes(LOGCAT.CRASH)) flag = true;
     if (arg1.includes(LOGCAT.CALL_QUALITY)) flag = true;
+    if (arg1.includes(LOGCAT.NETWORK_CHANGE)) flag = true;
+    if (arg1.includes(LOGCAT.NIMBUS)) flag = true;
 
     if (flag) Storage.getInstance().setData(premsg, arg1, arg2);
   };
@@ -134,10 +136,10 @@ class PlivoLogger {
       // Number of logs which sdk store in memory
       if (consoleLogsArr.length >= CONSOLE_LOGS_BUFFER_SIZE) consoleLogsArr.shift();
       consoleLogsArr.push(`${premsg + arg1 + arg2} \n`);
+      this._appendToQueue(premsg, arg1, arg2);
       if (logHierarchy.indexOf(ucFilter) > logHierarchy.indexOf(this.logMethod)) {
         return;
       }
-      this._appendToQueue(premsg, arg1, arg2);
       switch (ucFilter) {
         case 'OFF':
           // do nothing
@@ -160,12 +162,83 @@ class PlivoLogger {
     }
   };
 
+  private _getLogsBatchData = (arr: Array<string>, splitInterval: number): Array<Array<string>> => {
+    let logsCount = 0;
+    const batchData: Array<Array<string>> = [];
+    let currentBatch: Array<string> = [];
+    arr.forEach((log:string) => {
+      logsCount += log.length;
+      if (logsCount > splitInterval) {
+        currentBatch.push("...continue");
+        batchData.push(currentBatch);
+        currentBatch = [];
+        logsCount = 0;
+      }
+      currentBatch.push(log);
+    });
+    if (currentBatch.length !== 0) {
+      if (batchData.length > 0) {
+        currentBatch.push("...continue");
+      }
+      batchData.push(currentBatch);
+    }
+    return batchData;
+  };
+
+  private _sendBatchedLogsToServer = (
+    client: Client,
+    myHeaders,
+    logs: Array<Array<string>>,
+    index: number,
+  ): Promise<string> => new Promise((resolve, reject) => {
+    const sdkVersionParse = getSDKVersion();
+    const deviceOs = getOS();
+
+    const body: Body = {
+      username: client.userName,
+      logs: logs[index],
+      sdk_v: sdkVersionParse.version,
+      sdk_name: "BrowserSDK",
+      user_agent: deviceOs,
+    };
+
+    if (client.isAccessToken) body.jwt = client.accessToken;
+
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      headers: myHeaders,
+      body: JSON.stringify(body),
+      redirect: 'follow',
+    };
+    const url = (client.isAccessToken) ? LOG_COLLECTION_JWT : LOG_COLLECTION;
+    fetch(url.trimEnd(), requestOptions)
+      .then((response) => {
+        if (!response.ok) {
+          this.info(`${LOGCAT.NIMBUS} | Error while uploading logs to nimbus`);
+          reject(new Error('failure'));
+        } else {
+          index += 1;
+          if (logs.length > index) {
+            this._sendBatchedLogsToServer(client, myHeaders, logs, index);
+          } else {
+            Storage.getInstance().clear();
+          }
+          resolve('success');
+        }
+
+        response.text();
+      })
+      .then((result) => console.log(result))
+      .catch((error) => {
+        console.log('error', error);
+        reject(error);
+      });
+  });
+
   /**
  * Send logs to Plivo kibana.
  */
-  send = function (): void {
-    const client: Client = this;
-
+  send = (client: Client): void => {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
 
@@ -176,39 +249,12 @@ class PlivoLogger {
       return;
     }
 
-    const parsedData = JSON.parse(data);
-    const arr = parsedData.split("\n");
-
     if (!client.userName) return;
 
-    const sdkVersionParse = getSDKVersion();
-    const deviceOs = getOS();
-
-    const body : Body = {
-      username: client.userName,
-      logs: arr,
-      sdk_v: sdkVersionParse.version,
-      sdk_name: "BrowserSDK",
-      user_agent: deviceOs,
-    };
-
-    if (client.isAccessToken) body.jwt = client.accessToken;
-
-    const requestOptions:RequestInit = {
-      method: 'POST',
-      headers: myHeaders,
-      body: JSON.stringify(body),
-      redirect: 'follow',
-    };
-
-    const url = (client.isAccessToken) ? LOG_COLLECTION_JWT : LOG_COLLECTION;
-    fetch(url.trimEnd(), requestOptions)
-      .then((response) => {
-        Storage.getInstance().clear();
-        response.text();
-      })
-      .then((result) => console.log(result))
-      .catch((error) => console.log('error', error));
+    const parsedData = JSON.parse(data);
+    const arr = parsedData.split("\n");
+    const batchData = this._getLogsBatchData(arr, 20000);
+    this._sendBatchedLogsToServer(client, myHeaders, batchData, 0);
   };
 }
 
