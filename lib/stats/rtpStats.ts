@@ -580,7 +580,7 @@ export const handleChromeStats = async function (stream: RtpStatsStream): Promis
     },
     null,
     (err: any) => {
-      Plivo.log.error('Rtpstats peer connection getStats error', err);
+      Plivo.log.error(`${C.LOGCAT.CALL} | Rtpstats peer connection getStats error`, err.message);
     },
   );
 };
@@ -686,11 +686,11 @@ export const handleFirefoxSafariStats = function (stream: RtpStatsStream): void 
             });
           })
           .catch((e: any) => {
-            Plivo.log.debug('Error in getStats RemoteStreams API ', e);
+            Plivo.log.debug(`${C.LOGCAT.CALL} | Error in getStats RemoteStreams API `, e.message);
           });
       })
       .catch((e: any) => {
-        Plivo.log.debug('Error in getStats LocalStreams API ', e);
+        Plivo.log.debug(`${C.LOGCAT.CALL} | Error in getStats LocalStreams API `, e.message);
       });
   }
 };
@@ -716,7 +716,7 @@ const startStatsTimer = function (): void {
       handleFirefoxSafariStats.call(getStatsRef, stream);
     } else {
       Plivo.log.error(
-        `Plivo Browser SDK is not supported in ${getStatsRef.clientScope.browserDetails.browser}`,
+        `${C.LOGCAT.LOGIN} | Plivo Browser SDK is not supported in ${getStatsRef.clientScope.browserDetails.browser}`,
       );
     }
   }, C.GETSTATS_INTERVAL);

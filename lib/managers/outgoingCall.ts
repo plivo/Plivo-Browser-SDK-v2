@@ -132,7 +132,7 @@ const onTrack = (evt: RTCTrackEvent): void => {
       Plivo.log.debug('playAudio - MediaServer');
     }
   } else {
-    Plivo.log.error('Outgoing call add stream failure');
+    Plivo.log.error(`${LOGCAT.CALL} | Outgoing call add stream failure`);
     cs._currentSession.addConnectionStage(
       `addStream-failure@${getCurrentTime()}`,
     );
@@ -324,7 +324,7 @@ const handleFailureCauses = (evt: SessionFailedEvent): void => {
  * @param {SessionFailedEvent} evt - rtcsession failed information
  */
 const onFailed = (evt: SessionFailedEvent): void => {
-  Plivo.log.error(`Outgoing call failed: ${evt.cause}`);
+  Plivo.log.error(`${LOGCAT.CALL} | Outgoing call failed: ${evt.cause}`);
   if (!cs._currentSession) return;
   if (evt.message) {
     cs._currentSession.setCallUUID(evt.message.getHeader('X-CallUUID') || null);
@@ -378,7 +378,7 @@ const onEnded = (evt: SessionEndedEvent): void => {
  */
 const newDTMF = (evt: SessionNewDtmfEvent): void => {
   if (cs._currentSession && evt.originator === 'remote') {
-    console.log('emitting onDtmfReceived with digit: ', evt.dtmf.tone);
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing Call | emitting onDtmfReceived with digit: `, evt.dtmf.tone);
     const dtmfData = {
       tone: evt.dtmf.tone,
       duration: evt.dtmf.duration,

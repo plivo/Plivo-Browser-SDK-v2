@@ -402,6 +402,12 @@ export class Client extends EventEmitter {
   audioDevDic: any;
 
   /**
+   * Notifies when the network is changed and the call is not active
+   * @private
+   */
+  isNetworkChangedInIdle: boolean;
+
+  /**
    * It is a wrapper over ringback tone audio element.
    * It is used for playing and pausing ringtone audio for outgoing call
    * @private
@@ -765,6 +771,7 @@ export class Client extends EventEmitter {
     this.shouldMuteCall = false;
     this.isOutgoingGrant = false;
     this.isIncomingGrant = false;
+    this.isNetworkChangedInIdle = false;
     this.audio = {
       availableDevices: audioUtil.availableDevices,
       ringtoneDevices: audioUtil.ringtoneDevices,
@@ -796,7 +803,9 @@ export class Client extends EventEmitter {
 
     // store this instance as window object
     window['_PlivoInstance' as any] = this as any;
-
+    Plivo.log.info(
+      `PlivoWebSdk initialized in ${Plivo.log.level()} mode, version: PLIVO_LIB_VERSION`,
+    );
     this.jsFramework = detectFramework();
   }
 
@@ -1017,7 +1026,7 @@ export class Client extends EventEmitter {
     Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Logout successful!', this.userName);
     // Store.getInstance().clear();
     // if logout is called explicitly, make all the related flags to default
-    Plivo.log.send.call(this);
+    Plivo.log.send(this);
     if (this.isAccessToken) {
       this.isAccessToken = false;
       this.isOutgoingGrant = false;
@@ -1049,7 +1058,7 @@ export class Client extends EventEmitter {
     };
 
     if (!this.isLoggedIn) {
-      Plivo.log.warn('Must be logged in before to make a call');
+      Plivo.log.warn(`${C.LOGCAT.LOGIN} | Must be logged in before to make a call`);
       return false;
     }
 
@@ -1105,7 +1114,7 @@ export class Client extends EventEmitter {
       Plivo.log.debug(`answer - ${incomingCall.callUUID}`);
       incomingCall.addConnectionStage(`answer()@${new Date().getTime()}`);
       const mediaError = (reason: string) => {
-        Plivo.log.debug(`rejecting call, Reason : ${reason}`);
+        Plivo.log.debug(`${C.LOGCAT.CALL} | rejecting call, Reason : ${reason}`);
         this.reject(incomingCall.callUUID as string);
         return true;
       };
@@ -1139,7 +1148,7 @@ export class Client extends EventEmitter {
         );
       }
     } else {
-      Plivo.log.error('Incoming call answer() failed : no incoming call');
+      Plivo.log.error(`${C.LOGCAT.LOGIN} | Incoming call answer() failed : no incoming call`);
       return false;
     }
     return true;
@@ -1281,7 +1290,7 @@ export class Client extends EventEmitter {
   private _sendDtmf = (digit: number | string): void => {
     const dtmfFlags = C.DTMF_TONE_FLAG as any;
     if (typeof digit === 'undefined' || digit == null) {
-      return Plivo.log.warn('DTMF digit can not be null');
+      return Plivo.log.warn(`${C.LOGCAT.CALL} | DTMF digit can not be null`);
     }
     if (typeof dtmfFlags[digit] === 'undefined') {
       return Plivo.log.warn(`${digit} is not a valid DTMF digit`);
@@ -1303,7 +1312,7 @@ export class Client extends EventEmitter {
         }
         return documentUtil.playAudio(`dtmf${digit}`, this);
       } catch (err) {
-        Plivo.log.error('Call has not been confirmed cannot send DTMF');
+        Plivo.log.error(`${C.LOGCAT.CALL} | Call has not been confirmed cannot send DTMF`);
         if (Plivo.AppError) {
           Plivo.AppError.call(this, {
             name: err.name,
@@ -1342,7 +1351,7 @@ export class Client extends EventEmitter {
         }
         nonRTPStats.onToggleMute.call(this, this._currentSession, 'mute');
       } catch (err) {
-        Plivo.log.error('error in mute :', err);
+        Plivo.log.error(`${C.LOGCAT.CALL} | error in mute :`, err.message);
         Plivo.AppError?.call(this, {
           name: err.name,
           message: err.message,
@@ -1360,7 +1369,7 @@ export class Client extends EventEmitter {
         );
       }
     } else {
-      Plivo.log.warn('No call session exists to mute');
+      Plivo.log.warn(`${C.LOGCAT.CALL} | No call session exists to mute`);
       // value will be changed to true if user tries to mute call before session creation
       this.shouldMuteCall = true;
       return false;
@@ -1384,7 +1393,7 @@ export class Client extends EventEmitter {
         }
         nonRTPStats.onToggleMute.call(this, this._currentSession, 'unmute');
       } catch (err) {
-        Plivo.log.error('error in unmute : ', err);
+        Plivo.log.error(`${C.LOGCAT.CALL} | error in unmute : `, err.message);
         Plivo.AppError?.call(this, {
           name: err.name,
           message: err.message,
@@ -1402,7 +1411,7 @@ export class Client extends EventEmitter {
         );
       }
     } else {
-      Plivo.log.warn('No call session exists to unmute');
+      Plivo.log.warn(`${C.LOGCAT.CALL} | No call session exists to unmute`);
       return false;
     }
     return true;
@@ -1540,7 +1549,7 @@ export class Client extends EventEmitter {
           session = this._lastCallSession;
         }
         if (session) {
-          Plivo.log.send.call(this);
+          Plivo.log.send(this);
           if (this.statsSocket) {
             nonRTPStats.sendFeedbackEvent.call(this, session, feedback);
           } else {
