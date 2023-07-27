@@ -186,13 +186,14 @@ export const owaCallback = function (
     client.owaLastDetect.time = new Date();
   }
   if (err) {
-    Plivo.log.error('Error in detecting microphone status ', err);
+    Plivo.log.error(`${LOGCAT.CALL} | Error in detecting microphone status `, err.message);
     if (client && client.emit) client.emit('onMediaPermission', { status: 'failure', error: err.name });
     onError(`media - ${err.name}`);
     return false;
   }
   Plivo.log.debug('getUserMedia precheck ', res);
   if (Number(res.bytesSent) === 0 && Number(res.audioInputLevel) === 0) {
+    Plivo.log.error(`${LOGCAT.CALL} | chrome lost access to microphone - restart browser`, err.message);
     emitMetrics.call(
       this,
       'audio',
@@ -208,6 +209,7 @@ export const owaCallback = function (
     return false;
   }
   if (Number(res.audioInputLevel) === 0) {
+    Plivo.log.error(`${LOGCAT.CALL} | microphone is muted`, err.message);
     emitMetrics.call(
       this,
       'audio',
@@ -252,7 +254,7 @@ export const owaNotification = (connection: any): void => {
             && parseInt(report.stat('bytesSent'), 10) === 0
             && report.stat('audioInputLevel') === 0
           ) {
-            Plivo.log.debug('One way audio detected');
+            Plivo.log.debug(`${LOGCAT.CALL} | One way audio detected`);
             emitMetrics.call(
               this,
               'audio',

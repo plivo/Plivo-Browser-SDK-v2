@@ -119,7 +119,7 @@ export const addCloseProtectionListeners = function (): void {
         client._currentSession.session.terminate();
       }
       Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
-      Plivo.log.send.call(client);
+      Plivo.log.send(client);
     };
   });
 };
@@ -224,6 +224,7 @@ export const iceConnectionCheck = function (
 ): void {
   const client: Client = this;
   if (['disconnected', 'failed'].indexOf(iceState) !== -1) {
+    Plivo.log.info(`${LOGCAT.NETWORK_CHANGE} | Network drop while performing ice connection check`);
     Plivo.emitMetrics.call(
       client,
       'network',
@@ -450,7 +451,7 @@ const stopLocalStream = function (): void {
         });
         (window as any).localStream = null;
       } catch (err) {
-        Plivo.log.debug(`error in stopping tracks in localStream : ${err.message}`);
+        Plivo.log.debug(`${LOGCAT.CALL} | error in stopping tracks in localStream : ${err.message}`);
       }
     }
     // instead of stopping stream, enable audio tracks because safari and
@@ -467,7 +468,7 @@ const stopLocalStream = function (): void {
           }
         });
       } catch (err) {
-        Plivo.log.debug(`error in enabling tracks in localStream : ${err.message}`);
+        Plivo.log.debug(`${LOGCAT.CALL} | error in enabling tracks in localStream : ${err.message}`);
       }
     }
   }

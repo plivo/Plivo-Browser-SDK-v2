@@ -327,6 +327,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             audioDevDic: any;
             /**
+                * Notifies when the network is changed and the call is not active
+                * @private
+                */
+            isNetworkChangedInIdle: boolean;
+            /**
                 * It is a wrapper over ringback tone audio element.
                 * It is used for playing and pausing ringtone audio for outgoing call
                 * @private

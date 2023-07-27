@@ -15,6 +15,7 @@ interface PingPong {
 }
 
 const Plivo = { log: Logger };
+let isConnected = true;
 
 export const restartStatSocket = (client: Client) => {
   if (client.callstatskey && navigator.onLine && client._currentSession) {
@@ -27,20 +28,30 @@ export const restartStatSocket = (client: Client) => {
   }
 };
 
-export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) => {
+export const getNetworkData = (client: Client, ipAddress: string | Error) => {
   const newNetworkType = (navigator as any).connection
     ? (navigator as any).connection.effectiveType
     : 'unknown';
+  const previousNetworkInfo = {
+    networkType: client.currentNetworkInfo.networkType,
+    ip: client.currentNetworkInfo.ip,
+  };
+  const newNetworkInfo = {
+    networkType: newNetworkType,
+    ip: typeof ipAddress === "string" ? ipAddress : "",
+  };
+  return {
+    newNetworkInfo,
+    previousNetworkInfo,
+  };
+};
+
+export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) => {
+  const networkInfo = getNetworkData(client, ipAddress);
   const obj = {
     msg: "NETWORK_CHANGE",
-    previousNetworkInfo: {
-      networkType: client.currentNetworkInfo.networkType,
-      ip: client.currentNetworkInfo.ip,
-    },
-    newNetworkInfo: {
-      networkType: newNetworkType,
-      ip: typeof ipAddress === "string" ? ipAddress : "",
-    },
+    previousNetworkInfo: networkInfo.previousNetworkInfo,
+    newNetworkInfo: networkInfo.newNetworkInfo,
     reconnectionTimestamp: client.networkReconnectionTimestamp,
     disconnectionTimestamp: client.networkDisconnectedTimestamp,
   };
@@ -48,7 +59,7 @@ export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) 
   sendEvents.call(client, obj, client._currentSession!);
   // update current network info
   client.currentNetworkInfo = {
-    networkType: newNetworkType,
+    networkType: networkInfo.newNetworkInfo.networkType,
     ip: typeof ipAddress === "string" ? ipAddress : "",
   };
   client.networkDisconnectedTimestamp = null;
@@ -59,6 +70,7 @@ export const reconnectSocket = (client: Client) => {
   if (navigator.onLine) {
     Plivo.log.debug('Network changed re-registering');
     if (!client._currentSession) {
+      client.isNetworkChangedInIdle = true;
       (client.phone as any)._transport.disconnect(true);
       (client.phone as any)._transport.connect();
     } else {
@@ -76,37 +88,52 @@ export const startPingPong = ({
   networkChangeInterval,
   messageCheckTimeout,
 }: PingPong) => {
-  const check = client._currentSession ? true : client.browserDetails.browser === 'chrome' || client.browserDetails.browser === 'edge';
-  if (check) {
-    if (client.networkChangeInterval == null) {
-      client.networkChangeInterval = setInterval(() => {
-        // send message only when there is active network connect
-        if (
-          navigator.onLine
-            && client.phone
-            && !(client.phone as any)._transport.isConnecting()
-            && !(client.phone as any).isRegistering()
-        ) {
-          let isFailedMessageTriggered = false;
-          let message: null | SipLib.Message = null;
-          client.networkDisconnectedTimestamp = new Date().getTime();
-          // timeout to check whether we receive failed event in 5 seconds
-          const eventCheckTimeout = setTimeout(() => {
-            if (!isFailedMessageTriggered) {
-              reconnectSocket(client);
-              message = null;
-            }
-            clearTimeout(eventCheckTimeout);
-          }, messageCheckTimeout);
-          message = new SipLib.Message(client.phone);
-          message.on('failed', () => {
-            isFailedMessageTriggered = true;
-            if (eventCheckTimeout) clearTimeout(eventCheckTimeout);
-          });
-          message.send('admin', 'pong', 'OPTIONS');
+  if (client.networkChangeInterval == null) {
+    client.networkChangeInterval = setInterval(() => {
+      // send message only when there is active network connect
+      if (
+        navigator.onLine
+        && client.phone
+        && !(client.phone as any)._transport.isConnecting()
+        && !(client.phone as any).isRegistering()
+      ) {
+        let isFailedMessageTriggered = false;
+        let message: null | SipLib.Message = null;
+        client.networkDisconnectedTimestamp = new Date().getTime();
+        if (!isConnected) {
+          isConnected = true;
+          const eventData = {
+            state: 'connected',
+          };
+          client.emit('onConnectionChange', eventData);
         }
-      }, networkChangeInterval);
-    }
+        // timeout to check whether we receive failed event in 5 seconds
+        const eventCheckTimeout = setTimeout(() => {
+          if (!isFailedMessageTriggered) {
+            reconnectSocket(client);
+            message = null;
+          }
+          clearTimeout(eventCheckTimeout);
+        }, messageCheckTimeout);
+        message = new SipLib.Message(client.phone);
+        message.on('failed', () => {
+          isFailedMessageTriggered = true;
+          if (eventCheckTimeout) clearTimeout(eventCheckTimeout);
+        });
+        message.send('admin', 'pong', 'OPTIONS');
+      }
+      if (!navigator.onLine && client.phone
+        && !(client.phone as any)._transport.isConnecting()
+        && !(client.phone as any).isRegistering()) {
+        const eventData = {
+          state: 'disconnected',
+        };
+        if (isConnected) {
+          client.emit('onConnectionChange', eventData);
+          isConnected = false;
+        }
+      }
+    }, networkChangeInterval);
   }
 };
 

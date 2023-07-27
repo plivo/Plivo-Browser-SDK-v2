@@ -7,6 +7,7 @@ import {
   REMOTE_VIEW_ID,
   RINGBACK_ELEMENT_ID,
   RINGTONE_ELEMENT_ID,
+  LOGCAT,
 } from '../constants';
 import audioVisualize from './audioVisualize';
 import { Logger } from '../logger';
@@ -152,7 +153,7 @@ export const revealAudioDevices = function (
           }
         })
         .catch((err) => {
-          Plivo.log.error(`failed to get user media :: ${err.name}`);
+          Plivo.log.error(`${LOGCAT.CALL} | Failed to get user media during init :: ${err.message}`);
           reject(err.name);
         });
     } else {
