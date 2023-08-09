@@ -13,7 +13,12 @@ import { createOutgoingSession } from './outgoingCall';
 import { getCurrentTime, addMidAttribute } from './util';
 import { stopAudio } from '../media/document';
 import { Client } from '../client';
-import { sendNetworkChangeEvent, startPingPong, getNetworkData } from '../utils/networkManager';
+import {
+  sendNetworkChangeEvent,
+  startPingPong,
+  getNetworkData,
+  ConnectionState,
+} from '../utils/networkManager';
 import { StatsSocket } from '../stats/ws';
 
 const Plivo = { log: Logger };
@@ -253,12 +258,9 @@ class Account {
    */
   private _onConnected = (evt: SipLib.UserAgentConnectedEvent): void => {
     Plivo.log.info('websocket connection established', evt);
+    Plivo.log.info(`${C.LOGCAT.LOGIN} | websocket connection established`);
     if (!this.isPlivoSocketConnected) {
       this.isPlivoSocketConnected = true;
-      const eventData = {
-        state: 'connected',
-      };
-      this.cs.emit('onConnectionChange', eventData);
       if (!this.cs.didFetchInitialNetworkInfo) {
         fetchIPAddress(this.cs).then((ip) => {
           this.cs.currentNetworkInfo = {
@@ -287,28 +289,8 @@ class Account {
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
     Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed`, evt.reason);
     if (this.isPlivoSocketConnected) {
-      // 1000 is normal websocket closed event,
-      // others codes 1003,1006,1011 etc are for abnormal termination
-      const eventData: {
-        state: string;
-        eventCode: null | number;
-        eventReason: null | string;
-      } = {
-        state: 'disconnected',
-        eventCode: null,
-        eventReason: null,
-      };
-      if (evt && evt.code > 1000) {
-        eventData.eventCode = evt.code;
-        eventData.eventReason = evt.reason;
-      } else if (evt && evt.error) {
-        eventData.eventCode = (evt.error as any).code;
-        eventData.eventReason = (evt.error as any).reason;
-      }
-      this.cs.emit('onConnectionChange', eventData);
       this.isPlivoSocketConnected = false;
     }
-
     if (!(evt as any).ignoreReconnection) {
       urlIndex += 1;
       const sipConfig = this.setupUAConfig();
@@ -325,7 +307,12 @@ class Account {
     // Parse the response to get the JWT expiry in epoch
     // below is the example to get basic 120 sec expiry from response
     // To do : This needs to be changed in case of login through access Token method
-    if (this.cs.isAccessToken) {
+    const eventData = {
+      state: ConnectionState.CONNECTED,
+    };
+    this.cs.connectionState = eventData.state;
+    this.cs.emit('onConnectionChange', eventData);
+    if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
       const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
       this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
     }
@@ -337,8 +324,7 @@ class Account {
         client: this.cs,
         networkChangeInterval: this.cs._currentSession
           ? C.NETWORK_CHANGE_INTERVAL_ON_CALL_STATE : C.NETWORK_CHANGE_INTERVAL_IDLE_STATE,
-        messageCheckTimeout: this.cs._currentSession
-          ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
+        messageCheckTimeout: C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE,
       });
       if (!this.cs._currentSession) {
         // network changed when call is not active. sending network change stats to nimbus.
@@ -383,13 +369,14 @@ class Account {
       startPingPong({
         client: this.cs,
         networkChangeInterval: C.NETWORK_CHANGE_INTERVAL_IDLE_STATE,
-        messageCheckTimeout: C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
+        messageCheckTimeout: C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE,
       });
       // get callstats key and create stats socket
       let passToken: string | null;
       if (this.cs.isAccessToken) {
         passToken = this.cs.accessToken;
       } else {
+        this.cs.isAccessToken = false;
         passToken = this.cs.password;
       }
       validateCallStats(this.cs.userName, passToken, this.cs.isAccessToken)
@@ -411,15 +398,19 @@ class Account {
    * @param {Object} reason - Unregistration reason
    */
   private _onUnRegistered = (): void => {
-    if (this.cs.isNetworkChangedInIdle) {
-      Plivo.log.info(`${C.LOGCAT.NETWORK_CHANGE} | UA unregistered after network switch`);
-      this.cs.isNetworkChangedInIdle = false;
-      this.cs.isLoggedIn = false;
+    this.cs.isLoggedIn = false;
+    const eventData: {
+      state: string;
+    } = {
+      state: ConnectionState.DISCONNECTED,
+    };
+    this.cs.connectionState = eventData.state;
+    this.cs.emit('onConnectionChange', eventData);
+    if (!this.cs.isLogoutCalled) {
       return;
     }
 
     Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  Plivo client unregistered`);
-    this.cs.isLoggedIn = false;
     if (this.cs.ringToneView && !this.cs.ringToneView.paused) {
       stopAudio(C.RINGTONE_ELEMENT_ID);
     }
@@ -431,16 +422,14 @@ class Account {
     this.cs.userName = null;
     this.cs.password = null;
 
-    if (this.cs.isLogoutCalled === true || this.cs.callUUID == null) {
-      this.cs.emit('onLogout');
-      if (this.cs.networkChangeInterval) {
-        clearInterval(this.cs.networkChangeInterval);
-        this.cs.networkChangeInterval = null;
-      }
-      this.cs.logout();
-      this.message = null;
-      this.cs.isLogoutCalled = false;
+    this.cs.emit('onLogout');
+    if (this.cs.networkChangeInterval) {
+      clearInterval(this.cs.networkChangeInterval);
+      this.cs.networkChangeInterval = null;
     }
+    this.cs.logout();
+    this.message = null;
+    this.cs.isLogoutCalled = false;
   };
 
   /**
@@ -448,6 +437,9 @@ class Account {
    * @param {Object} error - Login failure error
    */
   private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
+    if (this.cs.connectionState === ConnectionState.DISCONNECTED && this.cs.isLoggedIn) {
+      return;
+    }
     this.cs.isLoggedIn = false;
     Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause, error.response);
     this.cs.userName = null;
@@ -456,6 +448,8 @@ class Account {
     const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
     if (this.cs.isAccessTokenGenerator) {
       this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
+    } else if (error.cause && errorCode === 401) {
+      this.cs.emit('onLoginFailed', error.cause);
     } else {
       this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
     }

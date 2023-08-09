@@ -14,6 +14,11 @@ interface PingPong {
   messageCheckTimeout: number
 }
 
+export const ConnectionState = {
+  CONNECTED: 'connected',
+  DISCONNECTED: 'disconnected',
+};
+
 const Plivo = { log: Logger };
 let isConnected = true;
 
@@ -70,7 +75,6 @@ export const reconnectSocket = (client: Client) => {
   if (navigator.onLine) {
     Plivo.log.debug('Network changed re-registering');
     if (!client._currentSession) {
-      client.isNetworkChangedInIdle = true;
       (client.phone as any)._transport.disconnect(true);
       (client.phone as any)._transport.connect();
     } else {
@@ -102,10 +106,15 @@ export const startPingPong = ({
         client.networkDisconnectedTimestamp = new Date().getTime();
         if (!isConnected) {
           isConnected = true;
-          const eventData = {
-            state: 'connected',
-          };
-          client.emit('onConnectionChange', eventData);
+          if (client._currentSession) {
+            const negotiationStarted = client._currentSession.session.renegotiate({
+              rtcOfferConstraints: { iceRestart: true },
+            });
+            Plivo.log.debug(`Renegotiate Ice :: ${negotiationStarted}`);
+          } else {
+            (client.phone as any)._transport.connect();
+          }
+          client.connectionState = ConnectionState.CONNECTED;
         }
         // timeout to check whether we receive failed event in 5 seconds
         const eventCheckTimeout = setTimeout(() => {
@@ -124,14 +133,11 @@ export const startPingPong = ({
       }
       if (!navigator.onLine && client.phone
         && !(client.phone as any)._transport.isConnecting()
-        && !(client.phone as any).isRegistering()) {
-        const eventData = {
-          state: 'disconnected',
-        };
-        if (isConnected) {
-          client.emit('onConnectionChange', eventData);
-          isConnected = false;
-        }
+        && !(client.phone as any).isRegistering()
+        && isConnected) {
+        (client.phone as any)._transport.disconnect(true);
+        client.connectionState = ConnectionState.DISCONNECTED;
+        isConnected = false;
       }
     }, networkChangeInterval);
   }

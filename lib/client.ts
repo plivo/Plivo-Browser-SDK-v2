@@ -402,12 +402,6 @@ export class Client extends EventEmitter {
   audioDevDic: any;
 
   /**
-   * Notifies when the network is changed and the call is not active
-   * @private
-   */
-  isNetworkChangedInIdle: boolean;
-
-  /**
    * It is a wrapper over ringback tone audio element.
    * It is used for playing and pausing ringtone audio for outgoing call
    * @private
@@ -432,6 +426,12 @@ export class Client extends EventEmitter {
    * @private
    */
   plivoSocket: WebSocketInterface;
+
+  /**
+   * Holds the connection state of the SDK
+   * @private
+   */
+  connectionState: string;
 
   /**
    * Responsible for playing audio stream of remote user during call
@@ -771,7 +771,6 @@ export class Client extends EventEmitter {
     this.shouldMuteCall = false;
     this.isOutgoingGrant = false;
     this.isIncomingGrant = false;
-    this.isNetworkChangedInIdle = false;
     this.audio = {
       availableDevices: audioUtil.availableDevices,
       ringtoneDevices: audioUtil.ringtoneDevices,
