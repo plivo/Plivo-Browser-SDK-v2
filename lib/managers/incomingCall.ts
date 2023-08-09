@@ -79,15 +79,7 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
     call.updateSignallingInfo({
       invite_time: getCurrentTime(),
     });
-    try {
-      // eslint-disable-next-line no-param-reassign
-      evt.request.body = checkCodecPreference(
-        cs.options.codecs as AvailableCodecs[],
-        evt.request.body as string,
-      );
-    } catch (err) {
-      Plivo.log.debug('checkCodecPreference err - ', err);
-    }
+
     Plivo.log.debug(`callSession - ${call.callUUID}`);
   }
 };
@@ -141,10 +133,26 @@ const onProgress = (incomingCall: CallSession) => (): void => {
 const onSDP = (evt: SessionSdpEvent): void => {
   isIncomingCallRinging = false;
   // eslint-disable-next-line no-param-reassign
+  try {
+    // eslint-disable-next-line no-param-reassign
+    evt.sdp = checkCodecPreference(
+      cs.options.codecs as AvailableCodecs[],
+      evt.sdp as string,
+    );
+  } catch (err) {
+    Plivo.log.debug('checkCodecPreference err - ', err);
+  }
+
   evt.sdp = evt.sdp.replace(
     'useinbandfec=1',
     `useinbandfec=1;maxaveragebitrate=${cs.options.maxAverageBitrate}`,
   );
+
+  evt.sdp = evt.sdp.replace(
+    '0\r\r',
+    `0`,
+  );
+
   // eslint-disable-next-line no-param-reassign
   evt.sdp = replaceMdnsIceCandidates(evt.sdp);
   Plivo.log.debug('Incoming call SDP processing done');

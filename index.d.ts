@@ -327,11 +327,6 @@ declare module 'plivo-browser-sdk/client' {
                 */
             audioDevDic: any;
             /**
-                * Notifies when the network is changed and the call is not active
-                * @private
-                */
-            isNetworkChangedInIdle: boolean;
-            /**
                 * It is a wrapper over ringback tone audio element.
                 * It is used for playing and pausing ringtone audio for outgoing call
                 * @private
@@ -353,6 +348,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             plivoSocket: WebSocketInterface;
+            /**
+                * Holds the connection state of the SDK
+                * @private
+                */
+            connectionState: string;
             /**
                 * Responsible for playing audio stream of remote user during call
                 * @private
@@ -574,6 +574,7 @@ declare module 'plivo-browser-sdk/client' {
 }
 
 declare module 'plivo-browser-sdk/logger' {
+    import { Client } from 'plivo-browser-sdk/client';
     export type AvailableLogMethods = 'INFO' | 'DEBUG' | 'WARN' | 'ERROR' | 'ALL' | 'OFF' | 'ALL-PLAIN';
     export type AvailableFlagValues = 'ALL' | 'NONE' | 'REMOTEONLY' | 'LOCALONLY';
     export interface DtmfOptions {
@@ -604,7 +605,7 @@ declare module 'plivo-browser-sdk/logger' {
             /**
             * Send logs to Plivo kibana.
             */
-            send: () => void;
+            send: (client: Client) => void;
     }
     export const Logger: PlivoLogger;
     export {};
