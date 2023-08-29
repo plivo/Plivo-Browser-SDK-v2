@@ -406,7 +406,7 @@ class Account {
     };
     this.cs.connectionState = eventData.state;
     this.cs.emit('onConnectionChange', eventData);
-    if (!this.cs.isLogoutCalled) {
+    if (!this.cs.isLogoutCalled || this.cs._currentSession) {
       return;
     }
 
@@ -440,7 +440,6 @@ class Account {
     if (this.cs.connectionState === ConnectionState.DISCONNECTED && this.cs.isLoggedIn) {
       return;
     }
-    this.cs.isLoggedIn = false;
     Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause, error.response);
     this.cs.userName = null;
     this.cs.password = null;
@@ -451,8 +450,12 @@ class Account {
     } else if (error.cause && errorCode === 401) {
       this.cs.emit('onLoginFailed', error.cause);
     } else {
+      if (this.cs.isLoggedIn) {
+        this.cs.isLogoutCalled = true;
+      }
       this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
     }
+    this.cs.isLoggedIn = false;
   };
 
   /**

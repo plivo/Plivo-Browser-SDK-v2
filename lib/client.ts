@@ -1039,9 +1039,11 @@ export class Client extends EventEmitter {
       Plivo.log.debug('Terminating an active call');
       this._currentSession.session.terminate();
     }
-    this.isLogoutCalled = true;
     if (this.phone && this.phone.isRegistered()) {
+      this.isLogoutCalled = true;
       this.phone.stop();
+    } else {
+      this.isLogoutCalled = false;
     }
 
     if (this.statsSocket) {
