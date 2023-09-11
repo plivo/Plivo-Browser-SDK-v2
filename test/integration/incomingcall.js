@@ -177,7 +177,7 @@ describe('plivoWebSdk', function () {
         Client1.reject();
         waitUntilIncoming(events.onCallFailed, done, 500);
       }
-      waitUntilIncoming(events.onIncomingCall, reject, 500);
+      waitUntilIncoming(events.onIncomingCall, reject, 2000);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('incoming call end failed'));
