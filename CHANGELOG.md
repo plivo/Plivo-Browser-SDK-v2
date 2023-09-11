@@ -5,6 +5,25 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.8 (released@ 11-09-2023)
+**Bug Fixes**
+
+* Fixed: stir-verification is passed in the incoming call headers.
+* Fixed: Issues where, audio levels were passed as null/incorrectly when the input/output devices are changed and setting the correct value of input/output devices when changed are resolved.
+* Fixed: Issue where DOMError was not compatible with the latest versions of typescipt has been resolved.
+* Fixed: Issue where Incoming calls not working with PCMU codec.
+* Fixed: Issue where SDK was logged out when re-registration timed out.
+* Fixed: onConnectionChange event with state disconnected is fired within 10 seconds if SDK is disconnected from the plivo servers. Earlier it was fired within 2 mins interval
+
+
+**Features**
+
+* Added: refreshRegistrationTimer flag which allows user to configure the perioidic re-registration performed by the SDK.
+* Added: onDtmfReceived event which is fired when an dtmf is received by the sdk.
+* Added: Logs collected and sent to plivo servers for better remote debugging.
+* Added: Plivo stun servers.
+* Added: CALL_RINGING event to sent to Plivo when the incoming/outgoing call starts to ring.
+
 ## v2.2.7 (released@ 06-06-2022)
 **Features**
 
