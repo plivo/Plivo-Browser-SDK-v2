@@ -11,7 +11,7 @@ unitTests:
         testsReportFile: nodejs.tests.report.xml
         coverageReportFile: nodejs.coverage.report.xml
         command: |
-          npm install
+          npm install --force
           npm run test:unit-jenkins
 integrationTests:
   ignoreFailure: 'false'
@@ -19,9 +19,9 @@ integrationTests:
         testsReportFile: nodejs.inttests.report.xml
         coverageReportFile: nodejs.intcoverage.report.xml
         command: |
-          npm install
+          npm install --force
           npm run test:integration
 build:
   nodejs:
-    command: npm install && npm run build
+    command: npm install --force && npm run build
     outputDistDir: dist
