@@ -23,5 +23,5 @@ integrationTests:
           npm run test:integration
 build:
   nodejs:
-    command: npm install --force && npm run build
+    command: export NODE_OPTIONS=--openssl-legacy-provider && npm install --force && npm run build
     outputDistDir: dist
