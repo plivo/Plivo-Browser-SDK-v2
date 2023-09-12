@@ -28,6 +28,9 @@ const auth_id = process.env.PLIVO_JWT_AUTHID;
 const basic_auth = process.env.PLIVO_JWT_BASIC_AUTH;
 
 async function getJWTToken(outgoing, incoming) {
+  console.log('auth id from plivo containers ', auth_id);
+  console.log('basic auth id from plivo containers ', basic_auth);
+
   var tokenGenServerURI = new URL(`https://api.plivo.com/v1/Account/${auth_id}/JWT/Token`);
 
   const payload = {

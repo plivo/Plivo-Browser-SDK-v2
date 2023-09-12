@@ -19,7 +19,6 @@ integrationTests:
         testsReportFile: nodejs.inttests.report.xml
         coverageReportFile: nodejs.intcoverage.report.xml
         command: |
-          rm -rf node_modules
           npm install --force
           npm run test:integration
 build:
