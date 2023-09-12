@@ -13,7 +13,12 @@ import { createOutgoingSession } from './outgoingCall';
 import { getCurrentTime, addMidAttribute } from './util';
 import { stopAudio } from '../media/document';
 import { Client } from '../client';
-import { sendNetworkChangeEvent, startPingPong } from '../utils/networkManager';
+import {
+  sendNetworkChangeEvent,
+  startPingPong,
+  getNetworkData,
+  ConnectionState,
+} from '../utils/networkManager';
 import { StatsSocket } from '../stats/ws';
 
 const Plivo = { log: Logger };
@@ -42,11 +47,23 @@ class Account {
   isFailedMessageTriggered: boolean;
 
   /**
+   * Holds the boolean whether failed event is triggered
+   */
+  registerRefreshTimer: number;
+
+  /**
    * Credentials object
    */
   private credentials: {
     userName: string;
     password: string;
+  };
+
+  /**
+   * Access Token Credentials object
+   */
+  private accessTokenCredentials: {
+    accessToken: string | null;
   };
 
   /**
@@ -84,10 +101,13 @@ class Account {
    * @param {String} password
    * @private
    */
-  constructor(clientObject: Client, userName: string, password: string) {
+  constructor(clientObject: Client, userName: string, password: string,
+    accessToken: string | null, registerRefreshtimer: number) {
     this.cs = clientObject;
     this.credentials = { userName, password };
+    this.accessTokenCredentials = { accessToken };
     this.message = null;
+    this.registerRefreshTimer = registerRefreshtimer;
     // for qa purpose
     this.reinviteCounter = 0;
     this.isPlivoSocketConnected = false;
@@ -103,13 +123,13 @@ class Account {
         && (this.credentials.userName.length <= 0
           || (this.credentials.password as string).length <= 0))
     ) {
-      Plivo.log.error('username and password cannot be null.');
+      Plivo.log.error(`${C.LOGCAT.LOGIN} | username and password cannot be null.`);
       this.cs.emit('onLoginFailed', 'Username and password must be filled out');
       return false;
     }
     if (this.cs._currentSession) {
       Plivo.log.warn(
-        `Cannot login when there is an ongoing call ${this.cs._currentSession.callUUID}`,
+        `${C.LOGCAT.LOGIN} | Cannot login when there is an ongoing call ${this.cs._currentSession.callUUID}`,
       );
       this.cs.emit(
         'onLoginFailed',
@@ -132,8 +152,8 @@ class Account {
       this.cs._currentSession.session.replaceUA(this.cs.phone);
       setTimeout(() => {
         const eventHandlers = {
-          succeeded: () => {},
-          failed: () => {},
+          succeeded: () => { },
+          failed: () => { },
         };
         // this.cs._currentSession!.session = session;
         this.reinviteCounter += 1;
@@ -164,9 +184,10 @@ class Account {
     this.cs.plivoSocket = new SipLib.WebSocketInterface(wsServers[urlIndex]) as any;
     const sipConfig = {
       sockets: [this.cs.plivoSocket],
-      register_expires: C.REGISTER_EXPIRES_SECONDS,
+      register_expires: this.registerRefreshTimer,
       uri: `${this.credentials.userName}@${C.DOMAIN}`,
       password: this.credentials.password,
+      token: this.accessTokenCredentials.accessToken,
       googIPv6: false,
       connection_recovery_max_interval: C.WS_RECOVERY_MAX_INTERVAL,
       connection_recovery_min_interval: C.WS_RECOVERY_MIN_INTERVAL,
@@ -182,6 +203,12 @@ class Account {
     Plivo.log.info('Ready to login');
     this._createListeners();
     if (this.cs.phone) {
+      if (this.accessTokenCredentials.accessToken != null) {
+        this.cs.phone.registrator().setExtraHeaders([
+          `X-Plivo-Jwt: ${this.accessTokenCredentials.accessToken}`,
+        ]);
+      }
+
       this.cs.phone.start();
     }
   };
@@ -192,24 +219,25 @@ class Account {
       this.cs.phone = new SipLib.UA(sipConfig);
       return true;
     } catch (e) {
-      Plivo.log.debug(`Failed to create user agent${e}`);
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Failed to create user agent${e.message}`);
       return false;
     }
   };
 
-  private tiggerNetworkChangeEvent = async () => {
+  private tiggerNetworkChangeEvent = () => {
     this.fetchIpCount += 1;
-    const ipAddress = await fetchIPAddress(this.cs);
-    if (typeof ipAddress === "string") {
-      sendNetworkChangeEvent(this.cs, ipAddress);
-    } else if (this.fetchIpCount !== C.IP_ADDRESS_FETCH_RETRY_COUNT) {
-      setTimeout(() => {
-        this.tiggerNetworkChangeEvent();
-      }, this.fetchIpCount * 200);
-    } else {
-      Plivo.log.warn('Could not retreive ipaddress');
-      this.fetchIpCount = 0;
-    }
+    fetchIPAddress(this.cs).then((ipAddress) => {
+      if (typeof ipAddress === "string") {
+        sendNetworkChangeEvent(this.cs, ipAddress);
+      } else if (this.fetchIpCount !== C.IP_ADDRESS_FETCH_RETRY_COUNT) {
+        setTimeout(() => {
+          this.tiggerNetworkChangeEvent();
+        }, this.fetchIpCount * 200);
+      } else {
+        Plivo.log.warn(`${C.LOGCAT.NETWORK_CHANGE} | Could not retreive ipaddress`);
+        this.fetchIpCount = 0;
+      }
+    });
   };
 
   private _createListeners = (): void => {
@@ -222,33 +250,6 @@ class Account {
       this.cs.phone.on('newTransaction' as any, this._onNewTransaction);
       this.cs.phone.on('newRTCSession', this._onNewRTCSession);
     }
-    window.addEventListener('online', () => {
-      clearInterval(this.cs.networkChangeInterval as any);
-      this.cs.networkChangeInterval = null;
-      startPingPong({
-        client: this.cs,
-        networkChangeInterval: this.cs._currentSession
-          ? C.NETWORK_CHANGE_INTERVAL_ON_CALL_STATE : C.NETWORK_CHANGE_INTERVAL_IDLE_STATE,
-        messageCheckTimeout: this.cs._currentSession
-          ? C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE : C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
-      });
-      if (!this.cs._currentSession) return;
-
-      // create stats socket and trigger and trigger network change event
-      // when user is in in-call state
-      if (this.cs.statsSocket) {
-        this.cs.statsSocket.disconnect();
-        this.cs.statsSocket = null;
-      }
-      this.cs.statsSocket = new StatsSocket();
-      this.cs.statsSocket.connect();
-      this.cs.networkReconnectionTimestamp = new Date().getTime();
-      this.tiggerNetworkChangeEvent();
-    });
-    window.addEventListener('offline', () => {
-      if (!this.cs._currentSession) return;
-      this.cs.networkDisconnectedTimestamp = new Date().getTime();
-    });
   };
 
   /**
@@ -257,12 +258,9 @@ class Account {
    */
   private _onConnected = (evt: SipLib.UserAgentConnectedEvent): void => {
     Plivo.log.info('websocket connection established', evt);
+    Plivo.log.info(`${C.LOGCAT.LOGIN} | websocket connection established`);
     if (!this.isPlivoSocketConnected) {
       this.isPlivoSocketConnected = true;
-      const eventData = {
-        state: 'connected',
-      };
-      this.cs.emit('onConnectionChange', eventData);
       if (!this.cs.didFetchInitialNetworkInfo) {
         fetchIPAddress(this.cs).then((ip) => {
           this.cs.currentNetworkInfo = {
@@ -289,30 +287,10 @@ class Account {
    * @param {UserAgentDisconnectedEvent} evt
    */
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
-    Plivo.log.info('websocket connection closed', evt);
+    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed`, evt.reason);
     if (this.isPlivoSocketConnected) {
-      // 1000 is normal websocket closed event,
-      // others codes 1003,1006,1011 etc are for abnormal termination
-      const eventData: {
-        state: string;
-        eventCode: null | number;
-        eventReason: null | string;
-      } = {
-        state: 'disconnected',
-        eventCode: null,
-        eventReason: null,
-      };
-      if (evt && evt.code > 1000) {
-        eventData.eventCode = evt.code;
-        eventData.eventReason = evt.reason;
-      } else if (evt && evt.error) {
-        eventData.eventCode = (evt.error as any).code;
-        eventData.eventReason = (evt.error as any).reason;
-      }
-      this.cs.emit('onConnectionChange', eventData);
       this.isPlivoSocketConnected = false;
     }
-
     if (!(evt as any).ignoreReconnection) {
       urlIndex += 1;
       const sipConfig = this.setupUAConfig();
@@ -325,7 +303,58 @@ class Account {
   /**
    * Triggered when the user is logged in.
    */
-  private _onRegistered = (): void => {
+  private _onRegistered = (res: any): void => {
+    // Parse the response to get the JWT expiry in epoch
+    // below is the example to get basic 120 sec expiry from response
+    // To do : This needs to be changed in case of login through access Token method
+    const eventData = {
+      state: ConnectionState.CONNECTED,
+    };
+    this.cs.connectionState = eventData.state;
+    this.cs.emit('onConnectionChange', eventData);
+    if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
+      const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
+      this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
+    }
+    if (!this.cs.isLoggedIn && !this.cs.isLoginCalled) {
+      // this is case of network change
+      clearInterval(this.cs.networkChangeInterval as any);
+      this.cs.networkChangeInterval = null;
+      startPingPong({
+        client: this.cs,
+        networkChangeInterval: this.cs._currentSession
+          ? C.NETWORK_CHANGE_INTERVAL_ON_CALL_STATE : C.NETWORK_CHANGE_INTERVAL_IDLE_STATE,
+        messageCheckTimeout: C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE,
+      });
+      if (!this.cs._currentSession) {
+        // network changed when call is not active. sending network change stats to nimbus.
+        fetchIPAddress(this.cs).then((ipAddress) => {
+          const networkInfo = getNetworkData(this.cs, ipAddress);
+
+          Plivo.log.info(`${C.LOGCAT.NETWORK_CHANGE} | Network changed from ${JSON.stringify(networkInfo.previousNetworkInfo)}
+          to ${JSON.stringify(networkInfo.newNetworkInfo)} in idle state`);
+
+          this.cs.currentNetworkInfo = {
+            networkType: networkInfo.newNetworkInfo.networkType,
+            ip: typeof ipAddress === "string" ? ipAddress : "",
+          };
+        });
+        this.cs.isLoggedIn = true;
+        return;
+      }
+
+      // create stats socket and trigger and trigger network change event
+      // when user is in in-call state
+      if (this.cs.statsSocket) {
+        this.cs.statsSocket.disconnect();
+        this.cs.statsSocket = null;
+      }
+      this.cs.statsSocket = new StatsSocket();
+      this.cs.statsSocket.connect();
+      this.cs.networkReconnectionTimestamp = new Date().getTime();
+      this.tiggerNetworkChangeEvent();
+    }
+
     if (!this.cs.isLoginCalled) {
       this.cs.isLoggedIn = true;
     }
@@ -335,15 +364,22 @@ class Account {
       this.cs.isLoggedIn = true;
       this.cs.isLoginCalled = false;
       this.cs.emit('onLogin');
-      Plivo.log.debug('logged in');
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | User logged in successfully`);
       // in firefox and safari web socket re-establishes automatically after network change
       startPingPong({
         client: this.cs,
         networkChangeInterval: C.NETWORK_CHANGE_INTERVAL_IDLE_STATE,
-        messageCheckTimeout: C.MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
+        messageCheckTimeout: C.MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE,
       });
       // get callstats key and create stats socket
-      validateCallStats(this.cs.userName, this.cs.password)
+      let passToken: string | null;
+      if (this.cs.isAccessToken) {
+        passToken = this.cs.accessToken;
+      } else {
+        this.cs.isAccessToken = false;
+        passToken = this.cs.password;
+      }
+      validateCallStats(this.cs.userName, passToken, this.cs.isAccessToken)
         .then((responsebody: CallStatsValidationResponse) => {
           this.cs.callstatskey = responsebody.data;
           this.cs.rtp_enabled = responsebody.is_rtp_enabled;
@@ -353,6 +389,7 @@ class Account {
 
       // initialize callstats.io
       initCallStatsIO.call(this.cs);
+      Plivo.log.send(this.cs);
     }
   };
 
@@ -361,36 +398,61 @@ class Account {
    * @param {Object} reason - Unregistration reason
    */
   private _onUnRegistered = (): void => {
-    Plivo.log.debug('Plivo client unregistered');
     this.cs.isLoggedIn = false;
+    const eventData: {
+      state: string;
+    } = {
+      state: ConnectionState.DISCONNECTED,
+    };
+    this.cs.connectionState = eventData.state;
+    this.cs.emit('onConnectionChange', eventData);
+    if (!this.cs.isLogoutCalled) {
+      return;
+    }
+
+    Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  Plivo client unregistered`);
     if (this.cs.ringToneView && !this.cs.ringToneView.paused) {
       stopAudio(C.RINGTONE_ELEMENT_ID);
     }
     if (this.cs.ringBackToneView && !this.cs.ringBackToneView.paused) {
       stopAudio(C.RINGBACK_ELEMENT_ID);
     }
+
+    this.cs.networkDisconnectedTimestamp = new Date().getTime();
     this.cs.userName = null;
     this.cs.password = null;
-    if (this.cs.isLogoutCalled === true) {
-      this.cs.isLogoutCalled = false;
-      this.cs.emit('onLogout');
-      if (this.cs.networkChangeInterval) {
-        clearInterval(this.cs.networkChangeInterval);
-      }
-      this.message = null;
+
+    this.cs.emit('onLogout');
+    if (this.cs.networkChangeInterval) {
+      clearInterval(this.cs.networkChangeInterval);
+      this.cs.networkChangeInterval = null;
     }
+    this.cs.logout();
+    this.message = null;
+    this.cs.isLogoutCalled = false;
   };
 
   /**
    * Triggered when user credentials are wrong.
    * @param {Object} error - Login failure error
    */
-  private _onRegistrationFailed = (error: { cause?: string }): void => {
+  private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
+    if (this.cs.connectionState === ConnectionState.DISCONNECTED && this.cs.isLoggedIn) {
+      return;
+    }
     this.cs.isLoggedIn = false;
-    Plivo.log.debug('Login failed : ', error.cause);
+    Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause, error.response);
     this.cs.userName = null;
     this.cs.password = null;
-    this.cs.emit('onLoginFailed', error.cause);
+
+    const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
+    if (this.cs.isAccessTokenGenerator) {
+      this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
+    } else if (error.cause && errorCode === 401) {
+      this.cs.emit('onLoginFailed', error.cause);
+    } else {
+      this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
+    }
   };
 
   /**
@@ -440,7 +502,7 @@ class Account {
       && this.cs._currentSession.session.connection
       && this.cs._currentSession.session.connection.signalingState === 'closed'
     ) {
-      Plivo.log.warn('Previous call did not end properly');
+      Plivo.log.warn(`${C.LOGCAT.CALL} | Previous call did not end properly`);
       this.cs._currentSession = null;
       this.cs.callSession = null;
       this.cs.callUUID = null;
@@ -458,9 +520,9 @@ class Account {
       ((this.cs._currentSession || this.cs.incomingInvites.size)
         && !this.cs.options.allowMultipleIncomingCalls)
       || this.cs.incomingInvites.size
-        >= C.NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED
+      >= C.NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED
     ) {
-      Plivo.log.debug('Already on call, sending busy signal.');
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Already on call, sending busy signal.`);
       const opts = {
         status_code: 486,
         reason_phrase: 'Busy Here',

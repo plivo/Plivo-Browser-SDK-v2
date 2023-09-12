@@ -21,6 +21,48 @@ const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
 const secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME;
 const secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
 
+let plivo_jwt = '';
+let plivo_jwt_without_inbound_access = '';   //  jwt with no inbound access  
+
+const auth_id = process.env.PLIVO_JWT_AUTHID;
+const basic_auth = process.env.PLIVO_JWT_BASIC_AUTH;
+
+async function getJWTToken(outgoing, incoming) {
+  var tokenGenServerURI = new URL(`https://api.plivo.com/v1/Account/${auth_id}/JWT/Token`);
+
+  const payload = {
+    "iss": auth_id,
+    "per": {
+      "voice": {
+        "incoming_allow": incoming,
+        "outgoing_allow": outgoing,
+      }
+    },
+    "sub": "Test9034"
+  }
+  let requestBody = {
+    method: 'POST',
+    headers: new Headers({
+      'Content-Type': 'application/json',
+      'Authorization': basic_auth
+    }),
+    body: JSON.stringify(payload),
+  };
+
+  let res = await fetch(tokenGenServerURI, requestBody).catch(function (err) {
+    console.error("Error in fetching the token ", err);
+    return null
+  });
+
+  try {
+    let myJson = await res.json()
+    return (myJson['token'])
+  } catch (error) {
+    console.error("Error : " + error);
+    return null
+  }
+}
+
 // eslint-disable-next-line no-undef
 describe('plivoWebSdk', function () {
   const GLOBAL_TIMEOUT = 240000;
@@ -64,11 +106,6 @@ describe('plivoWebSdk', function () {
 
     // eslint-disable-next-line no-undef
     before((done) => {
-      Client1.login(primary_user, primary_pass);
-      Client2.login(secondary_user, secondary_pass);
-      Client2.on("onLogin", () => {
-        done();
-      });
       Client1.on('onIncomingCallCanceled', () => {
         events.onIncomingCallCanceled.status = true;
       });
@@ -84,6 +121,16 @@ describe('plivoWebSdk', function () {
       Client1.on('onIncomingCall', () => {
         events.onIncomingCall.status = true;
       });
+      getJWTToken(true, true).then((token) => {
+        console.log("token is ", token)
+        plivo_jwt = token
+        Client1.login(primary_user, primary_pass);
+        Client2.loginWithAccessToken(plivo_jwt);
+        Client2.on("onLogin", () => {
+          done();
+        });
+      })
+
     });
 
     // eslint-disable-next-line no-undef
@@ -110,12 +157,13 @@ describe('plivoWebSdk', function () {
 
     // #5
     // eslint-disable-next-line no-undef
-    it('inbound call should come through with extra headers', (done) => {
+    it('inbound call should come through JWT with extra headers', (done) => {
       if (bail) {
         done(new Error('bailing'));
       }
       Client2.call(primary_user, {
         "X-Ph-Random": "true",
+        "X-Plivo-Jwt": plivo_jwt
       });
       Client1.on(
         "onIncomingCall",
@@ -184,4 +232,115 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
   });
+
+    // eslint-disable-next-line no-undef
+  // describe('incoming call without Inbound access', function () {
+  //   this.timeout(GLOBAL_TIMEOUT);
+
+  //   const events = {};
+
+  //   const clientEvents = [
+  //     'onIncomingCallCanceled',
+  //     'onCallFailed',
+  //     'onCallAnswered',
+  //     'onCallTerminated',
+  //     'onIncomingCall',
+  //   ];
+
+  //   clientEvents.forEach((i) => {
+  //     events[i] = { status: false };
+  //   });
+
+  //   let bail = false;
+
+  //   function waitUntilIncoming(boolObj, callback, delay) {
+  //     // if delay is undefined or is not an integer
+  //     const newDelay = typeof delay === 'undefined' || Number.isNaN(parseInt(delay, 10))
+  //       ? 100
+  //       : delay;
+  //     setTimeout(() => {
+  //       if (boolObj.status) {
+  //         callback();
+  //       } else {
+  //         waitUntilIncoming(boolObj, callback, newDelay);
+  //       }
+  //     }, newDelay);
+  //   }
+
+  //   // eslint-disable-next-line no-undef
+  //   before((done) => {
+  //     Client1.login(primary_user, primary_pass);
+  //     Client2.loginWithAccessToken(plivo_jwt_without_inbound_access);
+  //     Client2.on("onLogin", () => {
+  //       done();
+  //     });
+  //     Client1.on('onIncomingCallCanceled', () => {
+  //       events.onIncomingCallCanceled.status = true;
+  //     });
+  //     Client1.on('onCallFailed', () => {
+  //       events.onCallFailed.status = true;
+  //     });
+  //     Client1.on('onCallAnswered', () => {
+  //       events.onCallAnswered.status = true;
+  //     });
+  //     Client1.on('onCallTerminated', () => {
+  //       events.onCallTerminated.status = true;
+  //     });
+  //     Client1.on('onIncomingCall', () => {
+  //       events.onIncomingCall.status = true;
+  //     });
+  //   });
+
+  //   // eslint-disable-next-line no-undef
+  //   beforeEach((done) => {
+  //     const keys = Object.keys(events);
+  //     // reset all the flags
+  //     keys.forEach((key) => {
+  //       events[key].status = false;
+  //     });
+  //     done();
+  //     clearTimeout(bailTimer);
+  //   });
+
+  //   // eslint-disable-next-line no-undef
+  //   after(() => {
+  //     Client1.logout();
+  //     Client2.logout();
+  //   });
+
+  //   // eslint-disable-next-line no-undef
+  //   afterEach((done) => {
+  //     done();
+  //   });
+
+  //   // #5
+  //   // eslint-disable-next-line no-undef
+  //   it("inbound call shouldn't come through with extra headers", (done) => {
+      
+  //       if (bail) done(new Error('bailing'));
+
+  //       Client2.call(primary_user, {
+  //           "X-Ph-Random": "true",
+  //           "X-Plivo-Jwt": plivo_jwt
+  //       });
+
+  //       Client1.on(
+  //           "onIncomingCall",
+  //           (callerName, extraHeaders2) => {
+  //               if (extraHeaders2 && extraHeaders2["X-Ph-Random"]) {
+  //                   done();
+  //               } else {
+  //                   done(new Error('incoming call comes with extra headers'));
+  //               }
+  //           },
+  //       );
+  //       waitUntilIncoming(events.onCallFailed, done, 500);
+  //       bailTimer = setTimeout(() => {
+  //           bail = false;
+  //           done(new Error('incoming call failed'));
+  //       }, TIMEOUT);
+  //   });
+
+  // });
+
 });

@@ -182,7 +182,7 @@ export class StatsSocket {
           const item = this.messageBuffer.shift();
           this.ws.send(item as string);
           Plivo.log.debug('stats send success');
-          if (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK') {
+          if ((client.callSession == null) && (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK')) {
             // destroying stats socket since call has ended
             this.disconnect();
             client.statsSocket = null;
@@ -202,7 +202,7 @@ export class StatsSocket {
       if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
         retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
         retrySecondsCount = C.SOCKET_SEND_STATS_RETRY_SECONDS_COUNT;
-        Plivo.log.error('Error in sending call summary event');
+        Plivo.log.error(`${C.LOGCAT.CALL} | Error in sending call summary event due to retry exhaustion`);
         // return false;
       }
     }
@@ -212,7 +212,7 @@ export class StatsSocket {
       this.send(message, client);
     }, retrySecondsCount * 900);
 
-    Plivo.log.warn('statsSocket is not open, retrying to connect');
+    Plivo.log.warn(`${C.LOGCAT.CALL} | statsSocket is not open, retrying to connect`);
     this.reconnect();
     return false;
   };

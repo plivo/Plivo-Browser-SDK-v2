@@ -87,7 +87,7 @@ const processAudioLevel = function (
         );
       } else {
         Plivo.log.debug(
-          `Audio mute detected for ${type} : `,
+          `${C.LOGCAT.CALL} | Audio mute detected for ${type} : `,
           JSON.stringify(audioObj),
         );
       }
@@ -142,7 +142,7 @@ const processRtt = function (type: string, val: number): void {
         client.storage.warning[type] = true;
       }
       Plivo.log.debug(
-        `${type} : getting high rtt  : `,
+        `${C.LOGCAT.CALL} | ${type} : getting high rtt  : `,
         JSON.stringify(totRttObj),
       );
       emitMetrics.call(
@@ -195,7 +195,7 @@ const processJitter = function (type: string, val: number, stream: string): void
         client.storage.warning[type] = true;
       }
       Plivo.log.debug(
-        `${type} : getting high jitter rate : `,
+        `${C.LOGCAT.CALL} | ${type} : getting high jitter rate : `,
         JSON.stringify(totJitterObj),
       );
       emitMetrics.call(
@@ -245,7 +245,7 @@ const processMos = function (type: string, val: number): void {
       if (client.storage) {
         client.storage.warning[type] = true;
       }
-      Plivo.log.debug(`${type} : getting low mos : `, JSON.stringify(mosObj));
+      Plivo.log.debug(`${C.LOGCAT.CALL} | ${type} : getting low mos : `, JSON.stringify(mosObj));
       emitMetrics.call(
         client,
         'network',
@@ -309,7 +309,8 @@ const processPacketLoss = function (
         client.storage.warning[type] = true;
       }
       Plivo.log.debug(
-        `${type} : packet loss value is high :`,
+        `${C.LOGCAT.CALL} |
+        ${type} : packet loss value is high :`,
         JSON.stringify(totPlossObj),
       );
       emitMetrics.call(

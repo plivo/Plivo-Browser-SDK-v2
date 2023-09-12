@@ -6,6 +6,7 @@ import {
   SessionSdpEvent,
   SessionFailedEvent,
   SessionEndedEvent,
+  SessionNewDtmfEvent,
   C as JSSIP_C,
 } from 'plivo-jssip';
 import {
@@ -17,6 +18,7 @@ import {
   NETWORK_CHANGE_INTERVAL_ON_CALL_STATE,
   MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
+  LOGCAT,
 } from '../constants';
 import { CallSession } from './callSession';
 import { receiveExtraHeader } from '../utils/headers';
@@ -77,15 +79,7 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
     call.updateSignallingInfo({
       invite_time: getCurrentTime(),
     });
-    try {
-      // eslint-disable-next-line no-param-reassign
-      evt.request.body = checkCodecPreference(
-        cs.options.codecs as AvailableCodecs[],
-        evt.request.body as string,
-      );
-    } catch (err) {
-      Plivo.log.debug('checkCodecPreference err - ', err);
-    }
+
     Plivo.log.debug(`callSession - ${call.callUUID}`);
   }
 };
@@ -94,7 +88,9 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
  * Triggered when call is ringing.
  */
 const onProgress = (incomingCall: CallSession) => (): void => {
-  Plivo.log.debug('Incoming call in progress');
+  // allow incomming call only if permission granted
+  incomingCall.onRinging(cs);
+  Plivo.log.debug(`${LOGCAT.CALL} | Incoming call registeration initiated`);
   incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
   incomingCall.updateSignallingInfo({
     call_progress_time: getCurrentTime(),
@@ -137,10 +133,26 @@ const onProgress = (incomingCall: CallSession) => (): void => {
 const onSDP = (evt: SessionSdpEvent): void => {
   isIncomingCallRinging = false;
   // eslint-disable-next-line no-param-reassign
+  try {
+    // eslint-disable-next-line no-param-reassign
+    evt.sdp = checkCodecPreference(
+      cs.options.codecs as AvailableCodecs[],
+      evt.sdp as string,
+    );
+  } catch (err) {
+    Plivo.log.debug('checkCodecPreference err - ', err);
+  }
+
   evt.sdp = evt.sdp.replace(
     'useinbandfec=1',
     `useinbandfec=1;maxaveragebitrate=${cs.options.maxAverageBitrate}`,
   );
+
+  evt.sdp = evt.sdp.replace(
+    '0\r\r',
+    `0`,
+  );
+
   // eslint-disable-next-line no-param-reassign
   evt.sdp = replaceMdnsIceCandidates(evt.sdp);
   Plivo.log.debug('Incoming call SDP processing done');
@@ -151,7 +163,7 @@ const onSDP = (evt: SessionSdpEvent): void => {
  */
 const onAccepted = (incomingCall: CallSession) => (): void => {
   isIncomingCallRinging = false;
-  Plivo.log.info('Incoming call accepted');
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call Answered`);
   // reset ping pong service with on-call timeouts
   resetPingPong({
     client: cs,
@@ -182,7 +194,7 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
   const remoteStream: MediaStream = incomingCall.session.connection
     ? (incomingCall.session.connection as any).getRemoteStreams()[0] : null;
   if (!remoteStream) {
-    Plivo.log.error('Incoming call: remote stream does not exist');
+    Plivo.log.error(`${LOGCAT.CALL} | Incoming call: remote stream does not exist`);
   }
   cs.remoteView.srcObject = remoteStream;
   addCallstatsIOFabric.call(
@@ -198,6 +210,7 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
  * @param {SessionFailedEvent} evt - rtcsession failed information
  */
 const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession): void => {
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause}`);
   if (evt.cause === JSSIP_C.causes.CANCELED) {
     incomingCall.setState(incomingCall.STATE.CANCELED);
     cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo());
@@ -217,9 +230,15 @@ const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession)
  */
 const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void => {
   isIncomingCallRinging = false;
-  Plivo.log.error(`Incoming call failed: ${evt.cause}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | Incoming call failed: ${evt.cause}`);
   handleFailureCauses(evt, incomingCall);
   incomingCall.onFailed(cs, evt);
+
+  // //  logout if logged in by token and token get expired
+  // if(cs.isAccessToken && cs.accessToken == null) {
+  //   cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+  //   cs.logout();
+  // }
   // Check whether there is another incoming call
   if (cs.incomingInvites.size < 2) {
     if (cs.ringToneView && !cs.ringToneView.paused) {
@@ -234,8 +253,9 @@ const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void 
  */
 const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void => {
   isIncomingCallRinging = false;
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause} - ${evt.originator}`);
   Plivo.log.debug(`Incoming call ended - ${incomingCall.callUUID}`);
-  Plivo.log.info('Incoming call ended');
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call Hangup`);
   incomingCall.onEnded(cs, evt);
   // reset back pingpong to idle state timeouts
   resetPingPong({
@@ -243,6 +263,21 @@ const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void =>
     messageCheckTimeout: MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
     networkChangeInterval: NETWORK_CHANGE_INTERVAL_IDLE_STATE,
   });
+};
+
+/**
+ * Triggered when DTMF is received.
+ * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
+ */
+const newDTMF = (evt: SessionNewDtmfEvent): void => {
+  if (cs._currentSession && evt.originator === 'remote') {
+    Plivo.log.info(`${LOGCAT.CALL} | emitting onDtmfReceived with digit: `, evt.dtmf.tone);
+    const dtmfData = {
+      tone: evt.dtmf.tone,
+      duration: evt.dtmf.duration,
+    };
+    cs.emit('onDtmfReceived', dtmfData);
+  }
 };
 
 /**
@@ -257,31 +292,32 @@ export const createIncomingCallListeners = (incomingCall: CallSession): void => 
   incomingCall.session.on('failed', onFailed(incomingCall));
   incomingCall.session.on('ended', onEnded(incomingCall));
   incomingCall.session.on('noCall' as any, onEnded(incomingCall));
+  incomingCall.session.on('newDTMF', newDTMF);
   incomingCall.session.on('icecandidate', (event) => incomingCall.onIceCandidate(cs, event));
-  incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err));
+  incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err as Error));
   incomingCall.session.on('peerconnection:createofferfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'createofferfailed',
     cs.callStats ? cs.callStats.webRTCFunctions.createOffer : null,
-    err,
+    err as Error,
   ));
   incomingCall.session.on('peerconnection:createanswerfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'createanswerfailed',
     cs.callStats ? cs.callStats.webRTCFunctions.createAnswer : null,
-    err,
+    err as Error,
   ));
   incomingCall.session.on('peerconnection:setlocaldescriptionfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'setlocaldescriptionfailed',
     cs.callStats ? cs.callStats.webRTCFunctions.setLocalDescription : null,
-    err,
+    err as Error,
   ));
   incomingCall.session.on('peerconnection:setremotedescriptionfailed', (err) => incomingCall.handlePeerConnectionFailures(
     cs,
     'setremotedescriptionfailed',
     cs.callStats ? cs.callStats.webRTCFunctions.setRemoteDescription : null,
-    err,
+    err as Error,
   ));
 };
 
@@ -296,7 +332,7 @@ export const createIncomingSession = (
 ): void => {
   cs = clientObject;
   const callUUID = evt.request.getHeader('X-Calluuid');
-  Plivo.log.info(`newRTCSession for incomingCall ${callUUID}`);
+  const stirVerificationValue = evt.request.getHeader('X-Plivo-Stir-Verification');
   const sipCallID = evt.request.getHeader('Call-ID');
   const callerHeader = evt.request.getHeader('From');
   const callerRegex = callerHeader.match(/:(.*)@/i);
@@ -305,6 +341,12 @@ export const createIncomingSession = (
     evt.request,
     (evt.request as any).headers,
   );
+
+  const headers = {
+    call_uuid: callUUID,
+    sip_call_id: sipCallID,
+  };
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call initiated for ${cs.userName} with header:- `, JSON.stringify(headers));
   const callInitiationTime = cs.incomingCallsInitiationTime.get(callUUID);
   if (callInitiationTime) cs.incomingCallsInitiationTime.delete(callUUID);
 
@@ -318,6 +360,7 @@ export const createIncomingSession = (
     extraHeaders,
     call_initiation_time: callInitiationTime,
     client: cs,
+    stirShakenState: stirVerificationValue,
   });
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);
@@ -338,7 +381,7 @@ export const getCurrentIncomingCall = (
   } else if (clientObject.lastIncomingCall) {
     curIncomingCall = clientObject.lastIncomingCall;
     if (callUUID && clientObject.options.allowMultipleIncomingCalls) {
-      Plivo.log.error(`No incomingCall with callUUID - ${callUUID}`);
+      Plivo.log.error(`${LOGCAT.CALL} | No incomingCall with callUUID - ${callUUID}`);
       return null;
     }
   }
@@ -424,9 +467,7 @@ const getAnswerOptions = (): SessionAnswerOptions => {
     };
   } else if (!(window as any).localStream) Plivo.log.warn('no local stream attached for this call');
   opts.mediaStream = (window as any).localStream || null;
-  opts.rtcConstraints = cs.options.dscp
-    ? { optional: [{ googDscp: true }] }
-    : null;
+  // opts.rtcConstraints =  null;
   opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
   return opts;
 };
@@ -456,7 +497,7 @@ export const answerIncomingCall = (
     cs.callUUID = cs._currentSession.callUUID;
     cs.callDirection = cs._currentSession.direction;
   } catch (err) {
-    Plivo.log.error('error in answering : ', err);
+    Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
     curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
     cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo());
   }

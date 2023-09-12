@@ -9,6 +9,7 @@ import {
   SessionFailedEvent,
   SessionEndedEvent,
   SessionIceCandidateEvent,
+  SessionNewDtmfEvent,
 } from 'plivo-jssip';
 import {
   SESSION_TIMERS_EXPIRES,
@@ -19,9 +20,10 @@ import {
   NETWORK_CHANGE_INTERVAL_ON_CALL_STATE,
   MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
+  LOGCAT,
 } from '../constants';
 import { CallSession } from './callSession';
-import { checkExtraHeaderKey, checkExtraHeaderVal } from '../utils/headers';
+import { checkExtraHeaderKey, checkExtraHeaderVal, checkExtraHeaderJWTVal } from '../utils/headers';
 import { playAudio, stopAudio } from '../media/document';
 import checkCodecPreference, {
   AvailableCodecs,
@@ -130,7 +132,7 @@ const onTrack = (evt: RTCTrackEvent): void => {
       Plivo.log.debug('playAudio - MediaServer');
     }
   } else {
-    Plivo.log.error('Outgoing call add stream failure');
+    Plivo.log.error(`${LOGCAT.CALL} | Outgoing call add stream failure`);
     cs._currentSession.addConnectionStage(
       `addStream-failure@${getCurrentTime()}`,
     );
@@ -226,6 +228,8 @@ const handleProgressTone = (evt: SessionProgressEvent): void => {
 const OnProgress = (evt: SessionProgressEvent): void => {
   cs.timeTakenForStats.pdd.end = new Date().getTime();
   if (cs._currentSession && evt.response) {
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing`);
+    cs._currentSession.onRinging(cs);
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
     cs._currentSession.setState(cs._currentSession.STATE.RINGING);
@@ -264,7 +268,7 @@ const onAccepted = (evt: SessionAcceptedEvent): void => {
   if (evt.response && cs._currentSession) {
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
-    Plivo.log.info('Outgoing call accepted');
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Answered`);
     cs._currentSession.onAccepted(cs);
     cs._currentSession.setPostDialDelayEndTime(getCurrentTime());
     addCallstatsIOFabric.call(
@@ -303,6 +307,7 @@ const onConfirmed = (): void => {
  * @param {SessionFailedEvent} evt - rtcsession failed information
  */
 const handleFailureCauses = (evt: SessionFailedEvent): void => {
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call - ${evt.cause}`);
   if (cs._currentSession) {
     if (evt.cause === 'Rejected') {
       cs._currentSession.setState(cs._currentSession.STATE.REJECTED);
@@ -319,7 +324,7 @@ const handleFailureCauses = (evt: SessionFailedEvent): void => {
  * @param {SessionFailedEvent} evt - rtcsession failed information
  */
 const onFailed = (evt: SessionFailedEvent): void => {
-  Plivo.log.error(`Outgoing call failed: ${evt.cause}`);
+  Plivo.log.error(`${LOGCAT.CALL} | Outgoing call failed: ${evt.cause}`);
   if (!cs._currentSession) return;
   if (evt.message) {
     cs._currentSession.setCallUUID(evt.message.getHeader('X-CallUUID') || null);
@@ -327,6 +332,12 @@ const onFailed = (evt: SessionFailedEvent): void => {
   handleFailureCauses(evt);
   cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo());
   cs._currentSession.onFailed(cs, evt);
+
+  // //  logout if logged in by token and token get expired
+  // if(cs.isAccessToken && cs.accessToken == null) {
+  //   cs.emit('onLogout', 'ACCESS_TOKEN_EXPIRED');
+  //   cs.logout();
+  // }
   if (cs.ringBackToneView && !cs.ringBackToneView.paused) {
     stopAudio(RINGBACK_ELEMENT_ID);
   }
@@ -342,6 +353,7 @@ const onFailed = (evt: SessionFailedEvent): void => {
  */
 const onEnded = (evt: SessionEndedEvent): void => {
   if (cs._currentSession) {
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call - ${evt.cause} - ${evt.originator}`);
     Plivo.log.debug(`Outgoing call ended - ${cs._currentSession.callUUID}`);
     Plivo.log.info('Outgoing call ended');
     cs._currentSession.onEnded(cs, evt);
@@ -361,6 +373,21 @@ const onEnded = (evt: SessionEndedEvent): void => {
 };
 
 /**
+ * Triggered when DTMF is received.
+ * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
+ */
+const newDTMF = (evt: SessionNewDtmfEvent): void => {
+  if (cs._currentSession && evt.originator === 'remote') {
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing Call | emitting onDtmfReceived with digit: `, evt.dtmf.tone);
+    const dtmfData = {
+      tone: evt.dtmf.tone,
+      duration: evt.dtmf.duration,
+    };
+    cs.emit('onDtmfReceived', dtmfData);
+  }
+};
+
+/**
  * Remove headers which are not having `X-PH` prefix.
  * @param {ExtraHeaders} extraHeaders - Custom headers which are passed in the INVITE.
  * They should start with 'X-PH'
@@ -372,7 +399,8 @@ const getCleanedHeaders = (extraHeaders: ExtraHeaders = {}): string[] => {
   const keys = Object.keys(extraHeaders);
   keys.forEach((key) => {
     const value = extraHeaders[key];
-    if (checkExtraHeaderKey(key) && checkExtraHeaderVal(value)) {
+    const checkHeaderVal = key.toUpperCase() === 'X-PLIVO-JWT' ? checkExtraHeaderJWTVal : checkExtraHeaderVal;
+    if (checkExtraHeaderKey(key) && checkHeaderVal(value)) {
       cleanExtraHeaders.push(`${key}: ${value}`);
       outboundExtraHeaders[key] = value;
       Plivo.log.debug(`valid hdr = ${key} -> ${value}`);
@@ -402,9 +430,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     audio: cs.options.audioConstraints || true,
     video: false,
   };
-  opts.rtcConstraints = cs.options.dscp
-    ? { optional: [{ googDscp: true }] }
-    : null;
+  // opts.rtcConstraints = null;
   opts.extraHeaders = getCleanedHeaders(extraHeaders);
   opts.mediaStream = (window as any).localStream || null;
   // eslint-disable-next-line @typescript-eslint/dot-notation
@@ -415,6 +441,7 @@ const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
     accepted: onAccepted,
     confirmed: onConfirmed,
     noCall: onEnded,
+    newDTMF,
     icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
     && cs._currentSession.onIceCandidate(cs, event),
     icetimeout: (sec: number) => cs._currentSession
@@ -517,6 +544,12 @@ export const createOutgoingSession = (
   evt: UserAgentNewRtcSessionEvent,
 ): void => {
   const sipCallID = evt.request.getHeader('Call-ID') || null;
+
+  const headers = {
+    sip_call_id: sipCallID,
+    extra_headers: outboundExtraHeaders,
+  };
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call initiated with header:- `, JSON.stringify(headers));
   cs._currentSession = new CallSession({
     sipCallID,
     direction: 'outgoing',
@@ -525,6 +558,7 @@ export const createOutgoingSession = (
     session: evt.session,
     extraHeaders: outboundExtraHeaders,
     client: cs,
+    stirShakenState: "Not_applicable",
   });
   cs.callSession = cs._currentSession.session;
   cs.callUUID = cs._currentSession.callUUID;

@@ -43,6 +43,7 @@ declare module 'plivo-browser-sdk/client' {
             allowMultipleIncomingCalls?: boolean;
             closeProtection?: boolean;
             maxAverageBitrate?: number;
+            registrationRefreshTimer?: number;
             dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
@@ -192,6 +193,56 @@ declare module 'plivo-browser-sdk/client' {
                 */
             password: null | string;
             /**
+                * Access Token  given when logging in
+                * @private
+                */
+            accessToken: null | string;
+            /**
+                * Access Token object given when logging in
+                * @private
+                */
+            accessTokenObject: null | any;
+            /**
+                * boolean that tells which type of login method is called
+                * @private
+                */
+            isAccessTokenGenerator: boolean | null;
+            /**
+                * boolean that tells if user logged in through access token
+                * @private
+                */
+            isAccessToken: boolean;
+            /**
+                * access token expiry
+                * @private
+                */
+            accessTokenExpiryInEpoch: number | null;
+            /**
+                * Access Token  Outgoing Grant
+                * @private
+                */
+            isOutgoingGrant: boolean | null;
+            /**
+                * Access Token  Incoming Grant
+                * @private
+                */
+            isIncomingGrant: boolean | null;
+            /**
+                * Access Token  abstract class that needs to be implemented
+                * @private
+                */
+            accessTokenInterface: any;
+            /**
+                * Flag to monitor the feedback api that gets called after the token is expired
+                * @private
+                */
+            deferFeedback: null | boolean;
+            /**
+                * Flag that tells if unregister is pending or not
+                * @private
+                */
+            isUnregisterPending: null | boolean;
+            /**
                 * Options passed by the user while instantiating the client class
                 * @private
                 */
@@ -298,6 +349,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             plivoSocket: WebSocketInterface;
             /**
+                * Holds the connection state of the SDK
+                * @private
+                */
+            connectionState: string;
+            /**
                 * Responsible for playing audio stream of remote user during call
                 * @private
                 */
@@ -381,6 +437,21 @@ declare module 'plivo-browser-sdk/client' {
                 * @param {String} password
                 */
             login: (username: string, password: string) => boolean;
+            /**
+                * Register using user access token.
+                * @param {String} accessToken
+                */
+            loginWithAccessToken: (accessToken: string) => boolean;
+            /**
+                * Register using user access token.
+                * @param {Any} accessTokenObject
+                */
+            loginWithAccessTokenGenerator: (accessTokenObject: any) => boolean;
+            /**
+                * get error string by error code
+                * @param {number} errorCode
+                */
+            getErrorStringByErrorCodes: (errorCode: number) => string;
             /**
                 * Unregister and clear stats timer, socket.
                 */
@@ -497,10 +568,13 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             constructor(options: ConfiguationOptions);
+            setExpiryTimeInEpoch: (timeInEpoch: number) => void;
+            getTokenExpiryTimeInEpoch: () => number | null;
     }
 }
 
 declare module 'plivo-browser-sdk/logger' {
+    import { Client } from 'plivo-browser-sdk/client';
     export type AvailableLogMethods = 'INFO' | 'DEBUG' | 'WARN' | 'ERROR' | 'ALL' | 'OFF' | 'ALL-PLAIN';
     export type AvailableFlagValues = 'ALL' | 'NONE' | 'REMOTEONLY' | 'LOCALONLY';
     export interface DtmfOptions {
@@ -528,6 +602,10 @@ declare module 'plivo-browser-sdk/logger' {
                 * @param {AvailableLogMethods} debugLevel - passed by user while initializing client
                 */
             enableSipLogs: (debugLevel: AvailableLogMethods) => void;
+            /**
+            * Send logs to Plivo kibana.
+            */
+            send: (client: Client) => void;
     }
     export const Logger: PlivoLogger;
     export {};
@@ -547,6 +625,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             extraHeaders: ExtraHeaders;
             call_initiation_time?: number;
             client: Client;
+            stirShakenState: string;
     }
     export interface CallInfo {
             callUUID: string;
@@ -554,6 +633,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             src: string;
             dest: string;
             state: string;
+            stirShakenState: string;
             extraHeaders: ExtraHeaders;
     }
     export interface SignallingInfo {
@@ -599,6 +679,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @private
                 */
             callUUID: string | null;
+            /**
+                * call signed or not it will have these options ‘verified’ | ‘not_verified’ | ‘Not_applicable’
+                * @private
+                */
+            stirShakenState: string;
             /**
                 * Identifier generated by JSSIP when a new RTCSession is created for the call
                 * @private
@@ -725,6 +810,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 */
             onAccepted: (cs: Client) => void;
             /**
+                * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
+                * @param {Client} clientObject - client reference
+                */
+            onRinging: (cs: Client) => void;
+            /**
                 * Triggered when the user answers the call(Outgoing/Incoming) and got or received ACK.
                 * @param {Client} clientObject - client reference
                 */
@@ -758,7 +848,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @param {Client} clientObject - client reference
                 * @param {Error} err - reason for issue
                 */
-            onGetUserMediaFailed: (cs: Client, error: Error | DOMError) => void;
+            onGetUserMediaFailed: (cs: Client, error: Error) => void;
             /**
                 * Triggered when peer connection issues(creating offer, answer and setting description) occur.
                 * @param {Client} clientObject - client reference
@@ -766,7 +856,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @param {Function} callStatscb - callstats.io callback for each issue
                 * @param {Error} err - reason for issue
                 */
-            handlePeerConnectionFailures: (cs: Client, msg: string | Error | DOMError, callStatscb: () => void, err: Error | DOMError) => void;
+            handlePeerConnectionFailures: (cs: Client, msg: string | Error, callStatscb: () => void, err: Error) => void;
             /**
                 * @constructor
                 * @param {CallSessionOptions} options - call(Outgoing/Incoming) information
@@ -894,18 +984,6 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         */
     export const stopVolumeDataStreaming: () => void;
     /**
-        * Add getters and setters for input audio devices.
-        */
-    export const inputDevices: InputDevices;
-    /**
-        * Add getters and setters for output audio devices.
-        */
-    export const outputDevices: OutputDevices;
-    /**
-        * Add getters and setters for ringtone which is played during the call.
-        */
-    export const ringtoneDevices: RingToneDevices;
-    /**
         * Add audio device information whenever device is changed.
         * @param {Boolean} store - pass true to store information in Client object for reference
         * @returns Fulfills with audio device information or reject with error
@@ -936,6 +1014,18 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Check if input or output audio device has changed.
         */
     export const checkAudioDevChange: () => void;
+    /**
+        * Add getters and setters for input audio devices.
+        */
+    export const inputDevices: InputDevices;
+    /**
+        * Add getters and setters for output audio devices.
+        */
+    export const outputDevices: OutputDevices;
+    /**
+        * Add getters and setters for ringtone which is played during the call.
+        */
+    export const ringtoneDevices: RingToneDevices;
     /**
         * Unmute the local stream.
         */
@@ -1196,6 +1286,27 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             activeInputAudioDevice: string;
             activeOutputAudioDevice: string;
     }
+    export interface RingingEvent {
+            msg: string;
+            userAgent: string;
+            clientVersionMajor: string;
+            clientVersionMinor: string;
+            clientVersionPatch: string;
+            sdkName: string;
+            sdkVersionMajor: number;
+            sdkVersionMinor: number;
+            sdkVersionPatch: number;
+            clientName: string;
+            devicePlatform: string;
+            deviceOs: string;
+            setupOptions: ConfiguationOptions;
+            signalling?: any;
+            mediaConnection?: any;
+            audioDeviceInfo?: DeviceAudioInfo;
+            isAudioDeviceToggled?: boolean;
+            isNetworkChanged?: boolean;
+            jsFramework: string[];
+    }
     export interface SummaryEvent {
             msg: string;
             userAgent: string;
@@ -1252,6 +1363,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
         * @param {CallSession} session - call session information
         */
     export const sendCallSummaryEvent: (deviceInfo: DeviceAudioInfo, signallingInfo: SignallingInfo, mediaConnectionInfo: MediaConnectionInformation, session: CallSession) => void;
+    export const sendCallRingingEvent: (deviceInfo: DeviceAudioInfo, signallingInfo: SignallingInfo, mediaConnectionInfo: MediaConnectionInformation, session: CallSession) => void;
     /**
             * Send user feedback to plivo stats.
             * @param {CallSession} callSession - call information

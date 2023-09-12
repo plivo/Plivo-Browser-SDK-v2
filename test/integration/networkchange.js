@@ -148,14 +148,17 @@ describe("plivoWebSdk", function () {
       spy.resetHistory();
 
       function checkCallSumary() {
+        setTimeout(() => {
         Client1.hangup();
         waitUntilNetworkChange(spy.calledWith("stats send success"), done, 500);
+        },2000)
+        
       }
       function checkReconnection() {
         waitUntilNetworkChange(
           events.onConnectionChangeConnected,
           checkCallSumary,
-          500,
+          2000,
         );
       }
       function makeCall() {

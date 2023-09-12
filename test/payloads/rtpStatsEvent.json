@@ -5,7 +5,7 @@
     "corelationId": "f0dd8baf-a299-4535-8679-b0bcc725fea2",
     "domain": "phone.plivo.com",
     "local": {
-        "audioLevel": null,
+        "audioLevel": -100,
         "bytesSent": 50087,
         "fractionLoss": 0,
         "jitter": 0,
@@ -24,7 +24,7 @@
     "networkEffectiveType": "unknown",
     "networkType": "wifi",
     "remote": {
-        "audioLevel": null,
+        "audioLevel": -100,
         "bytesReceived": 68709,
         "fractionLoss": 0,
         "jitter": 0,

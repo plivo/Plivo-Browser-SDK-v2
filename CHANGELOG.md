@@ -5,9 +5,30 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## v2.2.7 (released@ 06-05-2022)
+## v2.2.8 (released@ 11-09-2023)
 **Bug Fixes**
-* The call summary stats are not pushed to Plivo when the call is answered and hung up before the stats socket is open.
+
+* Fixed: Corrected the handling of stir-verification in incoming call headers.
+* Fixed: Fixed audio level discrepancies that occurred when changing input/output devices, ensuring accurate device settings.
+* Fixed: Removed DOMError to support latest Typescript versions.
+* Fixed: Restored functionality for incoming calls with PCMU codec.
+* Fixed: Prevented SDK from logging out when re-registration timed out.
+* Fixed: Reduced the time for firing the onConnectionChange event with a disconnected state to within 10 seconds when the SDK disconnects from Plivo servers, previously occurring within a 2-minute interval.
+
+
+**Features**
+
+* Added: A `refreshRegistrationTimer` flag for user-configurable periodic re-registration by the SDK.
+* Added: An `onDtmfReceived` event triggered when the SDK receives DTMF tones.
+* Added: Enhanced remote debugging with the collection and transmission of logs to Plivo servers.
+* Added: Plivo STUN servers to ensure stable connections.
+* Added: A `CALL_RINGING` event signaling the initiation of incoming/outgoing call ringing to Plivo.
+
+## v2.2.7 (released@ 06-06-2022)
+**Features**
+
+* Added: New Client Region South-Asia to the existing Client Region list.
+* Fixed: The call summary stats are not pushed to Plivo when the call is answered and hung up before the stats socket is open
 
 ## v2.2.6 (released@ 13-10-2021)
 **Features**
