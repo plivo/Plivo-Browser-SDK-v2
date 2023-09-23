@@ -1,4 +1,4 @@
-import { handleChromeStats, handleFirefoxSafariStats } from '../../../lib/stats/rtpStats';
+import { handleWebRTCStats } from '../../../lib/stats/rtpStats';
 import { getChromeStatsResponse, getFirefoxSafariStatsResponse } from '../../mock/RTCStatsResponse';
 import rtpStatsResponse from '../../payloads/rtpStatsEvent.json';
 
@@ -52,27 +52,27 @@ describe('RTPStats', () => {
 
     it('should validate chrome stats', () => {
         updateChromeContext(context);
-        handleChromeStats.call(context, stream);
+        handleWebRTCStats.call(context, stream);
         // call second time for collecting basepackets
-        handleChromeStats.call(context, stream);
+        handleWebRTCStats.call(context, stream);
         expect(context.collected).toStrictEqual(rtpStatsResponse);
     });
 
     it('should validate chrome stats when enableQualityTracking flag is set to remoteonly', () => {
         updateChromeContext(context);
         context.options.enableQualityTracking = "REMOTEONLY";
-        handleChromeStats.call(context, stream);
+        handleWebRTCStats.call(context, stream);
         // call second time for collecting basepackets
-        handleChromeStats.call(context, stream);
+        handleWebRTCStats.call(context, stream);
         expect(context.collected).toStrictEqual(rtpStatsResponse);
     });
 
     it('should validate chrome stats when enableQualityTracking flag is default and enableTraking is false', () => {
         updateChromeContext(context);
         context.options.enableTracking = false;
-        handleChromeStats.call(context, stream);
+        handleWebRTCStats.call(context, stream);
         // call second time for collecting basepackets
-        handleChromeStats.call(context, stream);
+        handleWebRTCStats.call(context, stream);
         console.log(context.collected);
         expect(context.collected).toStrictEqual(rtpStatsResponse);
     });
@@ -80,9 +80,9 @@ describe('RTPStats', () => {
 
     it('should validate firefox stats', async () => {
         updateFirefoxContext(context);
-        handleFirefoxSafariStats.call(context, stream);
+        handleWebRTCStats.call(context, stream);
         // call second time for collecting basepackets
-        handleFirefoxSafariStats.call(context, stream);
+        handleWebRTCStats.call(context, stream);
         await new Promise<void>(res => setTimeout(() => {
             let expected = JSON.parse(JSON.stringify(rtpStatsResponse));
             expected.local.rtt = 0.026;
@@ -103,9 +103,9 @@ describe('RTPStats', () => {
 
   it('should validate firefox stats', async () => {
     updateFirefoxContext(context);
-    handleFirefoxSafariStats.call(context, stream);
+    handleWebRTCStats.call(context, stream);
     // call second time for collecting basepackets
-    handleFirefoxSafariStats.call(context, stream);
+    handleWebRTCStats.call(context, stream);
     await new Promise<void>((res) => setTimeout(() => {
       const expected = JSON.parse(JSON.stringify(rtpStatsResponse));
       expected.local.rtt = 0.026;
@@ -136,7 +136,7 @@ describe('RTPStats', () => {
         sdp: 'a=rtpmap:0 opus/8000',
       },
     };
-    handleFirefoxSafariStats.call(context, stream);
+    handleWebRTCStats.call(context, stream);
     await new Promise<void>((res) => setTimeout(() => {
       expect(consoleSpy.mock.calls[0][1]).toMatch(/Error in getStats LocalStreams API/);
       res();
@@ -145,12 +145,12 @@ describe('RTPStats', () => {
 
   it('should validate safari stats', async () => {
     updateSafariContext(context);
-    handleFirefoxSafariStats.call(context, stream);
+    handleWebRTCStats.call(context, stream);
     // call second time for collecting basepackets
     stream = {
       codec: '', local: {}, remote: {}, networkType: '',
     };
-    handleFirefoxSafariStats.call(context, stream);
+    handleWebRTCStats.call(context, stream);
     await new Promise<void>((res) => setTimeout(() => {
       const expected = JSON.parse(JSON.stringify(rtpStatsResponse));
       expected.codec = 'pcmu';
