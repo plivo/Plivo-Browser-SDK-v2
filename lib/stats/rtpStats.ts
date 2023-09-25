@@ -733,7 +733,7 @@ export const handleWebRTCStats = function (stream: RtpStatsStream): void {
           ) {
             stream.local.rtt = stats.currentRoundTripTime;
           }
-          if (stats.type === 'media-source') {
+          if (stats.type === 'media-source' && this.clientScope.browserDetails.browser === 'chrome') {
             stream.local.googEchoCancellationReturnLoss = stats.echoReturnLoss;
             // eslint-disable-next-line max-len
             stream.local.googEchoCancellationReturnLossEnhancement = stats.echoReturnLossEnhancement;
