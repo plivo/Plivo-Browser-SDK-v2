@@ -1112,15 +1112,10 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             gotNetworkType?: boolean;
     }
     /**
-        * Get RTP stats for chrome browser.
+        * Get RTP stats.
         * @param {RtpStatsStream} stream - holds local and remote stat details
         */
-    export const handleChromeStats: (stream: RtpStatsStream) => Promise<void>;
-    /**
-        * Get RTP stats for firefox and safari browsers.
-        * @param {RtpStatsStream} stream - holds local and remote stat details
-        */
-    export const handleFirefoxSafariStats: (stream: RtpStatsStream) => void;
+    export const handleWebRTCStats: (stream: RtpStatsStream) => void;
     /**
         * Initialize and create timers, media streams for RTP stats.
         */
