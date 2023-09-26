@@ -258,7 +258,7 @@ const validateOptions = function (
 
         case 'preDetectOwa':
           if (isBoolean(key, options[key])) {
-            _options.preDetectOwa = options[key];
+            _options.preDetectOwa = false;
           }
           break;
 

@@ -470,19 +470,19 @@ const processStats = function (stream: RtpStatsStream): void {
     Number(-100),
     true,
   );
-  getStatsRef.collected.remote.jitterBufferDelay = handleStat((stream.remote as any).googCurrentDelayMs, 'int', null, true);
+  getStatsRef.collected.remote.jitterBufferDelay = handleStat((stream.remote as any).jitterBufferDelay, 'int', null, true);
   getStatsRef.collected.local.googEchoCancellationReturnLoss = handleStat(stream.local.googEchoCancellationReturnLoss!, 'int', null, true);
   getStatsRef.collected.local.googEchoCancellationReturnLossEnhancement = handleStat(stream.local.googEchoCancellationReturnLossEnhancement!, 'int', null, true);
   getStatsRef.collected.remote.googJitterBufferMs = handleStat(stream.remote.googJitterBufferMs!, 'int', null, true);
   getStatsRef.collected.remote.packetsDiscarded = handleStat(stream.remote.packetsDiscarded!, 'int', null, true);
   if (getStatsRef.clientScope.browserDetails.browser === 'chrome') {
-    getStatsRef.collected.local.rtt = handleStat(stream.local.googRtt as number, 'float');
+    getStatsRef.collected.local.rtt = handleStat(stream.local.rtt as number, 'float');
     getStatsRef.collected.local.jitter = handleStat(
-      stream.local.googJitterReceived as number,
+      stream.local.jitter as number,
       'float',
     );
     getStatsRef.collected.remote.jitter = handleStat(
-      stream.remote.googJitterReceived as number,
+      stream.remote.jitter as number,
       'float',
     );
   } else if (
@@ -522,70 +522,6 @@ const processStats = function (stream: RtpStatsStream): void {
 };
 
 /**
- * Get RTP stats for chrome browser.
- * @param {RtpStatsStream} stream - holds local and remote stat details
- */
-export const handleChromeStats = async function (stream: RtpStatsStream): Promise<void> {
-  (this as any).pc.getStats(
-    (res: any) => {
-      res.result().forEach((result: any) => {
-        if (result.type === 'localcandidate') {
-          if (
-            result.stat('candidateType') === 'host'
-            && stream.gotNetworkType
-          ) {
-            return;
-          }
-          switch (result.stat('networkType')) {
-            case 'wlan':
-              stream.networkType = 'wifi';
-              break;
-            case 'lan':
-              stream.networkType = 'ethernet';
-              break;
-            default:
-              stream.networkType = result.stat('networkType');
-          }
-          if (result.stat('candidateType') !== 'host') {
-            stream.gotNetworkType = true;
-          }
-          return;
-        }
-        if (result.type === "googCandidatePair") {
-          if (result.stat('packetsDiscardedOnSend')) {
-            stream.remote.packetsDiscarded = result.stat('packetsDiscardedOnSend');
-          }
-        }
-        if (result.type !== 'ssrc') {
-          return;
-        }
-        if (result.stat('bytesSent')) {
-          result.names().forEach((e: string | number) => {
-            stream.local[e] = result.stat(e);
-          });
-        }
-        if (result.stat('bytesReceived')) {
-          result.names().forEach((e: string | number) => {
-            stream.remote[e] = result.stat(e);
-          });
-        }
-        if (result.stat('googCodecName')) {
-          stream.codec = result.stat('googCodecName');
-        }
-      });
-      stream.local.audioInputLevel = this.audioInputLevel / this.audioInputCount;
-      stream.remote.audioOutputLevel = this.audioOutputLevel / this.audioOutputCount;
-      clearAudioSamples.call(this);
-      processStats.call(this, stream);
-    },
-    null,
-    (err: any) => {
-      Plivo.log.error(`${C.LOGCAT.CALL} | Rtpstats peer connection getStats error`, err.message);
-    },
-  );
-};
-
-/**
  * Get codec name from sdp.
  */
 const getCodecName = function (): string {
@@ -603,6 +539,136 @@ const getCodecName = function (): string {
   }
 };
 
+// /**
+//  * Get RTP stats for chrome browser.
+//  * @param {RtpStatsStream} stream - holds local and remote stat details
+//  */
+// export const handleChromeStats = function (stream: RtpStatsStream): void {
+//   stream.codec = getCodecName.call(this);
+//   const senders = this.pc.getSenders();
+//   if (senders) {
+//     senders[0].getStats().then((statsResult: any[]) => {
+//       Array.from(statsResult.values()).forEach((stats: any) => {
+//         if (stats.type === 'outbound-rtp') {
+//           stream.local.rtt = stats.roundTripTime == null || isNaN(stats.roundTripTime)
+//             ? stream.local.rtt
+//             : stats.roundTripTime;
+//           stream.local.jitter = stats.jitter == null || isNaN(stats.jitter)
+//             ? stream.local.jitter
+//             : stats.jitter;
+//           stream.local.packetsSent = stats.packetsSent == null || isNaN(stats.packetsSent)
+//             ? stream.local.packetsSent
+//             : stats.packetsSent;
+//           stream.local.packetsLost = stats.packetsLost == null || isNaN(stats.packetsLost)
+//             ? stream.local.packetsLost
+//             : stats.packetsLost;
+//           stream.local.bytesSent = stats.bytesSent == null || isNaN(stats.bytesSent)
+//             ? stream.local.bytesSent
+//             : stats.bytesSent;
+//           stream.local.ssrc = stats.ssrc == null || isNaN(stats.ssrc)
+//             ? stream.local.ssrc
+//             : stats.ssrc;
+//         }
+//         if (stats.type === 'remote-inbound-rtp') {
+//           const outboundRTCP = stats;
+//           stream.local.rtt = outboundRTCP.roundTripTime == null
+//           || isNaN(outboundRTCP.roundTripTime)
+//             ? stream.local.rtt
+//             : outboundRTCP.roundTripTime;
+//           stream.local.jitter = outboundRTCP.jitter == null || isNaN(outboundRTCP.jitter)
+//             ? stream.local.jitter
+//             : outboundRTCP.jitter;
+//           stream.local.packetsLost = outboundRTCP.packetsLost == null
+//           || isNaN(outboundRTCP.packetsLost)
+//             ? stream.local.packetsLost
+//             : outboundRTCP.packetsLost;
+//         }
+//         if (stats.type === 'media-source') {
+//           stream.local.googEchoCancellationReturnLoss = stats.echoReturnLoss;
+//         stream.local.googEchoCancellationReturnLossEnhancement = stats.echoReturnLossEnhancement;
+//         }
+//         if (stats.type === 'local-candidate') {
+//           stream.networkType = stats.networkType;
+//         }
+//       });
+//     });
+//     this.pc
+//       .getReceivers()[0]
+//       .getStats()
+//       .then((receiverResults: any[]) => {
+//         Array.from(receiverResults.values()).forEach((stats: any) => {
+//           if (stats.type === 'inbound-rtp') {
+//             stream.remote = stats;
+//             stream.local.audioInputLevel = this.audioInputLevel / this.audioInputCount;
+//             stream.remote.audioOutputLevel = this.audioOutputLevel / this.audioOutputCount;
+//             clearAudioSamples.call(this);
+//             processStats.call(this, stream);
+//           }
+//         });
+//       })
+//       .catch((e: any) => {
+//         Plivo.log.debug(`${C.LOGCAT.CALL} | Error in getStats RemoteStreams API `, e.message);
+//       });
+//   }
+//   // (this as any).pc.getStats(
+//   //   (res: any) => {
+//   //     res.result().forEach((result: any) => {
+//   //       if (result.type === 'localcandidate') {
+//   //         if (
+//   //           result.stat('candidateType') === 'host'
+//   //           && stream.gotNetworkType
+//   //         ) {
+//   //           return;
+//   //         }
+//   //         switch (result.stat('networkType')) {
+//   //           case 'wlan':
+//   //             stream.networkType = 'wifi';
+//   //             break;
+//   //           case 'lan':
+//   //             stream.networkType = 'ethernet';
+//   //             break;
+//   //           default:
+//   //             stream.networkType = result.stat('networkType');
+//   //         }
+//   //         if (result.stat('candidateType') !== 'host') {
+//   //           stream.gotNetworkType = true;
+//   //         }
+//   //         return;
+//   //       }
+//   //       if (result.type === "googCandidatePair") {
+//   //         if (result.stat('packetsDiscardedOnSend')) {
+//   //           stream.remote.packetsDiscarded = result.stat('packetsDiscardedOnSend');
+//   //         }
+//   //       }
+//   //       if (result.type !== 'ssrc') {
+//   //         return;
+//   //       }
+//   //       if (result.stat('bytesSent')) {
+//   //         result.names().forEach((e: string | number) => {
+//   //           stream.local[e] = result.stat(e);
+//   //         });
+//   //       }
+//   //       if (result.stat('bytesReceived')) {
+//   //         result.names().forEach((e: string | number) => {
+//   //           stream.remote[e] = result.stat(e);
+//   //         });
+//   //       }
+//   //       if (result.stat('googCodecName')) {
+//   //         stream.codec = result.stat('googCodecName');
+//   //       }
+//   //     });
+//   //     stream.local.audioInputLevel = this.audioInputLevel / this.audioInputCount;
+//   //     stream.remote.audioOutputLevel = this.audioOutputLevel / this.audioOutputCount;
+//   //     clearAudioSamples.call(this);
+//   //     processStats.call(this, stream);
+//   //   },
+//   //   null,
+//   //   (err: any) => {
+//     Plivo.log.error(`${C.LOGCAT.CALL} | Rtpstats peer connection getStats error`, err.message);
+//   //   },
+//   // );
+// };
+
 /**
  * Converts rtt and jitter to milliseconds.
  * @param {RtpStatsStream} stream - holds local and remote stat details
@@ -619,7 +685,7 @@ const handleSafariChanges = function (stream: RtpStatsStream): RtpStatsStream {
  * Get RTP stats for firefox and safari browsers.
  * @param {RtpStatsStream} stream - holds local and remote stat details
  */
-export const handleFirefoxSafariStats = function (stream: RtpStatsStream): void {
+export const handleWebRTCStats = function (stream: RtpStatsStream): void {
   stream.codec = getCodecName.call(this);
   const senders = this.pc.getSenders();
   if (senders) {
@@ -667,6 +733,14 @@ export const handleFirefoxSafariStats = function (stream: RtpStatsStream): void 
           ) {
             stream.local.rtt = stats.currentRoundTripTime;
           }
+          if (stats.type === 'media-source' && this.clientScope.browserDetails.browser === 'chrome') {
+            stream.local.googEchoCancellationReturnLoss = stats.echoReturnLoss;
+            // eslint-disable-next-line max-len
+            stream.local.googEchoCancellationReturnLossEnhancement = stats.echoReturnLossEnhancement;
+          }
+          if (stats.type === 'local-candidate') {
+            stream.networkType = stats.networkType;
+          }
         });
         this.pc
           .getReceivers()[0]
@@ -708,12 +782,12 @@ const startStatsTimer = function (): void {
       networkType: '',
     };
     if (getStatsRef.clientScope.browserDetails.browser === 'chrome' || getStatsRef.clientScope.browserDetails.browser === 'edge') {
-      handleChromeStats.call(getStatsRef, stream);
+      handleWebRTCStats.call(getStatsRef, stream);
     } else if (
       getStatsRef.clientScope.browserDetails.browser === 'firefox'
       || getStatsRef.clientScope.browserDetails.browser === 'safari'
     ) {
-      handleFirefoxSafariStats.call(getStatsRef, stream);
+      handleWebRTCStats.call(getStatsRef, stream);
     } else {
       Plivo.log.error(
         `${C.LOGCAT.LOGIN} | Plivo Browser SDK is not supported in ${getStatsRef.clientScope.browserDetails.browser}`,

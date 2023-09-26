@@ -101,6 +101,43 @@ const stopStream = function (): void {
   }
 };
 
+export const getWebRTCStats = function (connection: any)
+  : Promise<any> {
+  return new Promise((resolve, reject) => {
+    const senders = connection.getSenders();
+    const cbr = {
+      bytesSent: null,
+      audioInputLevel: null,
+    };
+    if (senders) {
+      senders[0].getStats(connection.getLocalStreams()[0]
+        .getAudioTracks()[0]).then((senderResults: any[]) => {
+        Array.from(senderResults.values()).forEach((stats: any) => {
+          // console.log('type is ', stats.type);
+          if (stats.type === 'outbound-rtp') {
+            cbr.bytesSent = stats.bytesSent;
+          }
+
+          if (stats.type === 'media-source') {
+            cbr.audioInputLevel = stats.audioLevel;
+          }
+
+          if (cbr.bytesSent && cbr.audioInputLevel) {
+            resolve(cbr);
+          }
+        });
+        if (cbr.bytesSent === null && cbr.audioInputLevel === null) {
+          detectCallback(null, 'stats not collectd');
+        }
+      }).catch((error: any) => {
+        reject(error);
+      });
+    } else {
+      reject(cbr);
+    }
+  });
+};
+
 /**
  * Get RTP stats and check if one way audio exists or not through stats
  */
@@ -109,35 +146,25 @@ const getStats = function (): void {
   let statsCounter = 0;
   function processGetStats() {
     if (pc1.getLocalStreams()[0]) {
-      pc1.getStats(
-        (res: { result: () => any[] }) => {
-          res.result().forEach((result) => {
-            const report = result;
-            if (
-              report.type === 'ssrc'
-              && report.stat('mediaType') === 'audio'
-            ) {
-              const cbr = {
-                bytesSent: report.stat('bytesSent'),
-                audioInputLevel: report.stat('audioInputLevel'),
-              };
-              if (Number(cbr.audioInputLevel) <= 0 && statsCounter !== 2) {
-                statsCounter += 1;
-                setTimeout(processGetStats, 1000);
-                Plivo.log.debug(`Precheck re-attempt: ${statsCounter}`);
-              } else {
-                if (detectCallback) {
-                  detectCallback(cbr, null);
-                }
-                // since siplib new getUM at next moment is throwing user denied media
-                setTimeout(stopStream, 3000);
-              }
+      getWebRTCStats(pc1).then((result) => {
+        if (result.bytesSent && result.audioInputLevel) {
+          if (Number(result.audioInputLevel) <= 0 && statsCounter !== 2) {
+            statsCounter += 1;
+            setTimeout(processGetStats, 1000);
+            Plivo.log.debug(`Precheck re-attempt: ${statsCounter}`);
+          } else {
+            if (detectCallback) {
+              detectCallback(result, null);
             }
-          });
-        },
-        pc1.getLocalStreams()[0].getAudioTracks()[0],
-        errHandler,
-      );
+            // since siplib new getUM at next moment is throwing user denied media
+            setTimeout(stopStream, 3000);
+          }
+        } else {
+          detectCallback(null, 'error gathering stats');
+        }
+      }).catch((error: any) => {
+        errHandler(error);
+      });
     }
   }
   processGetStats();
@@ -236,42 +263,32 @@ export const owaNotification = (connection: any): void => {
     && connection.signalingState !== 'closed'
     && getBrowserDetails().browser === 'chrome'
   ) {
-    connection.getStats(
-      (res: { result: () => any[] }) => {
-        res.result().forEach((result) => {
-          const report = result;
-          if (report.stat('bytesSent')) {
-            Plivo.log.debug(
-              `Bytes sent by WebSDK client: ${
-                report.stat('bytesSent')
-              } audioInputLevel: ${
-                report.stat('audioInputLevel')}`,
-            );
-          }
-          if (
-            report.type === 'ssrc'
-            && report.stat('mediaType') === 'audio'
-            && parseInt(report.stat('bytesSent'), 10) === 0
-            && report.stat('audioInputLevel') === 0
-          ) {
-            Plivo.log.debug(`${LOGCAT.CALL} | One way audio detected`);
-            emitMetrics.call(
-              this,
-              'audio',
-              'warning',
-              'no_microphone_access',
-              0,
-              true,
-              'no access to your microphone',
-              'None',
-            );
-          }
-        });
-      },
-      connection.getLocalStreams()[0].getAudioTracks()[0],
-      (err: any) => {
-        Plivo.log.error(err);
-      },
-    );
+    getWebRTCStats(connection).then((result: any) => {
+      if (result.bytesSent) {
+        Plivo.log.debug(
+          `${LOGCAT.CALL} | Bytes sent by WebSDK client: ${
+            result.bytesSent
+          } audioInputLevel: ${
+            result.audioInputLevel}`,
+        );
+      }
+
+      if (result.bytesSent === 0
+        && result.audioInputLevel === 0) {
+        Plivo.log.debug(`${LOGCAT.CALL} | One way audio detected`);
+        emitMetrics.call(
+          this,
+          'audio',
+          'warning',
+          'no_microphone_access',
+          0,
+          true,
+          'no access to your microphone',
+          'None',
+        );
+      }
+    }).catch((error: any) => {
+      Plivo.log.debug(`${LOGCAT.CALL} | Error while gathering webrtc stats ${error}`);
+    });
   }
 };
