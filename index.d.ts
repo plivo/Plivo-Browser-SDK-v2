@@ -43,6 +43,7 @@ declare module 'plivo-browser-sdk/client' {
             allowMultipleIncomingCalls?: boolean;
             closeProtection?: boolean;
             maxAverageBitrate?: number;
+            useDefaultAudioDevice?: boolean;
             registrationRefreshTimer?: number;
             dtmfOptions?: DtmfOptions;
     }
@@ -412,6 +413,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             deviceToggledInCurrentSession: boolean;
+            /**
+                * Determines whether any audio device got toggled during current session
+                * @private
+                */
+            useDefaultAudioDevice: boolean;
             /**
                 * Determines whether network got changed during current session
                 * @private
