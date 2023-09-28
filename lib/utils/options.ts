@@ -29,6 +29,7 @@ const _options: ConfiguationOptions = {
   disableRtpTimeOut: false,
   allowMultipleIncomingCalls: false,
   closeProtection: false,
+  useDefaultAudioDevice: false,
   maxAverageBitrate: C.MAX_AVERAGE_BITRATE,
   dtmfOptions: C.DEFAULT_DTMFOPTIONS,
   registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
@@ -216,6 +217,12 @@ const validateOptions = function (
         case 'codecs':
           if (checkCodecs(options[key])) {
             _options.codecs = options[key];
+          }
+          break;
+
+        case 'useDefaultAudioDevice':
+          if (isBoolean(key, options[key])) {
+            _options.useDefaultAudioDevice = options[key];
           }
           break;
 

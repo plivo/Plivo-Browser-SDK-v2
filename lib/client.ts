@@ -67,6 +67,7 @@ export interface ConfiguationOptions {
   allowMultipleIncomingCalls?: boolean;
   closeProtection?: boolean;
   maxAverageBitrate?: number;
+  useDefaultAudioDevice?: boolean
   registrationRefreshTimer?: number;
   dtmfOptions?: DtmfOptions;
 }
@@ -498,6 +499,12 @@ export class Client extends EventEmitter {
   deviceToggledInCurrentSession: boolean;
 
   /**
+   * Determines whether any audio device got toggled during current session
+   * @private
+   */
+  useDefaultAudioDevice: boolean;
+
+  /**
    * Determines whether network got changed during current session
    * @private
    */
@@ -771,6 +778,7 @@ export class Client extends EventEmitter {
     this.shouldMuteCall = false;
     this.isOutgoingGrant = false;
     this.isIncomingGrant = false;
+    this.useDefaultAudioDevice = false;
     this.audio = {
       availableDevices: audioUtil.availableDevices,
       ringtoneDevices: audioUtil.ringtoneDevices,

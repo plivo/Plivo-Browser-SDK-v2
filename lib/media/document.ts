@@ -11,6 +11,7 @@ import {
   SILENT_TONE_ELEMENT_ID,
   SILENT_TONE_URL,
   DTMF_TONE_PLAY_RETRY_ATTEMPTS,
+  LOGCAT,
 } from '../constants';
 import { DtmfOptions, Logger } from '../logger';
 import {
@@ -51,34 +52,25 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
   if (evt.status === 'success' && evt.stream) {
     audioDevDictionary.call(clientObject, true).then(() => {
       availableDevices()
-        .then((devices) => {
-          if (navigator.platform === ' Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
-            Plivo.log.debug('Inside Windows machine. Updating the initial i/o audio device list');
-            let defaultInputGroupId;
-            let defaultOutputGroupId;
-            const temp = devices;
-            const groupIdDeviceId = {};
-            temp.forEach((e) => {
-              if (e.kind === 'audioinput' && e.deviceId === 'default') {
-                defaultInputGroupId = e.groupId;
+        .then((devices: MediaDeviceInfo[]) => {
+          if (navigator.platform === ' Win32'
+          || navigator.platform === 'Win16'
+          || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
+            let activeInputDevice: any = null;
+            let activeOutputDevice: any = null;
+
+            devices.forEach((device: MediaDeviceInfo) => {
+              if (device.deviceId === 'default' && device.kind === 'audioinput') {
+                activeInputDevice = device;
               }
-              if (e.kind === 'audiooutput') {
-                if (e.deviceId === 'default') {
-                  defaultOutputGroupId = e.groupId;
-                }
-                groupIdDeviceId[e.groupId] = e.deviceId;
+              if (device.deviceId === 'default' && device.kind === 'audiooutput') {
+                activeOutputDevice = device;
               }
             });
-            if (defaultInputGroupId !== defaultOutputGroupId) {
-              if (groupIdDeviceId[defaultInputGroupId]) {
-                clientObject.audio.speakerDevices.set(groupIdDeviceId[defaultInputGroupId]);
-                Plivo.log.debug(`Updated the windows device id ${groupIdDeviceId[defaultInputGroupId]}`);
-              } else {
-                clientObject.audio.microphoneDevices.set("default");
-                clientObject.audio.speakerDevices.set("default");
-                Plivo.log.debug(`Input and Output devices set to default for Windows`);
-              }
-            }
+            Plivo.log.debug(`${LOGCAT.CALL} Setting Input device set to default i.e ${JSON.stringify(activeInputDevice)}`);
+            clientObject.audio.microphoneDevices.set("default");
+            Plivo.log.debug(`${LOGCAT.CALL} Setting Output device set to default i.e ${JSON.stringify(activeOutputDevice)}`);
+            clientObject.audio.speakerDevices.set("default");
           }
         });
       Plivo.log.debug(
