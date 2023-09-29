@@ -1013,10 +1013,6 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         */
     export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
     /**
-        * Check audio devices for electron app
-        */
-    export const checkElectronAudioDevices: () => void;
-    /**
         * Check if input or output audio device has changed.
         */
     export const checkAudioDevChange: () => void;
