@@ -53,7 +53,6 @@ const setDevice = true;
 let settingFromWindows = false;
 let addedDevice;
 const audioVisual = audioVisualize();
-const deviceIdDeviceLableMap = new Map();
 let availableAudioDevices: MediaDeviceInfo[] = [];
 const availableAudioDevicesDeviceIdGroupIdMap = {};
 const groupIdDeviceIdMap = {};
@@ -61,8 +60,10 @@ let audioDevDicSetterCb: any = null;
 const activeDeviceLabelDeviceIdMap = {};
 const activeDeviceIdDeviceLabelMap = {};
 
-const isSafari = /constructor/i.test((window as any).HTMLElement) || ((p) => p.toString() === '[object SafariRemoteNotification]') || (!(window as any).safari || (typeof (window as any).safari !== 'undefined' && (window as any).safari.pushNotification));
-const isWindows = navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win');
+const isSafari = (navigator.userAgent.search("Safari") >= 0 && navigator.userAgent.search("Chrome") < 0);
+const isWindows = navigator.platform === 'Win32'
+  || navigator.platform === 'Win16'
+  || navigator.platform.toString().toLocaleLowerCase().includes('win');
 
 /**
  * Add audio constraints to client reference.
@@ -225,8 +226,6 @@ export const stopVolumeDataStreaming = function (): void {
     }
   }, 3000);
 };
-
-let replaceAudioTrackForFireFox: (deviceId: string, clientObj: Client, state: string) => {};
 
 /**
  * Updates audio track in active stream after device change.
@@ -412,6 +411,8 @@ export const isElectronApp = function (): boolean {
  */
 export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
   return navigator.mediaDevices.enumerateDevices().then((devices) => {
+    const inputDeviceIdLabelMap: Map<any, any> = new Map();
+    const outputDeviceIdLabelMap: Map<any, any> = new Map();
     const deviceInfo: DeviceAudioInfo = {
       noOfAudioInput: 0,
       noOfAudioOutput: 0,
@@ -435,7 +436,7 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
       }
 
       if (d.kind === 'audioinput') {
-        deviceIdDeviceLableMap.set(d.deviceId, d.label);
+        inputDeviceIdLabelMap.set(d.deviceId, d.label);
         deviceInfo.noOfAudioInput += 1;
         if (deviceInfo.noOfAudioInput === 1) {
           activeInputDeviceForSafari = d.label;
@@ -443,28 +444,28 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
         deviceInfo.audioInputLables += `${d.label} ,`;
         deviceInfo.audioInputGroupIds += `${d.groupId} ,`;
       } else if (d.kind === 'audiooutput') {
-        deviceIdDeviceLableMap.set(d.deviceId, d.label);
+        outputDeviceIdLabelMap.set(d.deviceId, d.label);
         deviceInfo.noOfAudioOutput += 1;
         deviceInfo.audioOutputLables += `${d.label} ,`;
         deviceInfo.audioOutputGroupIds += `${d.groupId} ,`;
       }
     });
     if (deviceInfo.audioInputIdSet === '') {
-      deviceInfo.activeInputAudioDevice = deviceIdDeviceLableMap.get('default');
+      deviceInfo.activeInputAudioDevice = inputDeviceIdLabelMap.get('default');
       if (getBrowserDetails().browser === 'safari') {
         deviceInfo.activeInputAudioDevice = activeInputDeviceForSafari;
       }
     } else {
-      deviceInfo.activeInputAudioDevice = deviceIdDeviceLableMap.get(
+      deviceInfo.activeInputAudioDevice = inputDeviceIdLabelMap.get(
         deviceInfo.audioInputIdSet,
       );
     }
     if (deviceInfo.audioOutputIdSet === '') {
-      deviceInfo.activeOutputAudioDevice = deviceIdDeviceLableMap.get(
+      deviceInfo.activeOutputAudioDevice = outputDeviceIdLabelMap.get(
         'default',
       );
     } else {
-      deviceInfo.activeOutputAudioDevice = deviceIdDeviceLableMap.get(
+      deviceInfo.activeOutputAudioDevice = outputDeviceIdLabelMap.get(
         deviceInfo.audioOutputIdSet,
       );
     }
@@ -508,51 +509,6 @@ export const setAudioDeviceForForWindows = function (devices,
   }
 };
 
-const toggleNonDefaultDevice = (devices: MediaDeviceInfo[],
-  client: Client, type: MediaDeviceKind) => {
-  let requiredGroupId: string;
-  const audioType = type === "audioinput" ? "microphoneDevices" : "speakerDevices";
-  devices.forEach((item) => {
-    if (item.deviceId === "default" && item.kind === type) {
-      requiredGroupId = item.groupId;
-    }
-  });
-  devices.forEach((item) => {
-    if (item.deviceId !== "default" && item.groupId === requiredGroupId && item.kind === type) {
-      client.audio[audioType].set(item.deviceId);
-      setTimeout(() => {
-        client.audio[audioType].set('default');
-      }, 0);
-    }
-  });
-};
-
-/**
- * Check audio devices for electron app
- */
-export const checkElectronAudioDevices = function (): void {
-  const client: Client = this;
-  if (isElectronApp()) {
-    audioDevDictionary().then((deviceInfo: DeviceDictionary) => {
-      const { devices } = deviceInfo;
-      // microphone device
-      const lastConnectedMicDevice = client.audio.microphoneDevices.get();
-      if (lastConnectedMicDevice === "" || lastConnectedMicDevice === "default" || !lastConnectedMicDevice) {
-        toggleNonDefaultDevice(devices, client, "audioinput");
-      } else {
-        client.audio.microphoneDevices.set(lastConnectedMicDevice);
-      }
-      // speaker device
-      const lastConnectedSpeakerDevice = client.audio.speakerDevices.get();
-      if (lastConnectedSpeakerDevice === "" || lastConnectedSpeakerDevice === "default" || !lastConnectedSpeakerDevice) {
-        toggleNonDefaultDevice(devices, client, "audiooutput");
-      } else {
-        client.audio.speakerDevices.set(lastConnectedSpeakerDevice);
-      }
-    });
-  }
-};
-
 /**
  * Check if input or output audio device has changed.
  */
@@ -560,25 +516,20 @@ export const checkAudioDevChange = function (): void {
   const client: Client = this;
   // eslint-disable-next-line @typescript-eslint/dot-notation
   const isIE = /* @cc_on!@ */ false || !!document['documentMode'];
+  let isChrome = false;
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.indexOf('chrome') > -1) {
+    isChrome = true;
+  }
   const isEdge = !isIE && !!window.StyleMedia;
-  const isChrome = !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
   const isFirefox = typeof (window as any).InstallTrigger !== 'undefined';
   const isElectron = isElectronApp();
   const lastActiveSpeakerDevice = clientObject ? clientObject.audio.speakerDevices.get() : '';
   const lastConnectedMicDevice = clientObject ? clientObject.audio.microphoneDevices.get() : '';
-  let isRemoved = false;
   audioDevDictionary()
     .then((deviceInfo: DeviceDictionary) => {
       const { devices, audioRef } = deviceInfo;
       if (availableAudioDevices && devices) {
-        // send event to call insights
-        if (client._currentSession) {
-          getAudioDevicesInfo.call(client).then((toggledDeviceInfo: DeviceAudioInfo) => {
-            const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
-            sendEvents.call(client, obj, client._currentSession);
-            client.deviceToggledInCurrentSession = true;
-          });
-        }
         // Check if device is newly added with devices
         devices.forEach((device) => {
           // update device name : device Id Map
@@ -599,7 +550,6 @@ export const checkAudioDevChange = function (): void {
             So ignore any new default device object, since we reference point '2'
           */
             if (!/default/i.test(device.deviceId)) {
-              isRemoved = false;
               client.emit('audioDeviceChange', {
                 change: 'added',
                 device,
@@ -611,18 +561,32 @@ export const checkAudioDevChange = function (): void {
               ) {
                 if (isEdge || isChrome || isSafari || isElectron) {
                   replaceAudioTrack(device.deviceId, client, 'added', device.label);
-                } else if (isFirefox) {
-                  replaceAudioTrackForFireFox(device.deviceId, client, 'added');
-                }
-                if (isWindows) {
-                  Plivo.log.debug("Setting to default mic");
-                  setTimeout(() => {
-                    Plivo.log.debug("Setting to default mic");
-                    if (clientObject) clientObject.audio.microphoneDevices.set('default');
-                  }, 100);
                 }
               }
-              if (clientObject && !isWindows) clientObject.audio.speakerDevices.set('default');
+
+              if (device.kind === 'audioinput') {
+                Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio input device added:- `, JSON.stringify(device));
+                setTimeout(() => {
+                  if (client && isFirefox && isSafari) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting mic to ${device.deviceId} in firefox/safari`);
+                    client.audio.microphoneDevices.set(device.deviceId);
+                  } else if (client) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting mic to ${isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default'} `);
+                    client.audio.microphoneDevices.set((isWindows && !client.options.useDefaultAudioDevice) ? device.deviceId : 'default');
+                  }
+                }, 200);
+              } else if (client && device.kind === 'audiooutput') {
+                Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio output device added:- `, JSON.stringify(device));
+                setTimeout(() => {
+                  if (client && isFirefox) {
+                    client.audio.speakerDevices.set(device.deviceId);
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting speaker to ${device.deviceId} in firefox`);
+                  } else if (client && !isSafari && !isFirefox) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting speaker to ${isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default'} `);
+                    client.audio.speakerDevices.set(isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default');
+                  }
+                }, 200);
+              }
             }
           }
         });
@@ -631,7 +595,7 @@ export const checkAudioDevChange = function (): void {
           if (!devices.filter((a) => a.deviceId === device.deviceId).length) { // If not present
             // Ignore any default device object which is removed
             if (!/default/i.test(device.deviceId)) {
-              isRemoved = true;
+              // isRemoved = true;
               client.emit('audioDeviceChange', { change: 'removed', device });
               // update device name : device Id Map
               if (activeDeviceLabelDeviceIdMap[device.label] !== undefined) {
@@ -642,19 +606,46 @@ export const checkAudioDevChange = function (): void {
               if (device.kind === 'audioinput') {
                 if (isEdge || isChrome || isSafari || isElectron) {
                   replaceAudioTrack(device.deviceId, client, 'removed', device.label, true);
-                } else if (isFirefox) {
-                  replaceAudioTrackForFireFox(device.deviceId, client, 'removed');
                 }
+                Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio input device removed:- `, JSON.stringify(device));
+                Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting microphone to default`);
+                setTimeout(() => {
+                  if (client && isFirefox && isSafari) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting microphone to ${availableAudioDevices[0].deviceId} in firefox/safari`);
+                    client.audio.microphoneDevices.set(availableAudioDevices[0].deviceId);
+                  } else if (client) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting microphone to default`);
+                    client.audio.microphoneDevices.set('default');
+                  }
+                }, 200);
               }
-              if (device.kind === 'audiooutput' && (lastActiveSpeakerDevice !== '' && lastActiveSpeakerDevice !== 'default') && clientObject) {
-                if (!client._currentSession) {
-                  const initialRemoteView = document.getElementById(REMOTE_VIEW_ID);
-                  initialRemoteView?.remove();
-                  setupRemoteView();
-                  Plivo.log.debug("Remote view id removed");
+
+              if (device.kind === 'audiooutput') {
+                if ((lastActiveSpeakerDevice !== '' && lastActiveSpeakerDevice !== 'default') && clientObject) {
+                  if (!client._currentSession) {
+                    const initialRemoteView = document.getElementById(REMOTE_VIEW_ID);
+                    initialRemoteView?.remove();
+                    setupRemoteView();
+                    Plivo.log.debug("Remote view id removed");
+                  }
+                  clientObject.remoteView = document.getElementById(REMOTE_VIEW_ID);
                 }
-                clientObject.remoteView = document.getElementById(REMOTE_VIEW_ID);
-                clientObject.audio.speakerDevices.set('default');
+                Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio output device removed:- `, JSON.stringify(device));
+                setTimeout(() => {
+                  if (client && isFirefox) {
+                    availableAudioDevices.every((deviceObj) => {
+                      if (deviceObj.kind === 'audiooutput') {
+                        Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting output to default ${deviceObj.deviceId} in firefox`);
+                        if (client) client.audio.speakerDevices.set(deviceObj.deviceId);
+                        return false;
+                      }
+                      return true;
+                    });
+                  } else if (client && !isSafari && !isFirefox) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting output to default`);
+                    client.audio.speakerDevices.set('default');
+                  }
+                }, 200);
               }
             }
           }
@@ -670,27 +661,6 @@ export const checkAudioDevChange = function (): void {
         if (audioDevDicSetterCb) audioDevDicSetterCb(audioRef);
       }
       return ([devices, addedDevice, lastActiveSpeakerDevice, lastConnectedMicDevice]);
-    })
-    .then((deviceInfo) => {
-      const deviceList = deviceInfo[0];
-      const newAddedDevice = deviceInfo[1];
-      const newLastActiveSpeakerDevice = deviceInfo[2];
-      const newLastConnectedMicDevice = deviceInfo[3];
-
-      // Calling only for windows systems to select i/o device having same group id.
-      // This is called only when a new device is added
-      // In case of device removal, i/o device get set to default
-      if (isWindows) {
-        if (newAddedDevice && newAddedDevice !== "") {
-          if (!isRemoved) {
-            isRemoved = true;
-            Plivo.log.debug("Trying to set device for windows system");
-            setAudioDeviceForForWindows(
-              deviceList, newLastConnectedMicDevice, newLastActiveSpeakerDevice,
-            );
-          }
-        }
-      }
     })
     .then(() => {
       settingFromWindows = false;
@@ -729,24 +699,32 @@ export const inputDevices = ((): InputDevices => ({
         (Plivo.audioConstraints as any).optional.push({ sourceId: deviceId });
       }
       updateGroupIdDeviceIdMap(availableAudioDevices);
-
-      if (clientObject && clientObject.getPeerConnection().pc) {
-        if (deviceId === 'default') {
-          const groupId = availableAudioDevicesDeviceIdGroupIdMap[deviceId];
-          // eslint-disable-next-line no-param-reassign
-          deviceId = groupIdDeviceIdMap[groupId];
-          Plivo.log.debug(deviceId);
-          checkAudioDevChange.call(clientObject);
-          replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
-        } else {
-          checkAudioDevChange.call(clientObject);
-          replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
-        }
-      }
     } else if (typeof Plivo.audioConstraints === 'boolean') {
       Plivo.audioConstraints = { deviceId };
     } else {
       (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
+    }
+
+    if (clientObject && clientObject.getPeerConnection().pc) {
+      if (deviceId === 'default') {
+        const groupId = availableAudioDevicesDeviceIdGroupIdMap[deviceId];
+        // eslint-disable-next-line no-param-reassign
+        deviceId = groupIdDeviceIdMap[groupId];
+        Plivo.log.debug(deviceId);
+        replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
+      } else {
+        replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
+      }
+      // send event to call insights
+      getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
+        const clientObj = clientObject;
+        if (clientObj !== null) {
+          Plivo.log.info(`${LOGCAT.CALL} Audio device toggled to`, JSON.stringify(device));
+          const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
+          sendEvents.call(clientObject, obj, clientObj._currentSession);
+          clientObj.deviceToggledInCurrentSession = true;
+        }
+      });
     }
     return true;
   },
@@ -819,7 +797,18 @@ export const outputDevices = ((): OutputDevices => ({
     if (!settingFromWindows) {
       setByWindows = false;
     }
-    checkAudioDevChange.call(clientObject);
+    // send event to call insights
+    if (clientObject !== null && clientObject._currentSession) {
+      getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
+        const clientObj = clientObject;
+        if (clientObj !== null) {
+          Plivo.log.info(`${LOGCAT.CALL} Audio device toggled to`, JSON.stringify(device));
+          const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
+          sendEvents.call(clientObject, obj, clientObj._currentSession);
+          clientObj.deviceToggledInCurrentSession = true;
+        }
+      });
+    }
     return true;
   },
   get() {
@@ -933,12 +922,5 @@ export const detectDeviceChange = function (): void {
     navigator.mediaDevices.ondevicechange = () => {
       checkAudioDevChange.call(this);
     };
-  }
-  if (navigator.platform === 'Win32' || navigator.platform === 'Win16' || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
-    audioDevDictionary().then((deviceInfo: DeviceDictionary) => {
-      const { devices } = deviceInfo;
-      availableAudioDevices = devices;
-      updateWindowDeviceList(devices);
-    });
   }
 };

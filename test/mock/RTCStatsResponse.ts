@@ -14,12 +14,6 @@ class RTCStatsResponse {
   public values = () => this.data;
 }
 
-export const getChromeStatsResponse = () => {
-  const res = [];
-  chromePayload.forEach((stat) => {
-    res.push(new RTCStatsReport(stat) as never);
-  });
-  return new RTCStatsResponse(res);
-};
+export const getChromeStatsResponse = () => new RTCStatsResponse(chromePayload);
 
 export const getFirefoxSafariStatsResponse = () => new RTCStatsResponse(ffSafariPayload);

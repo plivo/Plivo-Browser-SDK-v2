@@ -43,6 +43,7 @@ declare module 'plivo-browser-sdk/client' {
             allowMultipleIncomingCalls?: boolean;
             closeProtection?: boolean;
             maxAverageBitrate?: number;
+            useDefaultAudioDevice?: boolean;
             registrationRefreshTimer?: number;
             dtmfOptions?: DtmfOptions;
     }
@@ -412,6 +413,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             deviceToggledInCurrentSession: boolean;
+            /**
+                * Determines whether any audio device got toggled during current session
+                * @private
+                */
+            useDefaultAudioDevice: boolean;
             /**
                 * Determines whether network got changed during current session
                 * @private
@@ -1007,10 +1013,6 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         */
     export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
     /**
-        * Check audio devices for electron app
-        */
-    export const checkElectronAudioDevices: () => void;
-    /**
         * Check if input or output audio device has changed.
         */
     export const checkAudioDevChange: () => void;
@@ -1112,15 +1114,10 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             gotNetworkType?: boolean;
     }
     /**
-        * Get RTP stats for chrome browser.
+        * Get RTP stats.
         * @param {RtpStatsStream} stream - holds local and remote stat details
         */
-    export const handleChromeStats: (stream: RtpStatsStream) => Promise<void>;
-    /**
-        * Get RTP stats for firefox and safari browsers.
-        * @param {RtpStatsStream} stream - holds local and remote stat details
-        */
-    export const handleFirefoxSafariStats: (stream: RtpStatsStream) => void;
+    export const handleWebRTCStats: (stream: RtpStatsStream) => void;
     /**
         * Initialize and create timers, media streams for RTP stats.
         */

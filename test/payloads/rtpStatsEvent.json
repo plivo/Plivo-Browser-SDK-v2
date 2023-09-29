@@ -1,3 +1,5 @@
+
+
 {
     "callUUID": "f0dd8baf-a299-4535-8679-b0bcc725fea2",
     "callstats_key": "fb85a852-e7be-11ea-b940-5b5a84a8b39b",
@@ -29,10 +31,10 @@
         "fractionLoss": 0,
         "jitter": 0,
         "packetsLost": 1,
+        "googJitterBufferMs": null,
         "packetsReceived": 630,
         "ssrc": 2203501410,
-        "jitterBufferDelay": 66,
-        "googJitterBufferMs": 45,
+        "jitterBufferDelay": 0,
         "packetsDiscarded": 0
     },
     "source": "BrowserSDK",
