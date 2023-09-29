@@ -21,6 +21,7 @@ describe('ValidateOptions', () => {
       clientRegion: null,
       preDetectOwa: false,
       disableRtpTimeOut: false,
+      useDefaultAudioDevice: false,
       allowMultipleIncomingCalls: false,
       closeProtection: false,
       maxAverageBitrate: 48000,
@@ -78,6 +79,18 @@ describe('ValidateOptions', () => {
     const inputOptions = { ...options };
     inputOptions.registrationRefreshTimer = 3600;
     expect(validateOptions(inputOptions).registrationRefreshTimer).toStrictEqual(3600);
+  });
+
+  it('should check if useDefaultAudioDevice is valid', () => {
+    const inputOptions = { ...options };
+    inputOptions.useDefaultAudioDevice = "test";
+    expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(false);
+    inputOptions.useDefaultAudioDevice = 12345;
+    expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(false);
+    inputOptions.useDefaultAudioDevice = 12345.12345;
+    expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(false);
+    inputOptions.useDefaultAudioDevice = true;
+    expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(true);
   });
 
   it('should validate invalid options', () => {

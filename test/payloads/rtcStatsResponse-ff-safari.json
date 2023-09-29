@@ -155,5 +155,17 @@
     "bytesSent": 20772,
     "packetsSent": 145,
     "localId": "inbound_rtp_audio_0"
+  },
+  {
+    "id": "SA11",
+    "timestamp": 1695726108166.68,
+    "type": "media-source",
+    "kind": "audio",
+    "trackIdentifier": "1f2fcc71-885a-40a6-9a0b-a41492e6845f",
+    "audioLevel": 0.018097476119266334,
+    "echoReturnLoss": -8,
+    "echoReturnLossEnhancement": 0,
+    "totalAudioEnergy": 0.03942356098729142,
+    "totalSamplesDuration": 12.519999999999778
   }
 ]

@@ -16,7 +16,6 @@ import {
 } from '../stats/nonRTPStats';
 import { emitMetrics } from '../stats/mediaMetrics';
 import {
-  checkElectronAudioDevices,
   getAudioDevicesInfo,
   startVolumeDataStreaming,
   stopVolumeDataStreaming,
@@ -401,7 +400,6 @@ export class CallSession {
       this.signallingInfo.call_initiation_time = options.call_initiation_time;
     }
     this.postDialDelayEndTime = null;
-    checkElectronAudioDevices.call(options.client);
   }
 
   private _clearCallStats = (): void => {
