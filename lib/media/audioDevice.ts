@@ -566,19 +566,25 @@ export const checkAudioDevChange = function (): void {
 
               if (device.kind === 'audioinput') {
                 Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio input device added:- `, JSON.stringify(device));
-                Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting mic to ${isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default'} `);
                 setTimeout(() => {
                   if (client && isFirefox && isSafari) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting mic to ${device.deviceId} in firefox/safari`);
                     client.audio.microphoneDevices.set(device.deviceId);
-                  } else if (client) client.audio.microphoneDevices.set((isWindows && !client.options.useDefaultAudioDevice) ? device.deviceId : 'default');
+                  } else if (client) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting mic to ${isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default'} `);
+                    client.audio.microphoneDevices.set((isWindows && !client.options.useDefaultAudioDevice) ? device.deviceId : 'default');
+                  } 
                 }, 200);
               } else if (client && device.kind === 'audiooutput') {
                 Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio output device added:- `, JSON.stringify(device));
-                Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting speaker to ${isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default'} `);
                 setTimeout(() => {
                   if (client && isFirefox) {
                     client.audio.speakerDevices.set(device.deviceId);
-                  } else if (client && !isSafari && !isFirefox) client.audio.speakerDevices.set(isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default');
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting speaker to ${device.deviceId} in firefox`);
+                  } else if (client && !isSafari && !isFirefox) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting speaker to ${isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default'} `);
+                    client.audio.speakerDevices.set(isWindows && !client.options.useDefaultAudioDevice ? device.deviceId : 'default');
+                  }
                 }, 200);
               }
             }
@@ -605,9 +611,12 @@ export const checkAudioDevChange = function (): void {
                 Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting microphone to default`);
                 setTimeout(() => {
                   if (client && isFirefox && isSafari) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting microphone to ${availableAudioDevices[0].deviceId} in firefox/safari`);
                     client.audio.microphoneDevices.set(availableAudioDevices[0].deviceId);
+                  } else if (client) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting microphone to default`);
+                    client.audio.microphoneDevices.set('default');
                   }
-                  if (client) client.audio.microphoneDevices.set('default');
                 }, 200);
               }
 
@@ -622,17 +631,20 @@ export const checkAudioDevChange = function (): void {
                   clientObject.remoteView = document.getElementById(REMOTE_VIEW_ID);
                 }
                 Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio output device removed:- `, JSON.stringify(device));
-                Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting output to default`);
                 setTimeout(() => {
                   if (client && isFirefox) {
-                    availableAudioDevices.every((allDevices) => {
-                      if (allDevices.kind === 'audiooutput') {
-                        if (client) client.audio.speakerDevices.set(allDevices.deviceId);
+                    availableAudioDevices.every((deviceObj) => {
+                      if (deviceObj.kind === 'audiooutput') {
+                        Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting output to default ${deviceObj.deviceId} in firefox`);
+                        if (client) client.audio.speakerDevices.set(deviceObj.deviceId);
                         return false;
                       }
                       return true;
                     });
-                  } else if (client && !isSafari && !isFirefox) client.audio.speakerDevices.set('default');
+                  } else if (client && !isSafari && !isFirefox) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting output to default`);
+                    client.audio.speakerDevices.set('default');
+                  }
                 }, 200);
               }
             }
