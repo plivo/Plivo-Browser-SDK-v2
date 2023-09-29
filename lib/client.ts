@@ -11,7 +11,7 @@ import * as documentUtil from './media/document';
 import validateOptions from './utils/options';
 import * as nonRTPStats from './stats/nonRTPStats';
 import * as device from './utils/device';
-import * as oneWayAudio from './utils/oneWayAudio';
+// import * as oneWayAudio from './utils/oneWayAudio';
 import Account from './managers/account';
 import * as IncomingCall from './managers/incomingCall';
 import * as OutgoingCall from './managers/outgoingCall';
@@ -67,6 +67,7 @@ export interface ConfiguationOptions {
   allowMultipleIncomingCalls?: boolean;
   closeProtection?: boolean;
   maxAverageBitrate?: number;
+  useDefaultAudioDevice?: boolean
   registrationRefreshTimer?: number;
   dtmfOptions?: DtmfOptions;
 }
@@ -498,6 +499,12 @@ export class Client extends EventEmitter {
   deviceToggledInCurrentSession: boolean;
 
   /**
+   * Determines whether any audio device got toggled during current session
+   * @private
+   */
+  useDefaultAudioDevice: boolean;
+
+  /**
    * Determines whether network got changed during current session
    * @private
    */
@@ -771,6 +778,7 @@ export class Client extends EventEmitter {
     this.shouldMuteCall = false;
     this.isOutgoingGrant = false;
     this.isIncomingGrant = false;
+    this.useDefaultAudioDevice = false;
     this.audio = {
       availableDevices: audioUtil.availableDevices,
       ringtoneDevices: audioUtil.ringtoneDevices,
@@ -1071,10 +1079,10 @@ export class Client extends EventEmitter {
       return false;
     }
 
-    const onCallFailed = (reason: string) => {
-      Plivo.log.error(`${C.LOGCAT.CALL} | On call failed`, reason);
-      this.emit('onCallFailed', reason);
-    };
+    // const onCallFailed = (reason: string) => {
+    //   Plivo.log.error(`${C.LOGCAT.CALL} | On call failed`, reason);
+    //   this.emit('onCallFailed', reason);
+    // };
     const readyForCall = () => {
       if (this.isAccessToken) extraHeaders['X-Plivo-Jwt'] = `${this.accessToken}`;
 
@@ -1082,25 +1090,26 @@ export class Client extends EventEmitter {
       return OutgoingCall.makeCall(this, extraHeaders, phoneNumber);
     };
     // Handle One Way Audio issues in chrome. check for every 1 hr
-    if (
-      this.options.preDetectOwa
-      && this.browserDetails.browser === 'chrome'
-      && (new Date().getTime() - (this.owaLastDetect.time as any) > this.owaDetectTime
-        || this.owaLastDetect.isOneWay)
-    ) {
-      oneWayAudio.detectOWA((res, err) => {
-        oneWayAudio.owaCallback.call(
-          this,
-          res,
-          err,
-          onCallFailed,
-          readyForCall,
-        );
-      });
-    } else {
-      // Browsers other than chrome go to call ready mode
-      readyForCall();
-    }
+    // if (
+    //   this.options.preDetectOwa
+    //   && this.browserDetails.browser === 'chrome'
+    //   && (new Date().getTime() - (this.owaLastDetect.time as any) > this.owaDetectTime
+    //     || this.owaLastDetect.isOneWay)
+    // ) {
+
+    //   oneWayAudio.detectOWA((res, err) => {
+    //     oneWayAudio.owaCallback.call(
+    //       this,
+    //       res,
+    //       err,
+    //       onCallFailed,
+    //       readyForCall,
+    //     );
+    //   });
+    // } else {
+    // Browsers other than chrome go to call ready mode
+    readyForCall();
+    // }
     return true;
   };
 
@@ -1112,40 +1121,40 @@ export class Client extends EventEmitter {
     if (incomingCall && isValid) {
       Plivo.log.debug(`answer - ${incomingCall.callUUID}`);
       incomingCall.addConnectionStage(`answer()@${new Date().getTime()}`);
-      const mediaError = (reason: string) => {
-        Plivo.log.debug(`${C.LOGCAT.CALL} | rejecting call, Reason : ${reason}`);
-        this.reject(incomingCall.callUUID as string);
-        return true;
-      };
-      const readyForCall = () => {
-        IncomingCall.answerIncomingCall(
-          incomingCall,
-          actionOnOtherIncomingCalls,
-        );
-      };
+      // const mediaError = (reason: string) => {
+      //   Plivo.log.debug(`${C.LOGCAT.CALL} | rejecting call, Reason : ${reason}`);
+      //   this.reject(incomingCall.callUUID as string);
+      //   return true;
+      // };
+      // const readyForCall = () => {
+      //   IncomingCall.answerIncomingCall(
+      //     incomingCall,
+      //     actionOnOtherIncomingCalls,
+      //   );
+      // };
       // Handle One Way Audio issues in chrome. check for every 1 hr
-      if (
-        this.options.preDetectOwa
-        && this.browserDetails.browser === 'chrome'
-        && (new Date().getTime() - (this.owaLastDetect.time as any) > this.owaDetectTime
-          || this.owaLastDetect.isOneWay)
-      ) {
-        oneWayAudio.detectOWA((res, err) => {
-          oneWayAudio.owaCallback.call(
-            this,
-            res,
-            err,
-            mediaError,
-            readyForCall,
-          );
-        });
-      } else {
-        // Browsers other than chrome go to call ready mode
-        IncomingCall.answerIncomingCall(
-          incomingCall,
-          actionOnOtherIncomingCalls,
-        );
-      }
+      // if (
+      //   this.options.preDetectOwa
+      //   && this.browserDetails.browser === 'chrome'
+      //   && (new Date().getTime() - (this.owaLastDetect.time as any) > this.owaDetectTime
+      //     || this.owaLastDetect.isOneWay)
+      // ) {
+      //   oneWayAudio.detectOWA((res, err) => {
+      //     oneWayAudio.owaCallback.call(
+      //       this,
+      //       res,
+      //       err,
+      //       mediaError,
+      //       readyForCall,
+      //     );
+      //   });
+      // } else {
+      // Browsers other than chrome go to call ready mode
+      IncomingCall.answerIncomingCall(
+        incomingCall,
+        actionOnOtherIncomingCalls,
+      );
+      // }
     } else {
       Plivo.log.error(`${C.LOGCAT.LOGIN} | Incoming call answer() failed : no incoming call`);
       return false;

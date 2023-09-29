@@ -1,174 +1,179 @@
 [
-    {
-      "id": "googTrack_2351b996-e0dc-4c1d-b809-8f3e9b242074",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "googTrack",
-      "stats": {
-        "googTrackId": "2351b996-e0dc-4c1d-b809-8f3e9b242074"
-      }
-    },
-    {
-      "id": "googLibjingleSession_5541802850994804762",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "googLibjingleSession",
-      "stats": {
-        "googInitiator": "true"
-      }
-    },
-    {
-      "id": "googCertificate_2A:EE:99:C5:6C:B6:51:67:07:19:04:F…5:B9:81:19:E5:16:B1:1D:EC:CD:7C:FE:28:92:7B:DC:AE",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "googCertificate",
-      "stats": {
-        "googFingerprint": "2A:EE:99:C5:6C:B6:51:67:07:19:04:F…5:B9:81:19:E5:16:B1:1D:EC:CD:7C:FE:28:92:7B:DC:AE",
-        "googFingerprintAlgorithm": "sha-256",
-        "googDerBase64": "MIIBFTCBvaADAgECAgkA9zWzvUExCOIwCgYIKoZIzj0EAwIwETEPMA0GA1UEAwwGV2ViUlRDMB4XDTIwMDgzMTE0NTcxNFoXDTIwMTAwMTE0NTcxNFowETEPMA0GA1UEAwwGV2ViUlRDMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEELXZO4dg93YGMKibC6KBVtEsvQn3QhoOxtg9Xjc/VoODfQqmxBWCZMHosOEx4tkUo6HhCWa23yV0UarlcrCAwzAKBggqhkjOPQQDAgNHADBEAiAfzorY4h0Z3EmvGMHLo20Fdkyh6iDY4F2p3fs7lJTwhAIgMiLAzRFJFA48zQG5+mPBKSn0p2XOW4tEq+yujeqExxE="
-      }
-    },
-    {
-      "id": "Channel-0-1",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "googComponent",
-      "stats": {
-        "googComponent": "1",
-        "remoteCertificateId": "googCertificate_F8:FF:0E:BC:1B:5B:4D:A2:9C:6C:BD:14:1E:09:24:FD:EC:C7:84:ED",
-        "selectedCandidatePairId": "Conn-0-1-0",
-        "dtlsCipher": "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
-        "localCertificateId": "googCertificate_2A:EE:99:C5:6C:B6:51:67:07:19:04:F5:FB:F0:BB:15:B9:81:19:E5:16:B1:1D:EC:CD:7C:FE:28:92:7B:DC:AE",
-        "srtpCipher": "AES_CM_128_HMAC_SHA1_80"
-      }
-    },
-    {
-      "id": "ssrc_3487669162_send",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "ssrc",
-      "stats": {
-        "audioInputLevel": "16",
-        "packetsLost": "1",
-        "googRtt": "26",
-        "totalSamplesDuration": "18.83",
-        "googEchoCancellationReturnLossEnhancement": "0",
-        "googTrackId": "2351b996-e0dc-4c1d-b809-8f3e9b242074",
-        "totalAudioEnergy": "0.00827366",
-        "transportId": "Channel-audio-1",
-        "mediaType": "audio",
-        "googEchoCancellationReturnLoss": "-8",
-        "googCodecName": "opus",
-        "ssrc": "3487669162",
-        "googJitterReceived": "0",
-        "googTypingNoiseState": "false",
-        "packetsSent": "635",
-        "bytesSent": "50087"
-      }
-    },
-    {
-      "id": "googTrack_6a9d2efb-fd1e-486a-bda1-2cc03e2a451b",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "googTrack",
-      "stats": {
-        "googTrackId": "6a9d2efb-fd1e-486a-bda1-2cc03e2a451b"
-      }
-    },
-    {
-      "id": "googCertificate_F8:FF:0E:BC:1B:5B:4D:A2:9C:6C:BD:14:1E:09:24:FD:EC:C7:84:ED",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "googCertificate",
-      "stats": {
-        "googFingerprint": "F8:FF:0E:BC:1B:5B:4D:A2:9C:6C:BD:14:1E:09:24:FD:EC:C7:84:ED",
-        "googFingerprintAlgorithm": "sha-1",
-        "googDerBase64": "MIIEujCCAqICAQAwDQYJKoZIhvcNAQEFBQAwIjELMAkGA1UEBhMCVVMxEzARBgNVBAMMCkZyZWVTV0lUQ0gwIBcNMjAwODI1MDMwNzA2WhgPMjEyMDA4MDgwMzA3MDZaMCIxCzAJBgNVBAYTAlVTMRMwEQYDVQQDDApGcmVlU1dJVENIMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAp9x3RNePyzenSjGcXYeHsv81173iyH4SJCulY1zcgponOFfxdKVVbJHYVcbwnw8DuZ1q1WcqI3X35q27w4TMHe90qlEMl5TUcOp0oz3M1wHy1lezLtklHc4IBAk9Iy3ynEai2DpZhC7wMP3b1JlufLwmO5TGH0GOEit8lqJV2C0iUqBcZQuVDV/u4dgSHymArV9/KtzahI1+NIJfKRULGM9Yh0N0LH/u3piTUvCkF+Zt4suotEE2PLQ2ZeW8g9N2I+Expx1OrarGLlMIEkRTrf+WA77SefdiBjqHI9P7EyRgAxjWOD0Z7blnnjb6cDgKENVX+EiuFfAdAM27iPPRwttTh7WZZyjaC0fLSkQvf+orVjCpCogdQKiYxwWuzPUdjH9xvw8M2okiJWylJi5DQTtITIX3TH4Jv+ubgUH73xq4TLGmNSthWyjCnm0dBf8cHjTvhp37D9gSwYR+v5qYlPmH7RojJeAnsGkZDWudz0rVw6IDWJWwa2D94KxJ5FxLcfOztRT5Y7isRCMWO+RwipeuDLtxppcEIwOeILK0uyjQN21r16iLtUHzOUWa0kXR+0mD3S7nKKG+GQy1Xdq+xjTSxEOoA3ltN60jfncTRzXNbgvE11jA43BwntnO/GekIUfLFh7AS+SmKb1rmadlU3H49Osnyam9x88b1PPcGvsCAwEAATANBgkqhkiG9w0BAQUFAAOCAgEAD3hZphI4ZpQS/nXQ/HYLdwh6dNyNf6YzqJOO3hiNvg9cMr1J1/4+zfTQNBu6H6y2jyyKC9wwAATOVayUzCaflqVXVFqPm0XrtXAXXhY1vMu5caUPHhqJWO9mWHFabSoy9EmrDb+YpxcKKy6PPQZbpBjqpbS3pCLJYEup81kJRkJFDTvIjAIpGWcvJ82lxgZSqxc1G2A8AWO3IraD22vghrDflJ2Oe85gJGlb9TowfD8zHgvr1tfVkcaWqn7b6cxHYqNqY4+TifAtvA4uZCwQahFYHZRt6HzBpOYpvjcasYNGpND6uc/cKemxFDNc1KI+LterwSCVNRk9lcfnMNSRK1eLwXsXjwLjN817eYZ0xP6giK/wNOetmdYJ1NtUBM6WrdhkFpWimKUiYCG/sYZesl2d0OUWM642pjtLDWVbhV2jaPJfEtEtCpNkK0ZjlJdA0grm+GJPK85D6wbp6/n3rVteT78SP/SnmJfitk9AqJQTztJItcywgJH+2+1Fw1R9mLaukQmqsDwhbVT1ya0gjRRx5BE6M8sIgNI2pSGlwxDTIpIswyE1557EfrLGjawOcdoWF4IgHwZXInJMvCR2+uhH547Y0JuNtElgEFuQdec0Cv+Qxlar6bdXKDMgICw7zWuVuJT4a3hkyKo/SeO0E26kuTq9G24mMaoE+DB/k7c="
-      }
-    },
-    {
-      "id": "Conn-0-1-0",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "googCandidatePair",
-      "stats": {
-        "responsesSent": "14",
-        "requestsReceived": "14",
-        "googRemoteCandidateType": "local",
-        "googReadable": "true",
-        "googLocalAddress": "103.110.147.239:33336",
-        "consentRequestsSent": "1",
-        "googTransportType": "udp",
-        "googChannelId": "Channel-audio-1",
-        "googLocalCandidateType": "prflx",
-        "googWritable": "true",
-        "requestsSent": "10",
-        "googRemoteAddress": "15.207.90.1:28376",
-        "googRtt": "30",
-        "googActiveConnection": "true",
-        "packetsDiscardedOnSend": "0",
-        "bytesReceived": "77660",
-        "responsesReceived": "10",
-        "remoteCandidateId": "Cand-tpQUKRls",
-        "localCandidateId": "Cand-ZYgMRFYw",
-        "bytesSent": "58833",
-        "packetsSent": "642"
-      }
-    },
-    {
-      "id": "Cand-ZYgMRFYw",
-      "timestamp": "2020-09-01T12:14:35.551Z",
-      "type": "localcandidate",
-      "stats": {
-        "portNumber": "33336",
-        "networkType": "wlan",
-        "ipAddress": "",
-        "stunKeepaliveResponsesReceived": "4",
-        "stunKeepaliveRttTotal": "278",
-        "transport": "udp",
-        "candidateType": "peerreflexive",
-        "stunKeepaliveRttSquaredTotal": "27786",
-        "priority": "1853824767"
-      }
-    },
-    {
-      "id": "Cand-tpQUKRls",
-      "timestamp": "2020-09-01T12:14:35.551Z",
-      "type": "remotecandidate",
-      "stats": {
-        "portNumber": "28376",
-        "ipAddress": "",
-        "transport": "udp",
-        "candidateType": "host",
-        "priority": "659136"
-      }
-    },
-    {
-      "id": "ssrc_2203501410_recv",
-      "timestamp": "2020-09-01T12:14:35.549Z",
-      "type": "ssrc",
-      "stats": {
-        "googDecodingCTN": "1564",
-        "packetsLost": "1",
-        "googSecondaryDecodedRate": "0",
-        "googDecodingPLC": "7",
-        "packetsReceived": "630",
-        "googExpandRate": "0",
-        "googJitterReceived": "0",
-        "googDecodingCNG": "0",
-        "ssrc": "2203501410",
-        "googPreferredJitterBufferMs": "20",
-        "googSpeechExpandRate": "0",
-        "totalSamplesDuration": "15.64",
-        "totalAudioEnergy": "0.101048",
-        "transportId": "Channel-0-1",
-        "mediaType": "audio",
-        "googDecodingPLCCNG": "298",
-        "googCodecName": "opus",
-        "googSecondaryDiscardedRate": "0",
-        "googDecodingNormal": "1259",
-        "googTrackId": "6a9d2efb-fd1e-486a-bda1-2cc03e2a451b",
-        "audioOutputLevel": "40",
-        "googAccelerateRate": "0",
-        "bytesReceived": "68709",
-        "googCurrentDelayMs": "66",
-        "googDecodingCTSG": "0",
-        "googCaptureStartNtpTimeMs": "3807961040598",
-        "googPreemptiveExpandRate": "0",
-        "googJitterBufferMs": "45",
-        "googDecodingMuted": "297"
-      }
-    }
+  {
+    "id": "cadbd11d",
+    "timestamp": 1599029402030,
+    "type": "candidate-pair",
+    "bytesReceived": 0,
+    "bytesSent": 0,
+    "lastPacketReceivedTimestamp": 0,
+    "lastPacketSentTimestamp": 0,
+    "localCandidateId": "b7c14036",
+    "nominated": false,
+    "priority": 2830971807990271,
+    "readable": true,
+    "remoteCandidateId": "327b6a32",
+    "selected": false,
+    "state": "inprogress",
+    "transportId": "transport_0",
+    "writable": true
+  },
+  {
+    "id": "357b12e7",
+    "timestamp": 1599029402030,
+    "type": "candidate-pair",
+    "bytesReceived": 23314,
+    "bytesSent": 25283,
+    "lastPacketReceivedTimestamp": 1599029402020,
+    "lastPacketSentTimestamp": 1599029402011,
+    "localCandidateId": "3f2ba5df",
+    "nominated": false,
+    "priority": 2830971271119359,
+    "readable": true,
+    "remoteCandidateId": "327b6a32",
+    "selected": false,
+    "state": "succeeded",
+    "transportId": "transport_0",
+    "writable": true
+  },
+  {
+    "id": "b7c14036",
+    "timestamp": 1599029402030,
+    "type": "local-candidate",
+    "networkType": "wifi",
+    "address": "",
+    "candidateType": "host",
+    "port": 0,
+    "priority": 2122187007,
+    "protocol": "udp"
+  },
+  {
+    "id": "136209f2",
+    "timestamp": 1599029402030,
+    "type": "local-candidate",
+    "networkType": "wifi",
+    "address": "",
+    "candidateType": "srflx",
+    "port": 0,
+    "priority": 1685987327,
+    "protocol": "udp"
+  },
+  {
+    "id": "185b7661",
+    "timestamp": 1599029402030,
+    "type": "local-candidate",
+    "networkType": "wifi",
+    "address": "",
+    "candidateType": "host",
+    "port": 0,
+    "priority": 2122252543,
+    "protocol": "udp"
+  },
+  {
+    "id": "ad534583",
+    "timestamp": 1599029402030,
+    "type": "local-candidate",
+    "networkType": "wifi",
+    "address": "",
+    "candidateType": "host",
+    "port": 0,
+    "priority": 2105458943,
+    "protocol": "tcp"
+  },
+  {
+    "id": "dbab4569",
+    "timestamp": 1599029402030,
+    "type": "local-candidate",
+    "networkType": "wifi",
+    "address": "",
+    "candidateType": "host",
+    "port": 0,
+    "priority": 2105524479,
+    "protocol": "tcp"
+  },
+  {
+    "id": "3f2ba5df",
+    "timestamp": 1599029402030,
+    "type": "local-candidate",
+    "networkType": "wifi",
+    "address": "",
+    "candidateType": "prflx",
+    "port": 0,
+    "priority": 1853751551,
+    "protocol": "udp"
+  },
+  {
+    "id": "327b6a32",
+    "timestamp": 1599029402030,
+    "type": "remote-candidate",
+    "address": "",
+    "candidateType": "host",
+    "port": 0,
+    "priority": 659136,
+    "protocol": "udp"
+  },
+  {
+    "id": "d1514a8b",
+    "timestamp": 1599029402030,
+    "type": "outbound-rtp",
+    "kind": "audio",
+    "mediaType": "audio",
+    "ssrc": 3487669162,
+    "bytesSent": 50087,
+    "packetsSent": 635,
+    "nackCount": 0,
+    "remoteId": "a5fb2ff7"
+  },
+  {
+    "id": "a5fb2ff7",
+    "timestamp": 1599029401833,
+    "type": "remote-inbound-rtp",
+    "kind": "audio",
+    "mediaType": "audio",
+    "ssrc": 3487669162,
+    "jitter": 0,
+    "packetsLost": 1,
+    "packetsReceived": 51,
+    "bytesReceived": 5176,
+    "localId": "d1514a8b",
+    "roundTripTime": 0.026
+  },
+  {
+    "id": "inbound_rtp_audio_0",
+    "timestamp": 1599029400253,
+    "type": "inbound-rtp",
+    "kind": "audio",
+    "mediaType": "audio",
+    "ssrc": 2203501410,
+    "jitter": 0,
+    "packetsLost": 1,
+    "packetsReceived": 630,
+    "bytesReceived": 68709,
+    "packetsDiscarded": 0,
+    "jitterBufferDelay": 66,
+    "nackCount": 0,
+    "remoteId": "inbound_rtcp_audio_0"
+  },
+  {
+    "id": "inbound_rtcp_audio_0",
+    "timestamp": 1599029400253,
+    "type": "remote-outbound-rtp",
+    "kind": "audio",
+    "mediaType": "audio",
+    "ssrc": 2203501410,
+    "bytesSent": 20772,
+    "packetsSent": 145,
+    "localId": "inbound_rtp_audio_0"
+  },
+  {
+    "id": "SA11",
+    "timestamp": 1695726108166.68,
+    "type": "media-source",
+    "kind": "audio",
+    "trackIdentifier": "1f2fcc71-885a-40a6-9a0b-a41492e6845f",
+    "audioLevel": 0.018097476119266334,
+    "echoReturnLoss": -8,
+    "echoReturnLossEnhancement": 0,
+    "totalAudioEnergy": 0.03942356098729142,
+    "totalSamplesDuration": 12.519999999999778
+  }
 ]

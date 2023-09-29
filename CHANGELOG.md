@@ -5,6 +5,18 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.9 (released@ 29-09-2023)
+**Bug Fixes**
+
+* Fixed: Removed support for the getStats API, as it is no longer available in Chrome versions 117 and beyond.
+* Fixed: Removed the predetectOWA functionality.
+* Fixed: Issue on audio input/output device mismatch on windows platform.
+
+**Features**
+
+* Added: A new `useDefaultAudioDevice` flag, which allows the SDK to use either the system's default audio device or the recently added device for both input and output on Windows platform. 
+
+
 ## v2.2.8 (released@ 11-09-2023)
 **Bug Fixes**
 

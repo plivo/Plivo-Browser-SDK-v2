@@ -289,7 +289,7 @@ describe('AudioDevice', () => {
       activeInputAudioDevice: 'Default - MacBook Pro Microphone (Built-in)',
       activeOutputAudioDevice: 'Default - MacBook Pro Speakers (Built-in)',
       audioInputGroupIds: 'default ,',
-      audioInputIdSet: '',
+      audioInputIdSet: 'default',
       audioInputLables: 'Default - MacBook Pro Microphone (Built-in) ,',
       audioOutputGroupIds: 'default ,',
       audioOutputIdSet: 'default',

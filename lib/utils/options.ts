@@ -29,6 +29,7 @@ const _options: ConfiguationOptions = {
   disableRtpTimeOut: false,
   allowMultipleIncomingCalls: false,
   closeProtection: false,
+  useDefaultAudioDevice: false,
   maxAverageBitrate: C.MAX_AVERAGE_BITRATE,
   dtmfOptions: C.DEFAULT_DTMFOPTIONS,
   registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
@@ -219,6 +220,12 @@ const validateOptions = function (
           }
           break;
 
+        case 'useDefaultAudioDevice':
+          if (isBoolean(key, options[key])) {
+            _options.useDefaultAudioDevice = options[key];
+          }
+          break;
+
         case 'appSecret':
           _options.appSecret = options[key];
           break;
@@ -258,7 +265,7 @@ const validateOptions = function (
 
         case 'preDetectOwa':
           if (isBoolean(key, options[key])) {
-            _options.preDetectOwa = options[key];
+            _options.preDetectOwa = false;
           }
           break;
 
