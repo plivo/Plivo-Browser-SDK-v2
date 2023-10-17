@@ -212,6 +212,9 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
 const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession): void => {
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause}`);
   if (evt.cause === JSSIP_C.causes.CANCELED) {
+    const reason = incomingCall.extractReason(String(evt.message), /Reason: .*text="([^"]+)"/);
+    Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${reason}`);
+    cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo(reason));
     incomingCall.setState(incomingCall.STATE.CANCELED);
     cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo());
   } else {
@@ -499,7 +502,8 @@ export const answerIncomingCall = (
   } catch (err) {
     Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
     curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
-    cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo());
+    Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${err.message}`);
+    cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo(err.message));
   }
   if (cs.ringToneView && !cs.ringToneView.paused) {
     stopAudio(RINGTONE_ELEMENT_ID);

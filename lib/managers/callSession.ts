@@ -57,6 +57,7 @@ export interface CallInfo {
   state: string;
   stirShakenState: string;
   extraHeaders: ExtraHeaders;
+  remoteCancelReason: string;
 }
 
 export interface SignallingInfo {
@@ -281,7 +282,7 @@ export class CallSession {
   /**
    * Get basic call information.
    */
-  public getCallInfo = (): CallInfo => ({
+  public getCallInfo = (reason: string = "none") : CallInfo => ({
     callUUID: this.callUUID as string,
     direction: this.direction,
     src: this.src,
@@ -289,6 +290,7 @@ export class CallSession {
     state: this.state,
     extraHeaders: this.extraHeaders,
     stirShakenState: this.stirShakenState,
+    remoteCancelReason: reason,
   });
 
   /**
@@ -409,6 +411,18 @@ export class CallSession {
     this.stats.stop();
     this.stats = null;
   };
+
+    // eslint-disable-next-line class-methods-use-this
+    public extractReason(reasontag: string | undefined, reasonRegex: RegExp): string {
+      if (reasontag == null) {
+        return "Canceled";
+      }
+      const match = reasontag.match(reasonRegex);
+      if (match && match.length >= 2) {
+        return match[1];
+      }
+      return "Canceled";
+    }
 
   private _onAccepted = (clientObject: Client): void => {
     addCloseProtectionListeners.call(clientObject);
@@ -551,10 +565,15 @@ export class CallSession {
       );
     }
     if (clientObject._currentSession) {
+      let reason = this.extractReason(evt.message?.getHeader("Reason"), /text="([^"]+)"/);
+      if (reason === "SUCCESS" || reason === "Canceled") {
+        reason = evt.cause;
+      }
+      Plivo.log.info(`${C.LOGCAT.CALL} | onCallTerminated - ${reason}`);
       clientObject.emit(
         'onCallTerminated',
-        { originator: evt.originator, reason: evt.cause },
-        clientObject._currentSession.getCallInfo(),
+        { originator: evt.originator, reason },
+        clientObject._currentSession.getCallInfo(reason),
       );
       hangupClearance.call(clientObject, clientObject._currentSession);
       stopVolumeDataStreaming();
