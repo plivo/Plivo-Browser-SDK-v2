@@ -641,6 +641,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             state: string;
             stirShakenState: string;
             extraHeaders: ExtraHeaders;
+            remoteCancelReason: string;
     }
     export interface SignallingInfo {
             call_initiation_time?: number;
@@ -809,7 +810,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             /**
                 * Get basic call information.
                 */
-            getCallInfo: () => CallInfo;
+            getCallInfo: (reason?: string) => CallInfo;
             /**
                 * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
                 * @param {Client} clientObject - client reference
@@ -869,6 +870,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @private
                 */
             constructor(options: CallSessionOptions);
+            extractReason(reasontag: string | undefined, reasonRegex: RegExp): string;
     }
 }
 
