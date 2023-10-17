@@ -212,11 +212,10 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
 const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession): void => {
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause}`);
   if (evt.cause === JSSIP_C.causes.CANCELED) {
+    incomingCall.setState(incomingCall.STATE.CANCELED);
     const reason = incomingCall.extractReason(String(evt.message), /Reason: .*text="([^"]+)"/);
     Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${reason}`);
     cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo(reason));
-    incomingCall.setState(incomingCall.STATE.CANCELED);
-    cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo());
   } else {
     if (evt.cause === 'Rejected') {
       incomingCall.setState(incomingCall.STATE.REJECTED);
