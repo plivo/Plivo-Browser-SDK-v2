@@ -5,6 +5,13 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.9-beta.0 (released@ 17-10-2023)
+**Features**
+
+* Added a new property `remoteCancelReason` under the `CallInfo` object, which indicates the reason for call termination for both incoming and outgoing calls.
+
+**Note:** `remoteCancelReason` will be none during call state: ringing, answered.
+
 ## v2.2.9 (released@ 29-09-2023)
 **Bug Fixes**
 

@@ -412,17 +412,17 @@ export class CallSession {
     this.stats = null;
   };
 
-    // eslint-disable-next-line class-methods-use-this
-    public extractReason(reasontag: string | undefined, reasonRegex: RegExp): string {
-      if (reasontag == null) {
-        return "Canceled";
-      }
-      const match = reasontag.match(reasonRegex);
-      if (match && match.length >= 2) {
-        return match[1];
-      }
+  // eslint-disable-next-line class-methods-use-this
+  public extractReason(reasontag: string | undefined, reasonRegex: RegExp): string {
+    if (reasontag == null) {
       return "Canceled";
     }
+    const match = reasontag.match(reasonRegex);
+    if (match && match.length >= 2) {
+      return match[1];
+    }
+    return "Canceled";
+  }
 
   private _onAccepted = (clientObject: Client): void => {
     addCloseProtectionListeners.call(clientObject);
