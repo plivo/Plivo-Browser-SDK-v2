@@ -1,5 +1,6 @@
 import * as AudioDevice from '../../../lib/media/audioDevice';
 import { Client } from '../../../lib/client';
+import { NoiseSuppression } from '../../../lib/rnnoise/NoiseSuppression';
 
 describe('AudioDevice', () => {
   let inputDevice;
@@ -32,6 +33,7 @@ describe('AudioDevice', () => {
         microphoneDevices: AudioDevice.inputDevices,
         speakerDevices: AudioDevice.outputDevices,
       },
+      enableNoiseReduction: false,
       getPeerConnection: () => ({
         pc: {},
       }),
@@ -39,10 +41,12 @@ describe('AudioDevice', () => {
         session: {
           mute() {},
           unmute() {},
-          connection: { getSenders() { return [{ replaceTrack() {} }]; }, getRemoteStreams() { return []; }, getLocalStreams() { return []; } },
+          connection: { getSenders() { return [{ replaceTrack() {return new Promise((resolve, reject) => {})} }]; }, catch() {}, getRemoteStreams() { return []; }, getLocalStreams() { return []; } },
         },
       },
     };
+    let noiseSuppresion = new NoiseSuppression(context)
+    context.noiseSuppresion = noiseSuppresion;
     AudioDevice.setAudioContraints(context as unknown as Client);
     AudioDevice.audioDevDicSetter((d) => {
       context.audioDevDic = d;

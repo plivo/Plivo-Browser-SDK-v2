@@ -33,6 +33,7 @@ import getBrowserDetails from './utils/browserDetection';
 import detectFramework from './utils/frameworkDetection';
 import AccessTokenInterface from './utils/token';
 import { setErrorCollector } from './managers/util';
+import { NoiseSuppression } from './rnnoise/NoiseSuppression';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -69,6 +70,7 @@ export interface ConfiguationOptions {
   maxAverageBitrate?: number;
   useDefaultAudioDevice?: boolean
   registrationRefreshTimer?: number;
+  enableNoiseReduction?: boolean;
   dtmfOptions?: DtmfOptions;
 }
 
@@ -193,6 +195,18 @@ export class Client extends EventEmitter {
    * @private
    */
   callDirection: null | string;
+
+  /**
+   * Holds the instance of NoiseSuppression
+   * @private
+   */
+  noiseSuppresion: NoiseSuppression;
+
+  /**
+   * Specifies whether the noise suppression should be enabled or not
+   * @private
+   */
+  enableNoiseReduction: boolean | undefined;
 
   /**
    * Contains the identifier for previous incoming or outgoing call
@@ -636,6 +650,18 @@ export class Client extends EventEmitter {
   public setConnectTone = (val: boolean): boolean => this._setConnectTone(val);
 
   /**
+   * Starts the Noise Reduction.
+   * @param {Boolean} val - true if noise reduction is started, else false
+   */
+  public startNoiseReduction = (): Promise<boolean> => this._startNoiseReduction();
+
+  /**
+ * stops the Noise Reduction.
+ * @param {Boolean} val - true if noise reduction is stopped, else false
+ */
+  public stopNoiseReduction = (): Promise<boolean> => this._stopNoiseReduction();
+
+  /**
    * Configure the audio played when sending a DTMF.
    * @param {String} digit - Specify digit for which audio needs to be configured
    * @param {String} url - Media url for playing audio
@@ -736,6 +762,8 @@ export class Client extends EventEmitter {
       allowMultipleIncomingCalls: _options.allowMultipleIncomingCalls,
       closeProtection: _options.closeProtection,
       maxAverageBitrate: _options.maxAverageBitrate,
+      useDefaultAudioDevice: _options.useDefaultAudioDevice,
+      enableNoiseReduction: _options.enableNoiseReduction,
       dtmfOptions: _options.dtmfOptions,
     };
     Plivo.log.info(`${C.LOGCAT.INIT} | Plivo SDK initialized successfully with options:- `, JSON.stringify(data), `in ${Plivo.log.level()} mode`);
@@ -796,7 +824,7 @@ export class Client extends EventEmitter {
     this.deviceToggledInCurrentSession = false;
     this.networkChangeInCurrentSession = false;
     this.didFetchInitialNetworkInfo = false;
-
+    this.enableNoiseReduction = this.options.enableNoiseReduction;
     audioUtil.setAudioContraints(this);
     documentUtil.setup(this, this.options);
     audioUtil.detectDeviceChange.call(this);
@@ -1048,6 +1076,7 @@ export class Client extends EventEmitter {
       this._currentSession.session.terminate();
     }
     this.isLogoutCalled = true;
+    this.noiseSuppresion.clearNoiseSupression();
     if (this.phone && this.phone.isRegistered()) {
       this.phone.stop();
     }
@@ -1487,6 +1516,51 @@ export class Client extends EventEmitter {
     }
     return null;
   };
+
+  private _startNoiseReduction = (): Promise<boolean> => new Promise((resolve) => {
+    if (!this.enableNoiseReduction) {
+      Plivo.log.warn(`${C.LOGCAT.CALL_QUALITY} | Noise reduction cannot be started since "enableNoiseReduction" is set to false`);
+      resolve(false);
+    } else if (!this.noiseSuppresion) {
+      Plivo.log.warn(`${C.LOGCAT.CALL_QUALITY} | Noise reduction cannot be started since noise reduction is not instantiated`);
+
+      resolve(false);
+    } else if (this.browserDetails.browser === 'safari') {
+      Plivo.log.warn(`${C.LOGCAT.CALL_QUALITY} | Noise reduction feature is not supported in safari browser`);
+
+      resolve(false);
+    } else {
+      this.noiseSuppresion.startNoiseSuppresionManual().then(() => {
+        Plivo.log.info(`${C.LOGCAT.CALL_QUALITY} | Noise Reduction started`);
+        resolve(true);
+      }).catch((err) => {
+        Plivo.log.info(`${C.LOGCAT.CALL_QUALITY} | Noise Reduction start failed with error:- ${err.message}`);
+        resolve(false);
+      });
+    }
+  });
+
+  private _stopNoiseReduction = (): Promise<boolean> => new Promise((resolve) => {
+    if (!this.enableNoiseReduction) {
+      Plivo.log.warn(`${C.LOGCAT.CALL_QUALITY} | Noise reduction cannot be stopped since "enableNoiseReduction" is set to false`);
+      resolve(false);
+    } else if (!this.noiseSuppresion) {
+      Plivo.log.warn(`${C.LOGCAT.CALL_QUALITY} | Noise reduction cannot be stopped since noise reduction is not instantiated`);
+      resolve(false);
+    } else if (this.browserDetails.browser === 'safari') {
+      Plivo.log.warn(`${C.LOGCAT.CALL_QUALITY} | Noise reduction feature is not supported in safari browser`);
+
+      resolve(false);
+    } else {
+      this.noiseSuppresion.stopNoiseSuppressionManual().then(() => {
+        Plivo.log.info(`${C.LOGCAT.CALL_QUALITY} | Noise Reduction stopped`);
+        resolve(true);
+      }).catch((err) => {
+        Plivo.log.info(`${C.LOGCAT.CALL_QUALITY} | Noise Reduction stop failed with error:- ${err.message}`);
+        resolve(false);
+      });
+    }
+  });
 
   private _getLastCallUUID = (): string | null => {
     if (this._lastCallSession) {

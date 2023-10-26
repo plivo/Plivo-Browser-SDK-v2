@@ -32,6 +32,7 @@ const _options: ConfiguationOptions = {
   useDefaultAudioDevice: false,
   maxAverageBitrate: C.MAX_AVERAGE_BITRATE,
   dtmfOptions: C.DEFAULT_DTMFOPTIONS,
+  enableNoiseReduction: true,
   registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
 };
 
@@ -211,6 +212,12 @@ const validateOptions = function (
         case 'dscp':
           if (isBoolean(key, options[key])) {
             _options.dscp = options[key];
+          }
+          break;
+
+        case 'enableNoiseReduction':
+          if (isBoolean(key, options[key])) {
+            _options.enableNoiseReduction = options[key];
           }
           break;
 

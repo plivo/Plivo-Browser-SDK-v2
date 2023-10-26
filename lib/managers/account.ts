@@ -20,6 +20,7 @@ import {
   ConnectionState,
 } from '../utils/networkManager';
 import { StatsSocket } from '../stats/ws';
+import { NoiseSuppression } from '../rnnoise/NoiseSuppression';
 
 const Plivo = { log: Logger };
 let urlIndex: number = 0;
@@ -363,6 +364,8 @@ class Account {
     if (this.cs.isLoggedIn === false && this.cs.isLoginCalled === true) {
       this.cs.isLoggedIn = true;
       this.cs.isLoginCalled = false;
+      // initialize callstats.io
+      this.cs.noiseSuppresion = new NoiseSuppression(this.cs);
       this.cs.emit('onLogin');
       Plivo.log.info(`${C.LOGCAT.LOGIN} | User logged in successfully`);
       // in firefox and safari web socket re-establishes automatically after network change
@@ -386,8 +389,6 @@ class Account {
         }).catch(() => {
           this.cs.callstatskey = null;
         });
-
-      // initialize callstats.io
       initCallStatsIO.call(this.cs);
       Plivo.log.send(this.cs);
     }
