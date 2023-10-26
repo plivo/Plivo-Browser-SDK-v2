@@ -19,6 +19,7 @@ declare module 'plivo-browser-sdk/client' {
     import { CallSession } from 'plivo-browser-sdk/managers/callSession';
     import { StatsSocket } from 'plivo-browser-sdk/stats/ws';
     import { OutputDevices, InputDevices, RingToneDevices } from 'plivo-browser-sdk/media/audioDevice';
+    import { NoiseSuppression } from 'plivo-browser-sdk/rnnoise/NoiseSuppression';
     export interface PlivoObject {
             log: typeof Logger;
             sendEvents?: (obj: any, session: CallSession) => void;
@@ -45,6 +46,7 @@ declare module 'plivo-browser-sdk/client' {
             maxAverageBitrate?: number;
             useDefaultAudioDevice?: boolean;
             registrationRefreshTimer?: number;
+            enableNoiseReduction?: boolean;
             dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
@@ -153,6 +155,16 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             callDirection: null | string;
+            /**
+                * Holds the instance of NoiseSuppression
+                * @private
+                */
+            noiseSuppresion: NoiseSuppression;
+            /**
+                * Specifies whether the noise suppression should be enabled or not
+                * @private
+                */
+            enableNoiseReduction: boolean | undefined;
             /**
                 * Contains the identifier for previous incoming or outgoing call
                 * @private
@@ -520,6 +532,16 @@ declare module 'plivo-browser-sdk/client' {
                 * @param {Boolean} val - Enable/Disable default connect tone
                 */
             setConnectTone: (val: boolean) => boolean;
+            /**
+                * Starts the Noise Reduction.
+                * @param {Boolean} val - true if noise reduction is started, else false
+                */
+            startNoiseReduction: () => Promise<boolean>;
+            /**
+            * stops the Noise Reduction.
+            * @param {Boolean} val - true if noise reduction is stopped, else false
+            */
+            stopNoiseReduction: () => Promise<boolean>;
             /**
                 * Configure the audio played when sending a DTMF.
                 * @param {String} digit - Specify digit for which audio needs to be configured
@@ -983,6 +1005,11 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         */
     export const mute: () => void;
     /**
+        * Mute audio state.
+        * @param {Client} client - client reference
+        */
+    export const resetMuteOnHangup: () => void;
+    /**
         * Collect realtime Audio levels for local and remote streams.
         * @param {Client} client - client reference
         */
@@ -991,6 +1018,7 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Stopping the requesting frame. It would stop emitting the real time audio levels.
         */
     export const stopVolumeDataStreaming: () => void;
+    export const replaceStream: (client: Client, constraints: any) => Promise<void>;
     /**
         * Add audio device information whenever device is changed.
         * @param {Boolean} store - pass true to store information in Client object for reference
@@ -1047,6 +1075,25 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Detect if input or output audio device has changed.
         */
     export const detectDeviceChange: () => void;
+}
+
+declare module 'plivo-browser-sdk/rnnoise/NoiseSuppression' {
+    import { Client } from "plivo-browser-sdk/client";
+    export class NoiseSuppression {
+        noiseSupressionRunning: boolean;
+        started: boolean;
+        constructor(client: Client);
+        initNoiseSuppresionEffect: () => Promise<void>;
+        startNoiseSuppression: (mediaStream?: MediaStream | undefined) => Promise<MediaStream | null>;
+        stopNoiseSuppresion: () => void;
+        setLocalMediaStream: () => Promise<MediaStream | null>;
+        updateProcessingStream: (stream: MediaStream) => Promise<MediaStream | null>;
+        clearNoiseSupression: () => void;
+        muteStream: () => void;
+        unmuteStream: () => void;
+        startNoiseSuppresionManual: () => Promise<void>;
+        stopNoiseSuppressionManual: () => Promise<void>;
+    }
 }
 
 declare module 'plivo-browser-sdk/stats/rtpStats' {
@@ -1272,6 +1319,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             deviceOs: string;
             setupOptions: ConfiguationOptions;
             audioDeviceInfo?: DeviceAudioInfo;
+            noiseReduction: NoiseReduction;
     }
     export interface DeviceAudioInfo {
             noOfAudioInput: number;
@@ -1305,6 +1353,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
             jsFramework: string[];
+            noiseReduction: NoiseReduction;
     }
     export interface SummaryEvent {
             msg: string;
@@ -1326,6 +1375,11 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
             jsFramework: string[];
+            noiseReduction: NoiseReduction;
+    }
+    export interface NoiseReduction {
+            enabled: boolean;
+            noiseSuprressionStarted: boolean;
     }
     /**
         * Add call related information to call answered/summary stat.
