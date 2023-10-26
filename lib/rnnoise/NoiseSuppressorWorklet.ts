@@ -125,7 +125,6 @@ class NoiseSuppressorWorklet extends AudioWorkletProcessor {
       return true;
     }
 
-    console.log('after');
     if (
       this._circularBuffer
       && this._denoiseSampleSize

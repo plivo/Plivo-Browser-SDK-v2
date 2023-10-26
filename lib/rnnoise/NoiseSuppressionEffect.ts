@@ -16,14 +16,12 @@ const Plivo = {
 function initializeKRnnoise(): Promise<AudioWorkletNode | undefined> {
   return new Promise((resolve) => {
     audioContext.resume().then(() => {
-      // const distjs = `http://localhost:9000/processor.js`
       const distjs = `https://csdk-test.s3.ap-south-1.amazonaws.com/processor.js`;
 
       try {
         audioContext.audioWorklet.addModule(distjs).then(() => {
           resolve(new AudioWorkletNode(audioContext, 'NoiseSuppressorWorklet-ts'));
         });
-        // audioContext.audioWorklet.addModule(new URL("https://client-sdk-test.s3.ap-south-1.amazonaws.com/processor.js", import.meta.url));
       } catch (e) {
         Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Error while initializing noise suppression effect ${e}`);
         resolve(undefined);
@@ -63,10 +61,6 @@ export class NoiseSuppressionEffect {
   private outputMediaTrack: MediaStreamTrack | undefined;
 
   private init: any;
-
-  constructor() {
-    console.log(`NoiseSuppressionEffect 'RNNoise'}`);
-  }
 
   prepareAudioWorklet = function (): Promise<AudioWorkletNode | undefined> {
     return new Promise((resolve) => {
