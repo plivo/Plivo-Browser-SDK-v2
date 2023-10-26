@@ -420,92 +420,73 @@ const getCleanedHeaders = (extraHeaders: ExtraHeaders = {}): string[] => {
  * They should start with 'X-PH'
  * @returns Outgoing call answer options
  */
-const getOptions = (extraHeaders: ExtraHeaders): SessionAnswerOptions => {
-  const opts: SessionAnswerOptions = {};
-  opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
-  opts.pcConfig = {
-    iceServers: [{ urls: STUN_SERVERS }],
-  };
-  opts.mediaConstraints = {
-    audio: cs.options.audioConstraints || true,
-    video: false,
-  };
-  // opts.rtcConstraints = null;
-  opts.extraHeaders = getCleanedHeaders(extraHeaders);
-  opts.mediaStream = (window as any).localStream || null;
-  // eslint-disable-next-line @typescript-eslint/dot-notation
-  opts['eventHandlers'] = {
-    sending: onSending,
-    sdp: onSDP,
-    progress: OnProgress,
-    accepted: onAccepted,
-    confirmed: onConfirmed,
-    noCall: onEnded,
-    newDTMF,
-    icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
-    && cs._currentSession.onIceCandidate(cs, event),
-    icetimeout: (sec: number) => cs._currentSession
-    && cs._currentSession.onIceTimeout(cs, sec),
-    failed: onFailed,
-    ended: onEnded,
-    getusermediafailed: (err) => cs._currentSession
-    && cs._currentSession.onGetUserMediaFailed(cs, err),
-    'peerconnection:createofferfailed': (err) => cs._currentSession
-    && cs._currentSession.handlePeerConnectionFailures(
-      cs,
-      'createofferfailed',
-      cs.callStats ? cs.callStats.webRTCFunctions.createOffer : null,
-      err,
-    ),
-    'peerconnection:createanswerfailed': (err) => cs._currentSession
-    && cs._currentSession.handlePeerConnectionFailures(
-      cs,
-      'createanswerfailed',
-      cs.callStats ? cs.callStats.webRTCFunctions.createAnswer : null,
-      err,
-    ),
-    'peerconnection:setlocaldescriptionfailed': (err) => cs._currentSession
-    && cs._currentSession.handlePeerConnectionFailures(
-      cs,
-      'setlocaldescriptionfailed',
-      cs.callStats ? cs.callStats.webRTCFunctions.setLocalDescription : null,
-      err,
-    ),
-    'peerconnection:setremotedescriptionfailed': (err) => cs._currentSession
-    && cs._currentSession.handlePeerConnectionFailures(
-      cs,
-      'setremotedescriptionfailed',
-      cs.callStats ? cs.callStats.webRTCFunctions.setRemoteDescription : null,
-      err,
-    ),
-  };
-  return opts;
+const getOptions = function (extraHeaders: ExtraHeaders): Promise<SessionAnswerOptions> {
+  return new Promise((resolve) => {
+    const opts: SessionAnswerOptions = {};
+    opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
+    opts.pcConfig = {
+      iceServers: [{ urls: STUN_SERVERS }],
+    };
+    opts.mediaConstraints = {
+      audio: cs.options.audioConstraints || true,
+      video: false,
+    };
+    // opts.rtcConstraints = null;
+    opts.extraHeaders = getCleanedHeaders(extraHeaders);
+    cs.noiseSuppresion.startNoiseSuppression().then((mediaStream) => {
+      opts.mediaStream = mediaStream != null ? mediaStream : (window as any).localStream;
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      opts['eventHandlers'] = {
+        sending: onSending,
+        sdp: onSDP,
+        progress: OnProgress,
+        accepted: onAccepted,
+        confirmed: onConfirmed,
+        noCall: onEnded,
+        newDTMF,
+        icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
+        && cs._currentSession.onIceCandidate(cs, event),
+        icetimeout: (sec: number) => cs._currentSession
+        && cs._currentSession.onIceTimeout(cs, sec),
+        failed: onFailed,
+        ended: onEnded,
+        getusermediafailed: (err) => cs._currentSession
+        && cs._currentSession.onGetUserMediaFailed(cs, err),
+        'peerconnection:createofferfailed': (err) => cs._currentSession
+        && cs._currentSession.handlePeerConnectionFailures(
+          cs,
+          'createofferfailed',
+          cs.callStats ? cs.callStats.webRTCFunctions.createOffer : null,
+          err,
+        ),
+        'peerconnection:createanswerfailed': (err) => cs._currentSession
+        && cs._currentSession.handlePeerConnectionFailures(
+          cs,
+          'createanswerfailed',
+          cs.callStats ? cs.callStats.webRTCFunctions.createAnswer : null,
+          err,
+        ),
+        'peerconnection:setlocaldescriptionfailed': (err) => cs._currentSession
+        && cs._currentSession.handlePeerConnectionFailures(
+          cs,
+          'setlocaldescriptionfailed',
+          cs.callStats ? cs.callStats.webRTCFunctions.setLocalDescription : null,
+          err,
+        ),
+        'peerconnection:setremotedescriptionfailed': (err) => cs._currentSession
+        && cs._currentSession.handlePeerConnectionFailures(
+          cs,
+          'setremotedescriptionfailed',
+          cs.callStats ? cs.callStats.webRTCFunctions.setRemoteDescription : null,
+          err,
+        ),
+      };
+      resolve(opts);
+    });
+  });
 };
 
-/**
- * Perform outgoing call.
- * @param {Client} clientObject - client reference
- * @param {ExtraHeaders} extraHeaders - Custom headers which are passed in the INVITE.
- * They should start with 'X-PH'
- * @param {String} phoneNumber  - it can be a sip endpoint/number
- */
-export const makeCall = (
-  clientObject: Client,
-  extraHeaders: ExtraHeaders,
-  phoneNumber: string,
-): boolean => {
-  cs = clientObject;
-  outBoundConnectionStages = [];
-  outBoundConnectionStages.push(`call()@${getCurrentTime()}`);
-  let phoneNumberStr = '';
-  if (phoneNumber) {
-    // eslint-disable-next-line no-param-reassign
-    phoneNumberStr = String(phoneNumber);
-  }
-  const isValid = validateSession(phoneNumberStr);
-  if (!isValid) return false;
-  const destinationUri = getValidPhoneNumber(phoneNumberStr);
-  const opts = getOptions(extraHeaders);
+const makingCall = (opts: SessionAnswerOptions, destinationUri: string): void => {
   try {
     if (cs.phone) {
       cs.phone.call(destinationUri, opts);
@@ -531,8 +512,41 @@ export const makeCall = (
       },
       cs._currentSession,
     );
-    return false;
   }
+};
+
+/**
+ * Perform outgoing call.
+ * @param {Client} clientObject - client reference
+ * @param {ExtraHeaders} extraHeaders - Custom headers which are passed in the INVITE.
+ * They should start with 'X-PH'
+ * @param {String} phoneNumber  - it can be a sip endpoint/number
+ */
+export const makeCall = (
+  clientObject: Client,
+  extraHeaders: ExtraHeaders,
+  phoneNumber: string,
+): boolean => {
+  cs = clientObject;
+  outBoundConnectionStages = [];
+  outBoundConnectionStages.push(`call()@${getCurrentTime()}`);
+  let phoneNumberStr = '';
+  if (phoneNumber) {
+    // eslint-disable-next-line no-param-reassign
+    phoneNumberStr = String(phoneNumber);
+  }
+  const isValid = validateSession(phoneNumberStr);
+  if (!isValid) return false;
+  const destinationUri = getValidPhoneNumber(phoneNumberStr);
+  (() => {
+    getOptions(extraHeaders)
+      .then((data) => {
+        makingCall(data, destinationUri);
+      })
+      .catch((error) => {
+        Plivo.log.error("Error:", error);
+      });
+  })();
   return true;
 };
 

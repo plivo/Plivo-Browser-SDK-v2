@@ -456,22 +456,27 @@ const handleOtherInvites = (
  * Get answer options for answering the call.
  * @returns Incoming call answer options
  */
-const getAnswerOptions = (): SessionAnswerOptions => {
-  const opts: SessionAnswerOptions = {};
-  opts.pcConfig = {
-    iceServers: [{ urls: STUN_SERVERS }],
-  };
-  if (cs.permOnClick) {
-    const audioConstraints = cs.options.audioConstraints || true;
-    opts.mediaConstraints = {
-      audio: audioConstraints,
-      video: false,
+const getAnswerOptions = function (): Promise<SessionAnswerOptions> {
+  return new Promise((resolve) => {
+    const opts: SessionAnswerOptions = {};
+    opts.pcConfig = {
+      iceServers: [{ urls: STUN_SERVERS }],
     };
-  } else if (!(window as any).localStream) Plivo.log.warn('no local stream attached for this call');
-  opts.mediaStream = (window as any).localStream || null;
-  // opts.rtcConstraints =  null;
-  opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
-  return opts;
+    if (cs.permOnClick) {
+      const audioConstraints = cs.options.audioConstraints || true;
+      opts.mediaConstraints = {
+        audio: audioConstraints,
+        video: false,
+      };
+    }
+    cs.noiseSuppresion.startNoiseSuppression().then((mediaStream) => {
+      opts.mediaStream = mediaStream != null ? mediaStream : (window as any).localStream;
+      // opts.mediaStream = (window as any).localStream || null;
+      // opts.rtcConstraints =  null;
+      opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
+      resolve(opts);
+    });
+  });
 };
 
 /**
@@ -479,34 +484,38 @@ const getAnswerOptions = (): SessionAnswerOptions => {
  * @param {CallSession} curIncomingCall - current incoming call
  * @param {String} actionOnOtherIncomingCalls - list of incoming call actions
  */
-export const answerIncomingCall = (
+export const answerIncomingCall = function (
   curIncomingCall: CallSession,
   actionOnOtherIncomingCalls: string,
-): void => {
-  handleOtherInvites(curIncomingCall, actionOnOtherIncomingCalls);
-  cs.owaLastDetect.isOneWay = false;
-  try {
-    curIncomingCall.session.answer(getAnswerOptions());
-    cs._currentSession = curIncomingCall;
-    cs.incomingInvites.delete(curIncomingCall.callUUID as string);
-    if (curIncomingCall === cs.lastIncomingCall) {
-      cs.lastIncomingCall = null;
-      if (cs.incomingInvites.size) {
-        cs.lastIncomingCall = cs.incomingInvites.values().next().value;
-      }
+): Promise<void> {
+  return new Promise(() => {
+    handleOtherInvites(curIncomingCall, actionOnOtherIncomingCalls);
+    cs.owaLastDetect.isOneWay = false;
+    try {
+      getAnswerOptions().then((options) => {
+        curIncomingCall.session.answer(options);
+        cs._currentSession = curIncomingCall;
+        cs.incomingInvites.delete(curIncomingCall.callUUID as string);
+        if (curIncomingCall === cs.lastIncomingCall) {
+          cs.lastIncomingCall = null;
+          if (cs.incomingInvites.size) {
+            cs.lastIncomingCall = cs.incomingInvites.values().next().value;
+          }
+        }
+        cs.callSession = cs._currentSession.session;
+        cs.callUUID = cs._currentSession.callUUID;
+        cs.callDirection = cs._currentSession.direction;
+      });
+    } catch (err) {
+      Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
+      curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
+      Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${err.message}`);
+      cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo(err.message));
     }
-    cs.callSession = cs._currentSession.session;
-    cs.callUUID = cs._currentSession.callUUID;
-    cs.callDirection = cs._currentSession.direction;
-  } catch (err) {
-    Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
-    curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
-    Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${err.message}`);
-    cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo(err.message));
-  }
-  if (cs.ringToneView && !cs.ringToneView.paused) {
-    stopAudio(RINGTONE_ELEMENT_ID);
-  }
+    if (cs.ringToneView && !cs.ringToneView.paused) {
+      stopAudio(RINGTONE_ELEMENT_ID);
+    }
+  });
 };
 
 /**

@@ -54,16 +54,23 @@ module.exports = env => {
     mode:  env.development || env.nominify || env.npm ? 'development' : 'production',
     entry: env.npm ? [
       './lib/index.ts',
-    ] : [
-      './lib/stats/callstatsio.js',
-      './lib/index.ts',
-    ],
+    ] : {
+      main: [
+        './lib/stats/callstatsio.js',
+        './lib/index.ts',
+      ],
+      processor: [
+        './lib/rnnoise/NoiseSuppressorWorklet.ts',
+      ]
+    },
     devtool: env.development || env.nominify ? 'eval' : env.npm ? 'none' : false,
     node: {
       console: false,
       fs: 'empty',
       net: 'empty',
-      tls: 'empty'
+      tls: 'empty',
+      __filename: true,
+      __dirname: true
     },
     module: {
       rules: [!env.npm ? {
@@ -83,9 +90,12 @@ module.exports = env => {
             ],
           },
         },
+        {
+          test: path.resolve(__dirname, 'node_modules/webpack-dev-server/client'),
+          loader: 'null-loader'
+        },
         // All files with a '.ts' or '.tsx' extension will be handled by 'awesome-typescript-loader'.
         { test: /\.ts?$/, loader: "awesome-typescript-loader" },
-
         // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
         { test: /\.js$/, loader: "source-map-loader" },
         {
@@ -94,7 +104,11 @@ module.exports = env => {
           options: {
             name: '[path][name].[ext]',
           },
-        }
+        },
+        {
+          test: /\.wasm$/,
+          type: "webassembly/experimental",
+        },
       ],
     },
     output: env.npm ? {
@@ -103,9 +117,12 @@ module.exports = env => {
       library: 'Plivo', 
       libraryTarget: 'umd'
     } : {
-      filename: env.production && !env.nominify ? 'plivobrowsersdk.min.js' : 'plivobrowsersdk.js',
+      filename: (pathData) => {
+        return pathData.chunk.name === 'main' ?  env.production && !env.nominify ? 'plivobrowsersdk.min.js' : 'plivobrowsersdk.js': '[name].js';
+      },
       path: path.resolve(__dirname, 'dist'),
       library: 'Plivo',
+      globalObject: 'this'
     },
     watch: !env.production,
     plugins: plugins,
@@ -129,17 +146,17 @@ module.exports = env => {
       )],
     },
     resolve:{
-      extensions: ['.ts', '.js','.json']
-    }
+      extensions: ['.ts', '.js','.json', '.wasm']
+    },
   };
 };
 
 
-function DtsBundlePlugin(){}
+function DtsBundlePlugin() { }
 DtsBundlePlugin.prototype.apply = function (compiler) {
-  compiler.plugin('done', function(){
-    var dts = require('dts-bundle');
 
+  compiler.plugin('done', function () {
+    var dts = require('dts-bundle');
     dts.bundle({
       name: 'plivo-browser-sdk',
       main: 'types/lib/index.d.ts',

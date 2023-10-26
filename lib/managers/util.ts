@@ -19,7 +19,7 @@ import {
 import { emitMetrics as _emitMetrics } from '../stats/mediaMetrics';
 import { GetRTPStats } from '../stats/rtpStats';
 import {
-  getAudioDevicesInfo, isElectronApp,
+  getAudioDevicesInfo, isElectronApp, resetMuteOnHangup, updateAudioDeviceFlags,
 } from '../media/audioDevice';
 import { Logger } from '../logger';
 import { Client } from '../client';
@@ -67,6 +67,10 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
+    noiseReduction: {
+      enabled: client.enableNoiseReduction ?? false,
+      noiseSuprressionStarted: client.noiseSuppresion.started,
+    },
     isAudioDeviceToggled: client.deviceToggledInCurrentSession,
     isNetworkChanged: client.networkChangeInCurrentSession,
     jsFramework: client.jsFramework,
@@ -443,7 +447,7 @@ const removeCloseProtectionListeners = function (): void {
  */
 const stopLocalStream = function (): void {
   if ((window as any).localStream) {
-    if (getBrowserDetails().browser === 'chrome' || this.permOnClick || isElectronApp()) {
+    if (getBrowserDetails().browser === 'firefox' || getBrowserDetails().browser === 'chrome' || this.permOnClick || isElectronApp()) {
       try {
         (window as any).localStream.getTracks().forEach((track: MediaStreamTrack) => {
           track.stop();
@@ -458,7 +462,6 @@ const stopLocalStream = function (): void {
     // firefox uses the same mediastream across calls
     if (
       getBrowserDetails().browser === 'safari'
-      || getBrowserDetails().browser === 'firefox'
     ) {
       try {
         (window as any).localStream.getTracks().forEach((track: MediaStreamTrack) => {
@@ -512,6 +515,9 @@ export const hangupClearance = function (session: CallSession) {
   if (client._currentSession) return;
   if (client.storage) client.storage = null;
   stopLocalStream.call(client);
+  updateAudioDeviceFlags();
+  resetMuteOnHangup();
+  client.noiseSuppresion.stopNoiseSuppresion();
 };
 
 /**

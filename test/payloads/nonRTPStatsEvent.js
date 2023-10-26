@@ -36,6 +36,10 @@ const ANSWER_EVENT = {
   userName: "testing",
   domain: "phone.plivo.com",
   source: "BrowserSDK",
+  noiseReduction: {
+    enabled: false,
+    noiseSuprressionStarted: false,
+  },
   version: "v1",
 };
 
@@ -91,6 +95,10 @@ const SUMMARY_EVENT = {
   userName: "testing",
   domain: "phone.plivo.com",
   source: "BrowserSDK",
+  noiseReduction: {
+    enabled: false,
+    noiseSuprressionStarted: false,
+  },
   version: "v1",
 };
 

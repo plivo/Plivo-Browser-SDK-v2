@@ -1,22 +1,28 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "target": "es5",
+    "target": "es6",
     "lib": ["es5", "es6", "es2016", "es2017.object", "dom"],
-    "module": "commonjs",
+    "module": "CommonJS",
     "moduleResolution": "node",
+    "skipLibCheck": true,
     "outDir": "types",
+    "downlevelIteration": true,
     "sourceMap": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "strictNullChecks": true,
     "types": [
-      "jest", "chrome", "node"
+      "jest", "chrome", "node", "audioworklet", "emscripten"
     ],
     "declaration": true
   },
   "include": [
     "lib/**/*.ts",
+    "lib/rnnoise/*.ts",
+    "lib/rnnoise/utils/*.ts",
+    "lib/rnnoise/c/*.wasm",
+    "lib/rnnoise/c/*.mjs",
     "test/integration/*.js"
 , "lib/utils/token.js"  ]
 }

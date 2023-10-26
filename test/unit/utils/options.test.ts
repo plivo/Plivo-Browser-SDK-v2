@@ -25,6 +25,7 @@ describe('ValidateOptions', () => {
       allowMultipleIncomingCalls: false,
       closeProtection: false,
       maxAverageBitrate: 48000,
+      enableNoiseReduction: true,
       registrationRefreshTimer: 120,
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
