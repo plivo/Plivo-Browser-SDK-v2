@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## v2.2.10-beta.0 (released@ 26-10-2023)
+**Bug Fixes**
+
+* Fixed: Call mutes when input/output devices change.
+
 **Features**
 
 * Included noise suppression feature to enhance audio quality, which effectively eliminates unwanted background noise during active calls. You can enable or disable this feature using the `enableNoiseReduction` flag.
