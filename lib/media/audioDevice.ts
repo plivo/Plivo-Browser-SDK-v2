@@ -15,6 +15,7 @@ import { Client, PlivoObject } from '../client';
 import { DeviceAudioInfo, sendEvents } from '../stats/nonRTPStats';
 import getBrowserDetails from '../utils/browserDetection';
 import { setupRemoteView } from './document';
+import { emitMetrics } from '../stats/mediaMetrics';
 import { AudioLevel } from './audioLevel';
 
 export interface RingToneDevices {
@@ -164,11 +165,76 @@ export const revealAudioDevices = function (
   });
 };
 
+export const speechListeners = function (): void {
+  if (this._currentSession.state !== this._currentSession.STATE.ANSWERED) {
+    return;
+  }
+  const client: Client = this;
+  client.speechRecognition.stop();
+  client.speechRecognition.continuous = true;
+  client.speechRecognition.interimResults = true;
+  client.speechRecognition.onerror = (error) => {
+    Plivo.log.error(`${LOGCAT.CALL} | Error in Recognizing speech :`, error.error);
+    if (error.error === "network") {
+      client
+        ._currentSession?.setSpeechState(client
+          ._currentSession.SPEECH_STATE.STOPPED_DUE_TO_NETWORK_ERROR);
+      Plivo.log.info(`${LOGCAT.CALL} | Speech Recognition stopped due to network disruption`);
+    }
+  };
+
+  client.speechRecognition.onend = () => {
+    Plivo.log.info(`${LOGCAT.CALL} | Recognizing speech Stopped`);
+    if (client.isMuteCalled
+      && (client._currentSession?.speech_state
+        !== client._currentSession?.SPEECH_STATE.STOPPED_AFTER_DETECTION
+          && client._currentSession?.speech_state
+            !== client._currentSession?.SPEECH_STATE.STOPPED_DUE_TO_NETWORK_ERROR)) {
+      client._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.STOPPED);
+      client._currentSession?.startSpeechRecognition(client);
+    } else {
+      client._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.STOPPED);
+    }
+  };
+  client.speechRecognition.onstart = () => {
+    Plivo.log.info(`${LOGCAT.CALL} | Recognizing speech Running`);
+    if (!client.isMuteCalled
+      && (client._currentSession?.speech_state
+        !== client._currentSession?.SPEECH_STATE.STOPPED
+          || client._currentSession?.speech_state
+            !== client._currentSession?.SPEECH_STATE.STOPPING)) {
+      client
+        ._currentSession?.stopSpeechRecognition(client);
+    } else {
+      client._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.RUNNING);
+    }
+  };
+  client.speechRecognition.onresult = () => {
+    emitMetrics.call(
+      this,
+      'audio',
+      'warning',
+      'speaking_on_mute',
+      0,
+      true,
+      'User is trying to speak on mute',
+      '',
+    );
+    client
+      ._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.STOPPED_AFTER_DETECTION);
+    client.speechRecognition.stop();
+    Plivo.log.info(`${LOGCAT.CALL} | User speaking on mute`);
+  };
+  client._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.STARTING);
+  client.speechRecognition.start();
+};
+
 /**
  * Mute the local stream.
  */
 export const mute = function (): void {
   const client: Client = this;
+  this._currentSession?.startSpeechRecognition(client);
   if (currentLocalStream) {
     currentLocalStream.getAudioTracks()[0].enabled = false;
   } else {
@@ -516,7 +582,7 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
 /**
  * Updating the default input & output device
  */
-export const updateWindowDeviceList = function (deviceList) : void {
+export const updateWindowDeviceList = function (deviceList): void {
   const groupIdDeviceId = {};
   deviceList.forEach((device) => {
     if (device.kind === 'audioinput' && device.deviceId === 'default') {
@@ -543,7 +609,7 @@ export const updateWindowDeviceList = function (deviceList) : void {
  * Check the input & output audio device for windows machine such that both belong to same groupid
  */
 export const setAudioDeviceForForWindows = function (devices,
-  lastConnectedMicDevice, lastConnectedSpeakerDevice) : void {
+  lastConnectedMicDevice, lastConnectedSpeakerDevice): void {
   if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || setByWindows)) {
     availableAudioDevices = devices;
     updateWindowDeviceList(devices);
@@ -772,17 +838,17 @@ export const outputDevices = ((): OutputDevices => ({
     speakerElement.forEach((e: any) => {
       if (typeof e.sinkId !== 'undefined') {
         e.setSinkId(deviceId)
-          .then(() => {})
+          .then(() => { })
           .catch((error) => {
             if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
               e.src = '';
               e.setSinkId(deviceId)
-                .then(() => {})
+                .then(() => { })
                 .catch((error2) => {
-                  Plivo.log.error(error2);
+                  Plivo.log.error(error2.message);
                 });
             } else {
-              let errorMessage: string = error;
+              let errorMessage: string = error.message;
               if (error.name === AUDIO_DEVICE_SECURITY_ERROR) {
                 errorMessage = `You need to use HTTPS for selecting audio output device: ${error}`;
               }
@@ -885,6 +951,7 @@ export const unmute = function (): void {
   } else {
     this._currentSession.session.unmute();
   }
+  client._currentSession?.stopSpeechRecognition(client);
   if (client.noiseSuppresion) {
     client.noiseSuppresion.unmuteStream();
   }

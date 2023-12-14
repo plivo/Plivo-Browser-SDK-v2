@@ -17,6 +17,7 @@ import {
 import { emitMetrics } from '../stats/mediaMetrics';
 import {
   getAudioDevicesInfo,
+  speechListeners,
   startVolumeDataStreaming,
   stopVolumeDataStreaming,
 } from '../media/audioDevice';
@@ -35,6 +36,7 @@ import { Logger } from '../logger';
 import { Client, ExtraHeaders } from '../client';
 import { stopAudio } from '../media/document';
 import { GetRTPStats } from '../stats/rtpStats';
+import { LOGCAT } from '../constants';
 
 export interface CallSessionOptions {
   callUUID?: string;
@@ -104,6 +106,15 @@ export class CallSession {
     ENDED: string;
   };
 
+  SPEECH_STATE: {
+    STOPPED: string;
+    STARTING: string;
+    RUNNING: string;
+    STOPPING: string;
+    STOPPED_AFTER_DETECTION: string;
+    STOPPED_DUE_TO_NETWORK_ERROR: string;
+  };
+
   /**
    * Unique identifier generated for a call by server
    * @private
@@ -145,6 +156,12 @@ export class CallSession {
    * @private
    */
   state: string;
+
+  /**
+   * Holds the current status of speechrecgnition
+   * @private
+   */
+  speech_state: string;
 
   /**
    * Custom headers which are passed in the INVITE. They should start with 'X-PH'
@@ -210,6 +227,10 @@ export class CallSession {
     this.state = state;
   };
 
+  public setSpeechState = (state: string): void => {
+    this.speech_state = state;
+  };
+
   /**
    * Add stage at each state of call.
    * @param {String} stage - Has state name and time at which state change happens
@@ -263,6 +284,34 @@ export class CallSession {
           - (this.signallingInfo as any).call_initiation_time,
     },
   });
+
+  public stopSpeechRecognition = (clientObj : Client) => {
+    if (clientObj.speechRecognition) {
+      if (clientObj._currentSession?.speech_state
+        === clientObj._currentSession?.SPEECH_STATE.RUNNING) {
+        clientObj
+          ._currentSession?.setSpeechState(clientObj._currentSession.SPEECH_STATE.STOPPING);
+        clientObj.speechRecognition.stop();
+      }
+    }
+  };
+
+  public startSpeechRecognition = (clientObj : Client) => {
+    if ("webkitSpeechRecognition" in window) {
+      if (clientObj._currentSession?.state === clientObj._currentSession?.STATE.ANSWERED
+        && clientObj._currentSession?.speech_state
+          === clientObj._currentSession?.SPEECH_STATE.STOPPED) {
+        try {
+          Plivo.log.info(`${LOGCAT.CALL} | Recognizing speech Starting`);
+          speechListeners.call(clientObj);
+        } catch (err) {
+          Plivo.log.error(`${LOGCAT.CALL} | Error in starting recognizing speech, will be restarted :: ${err.message}`);
+        }
+      }
+    } else {
+      Plivo.log.error(`${LOGCAT.CALL} | Speech Recognition not available in browser`);
+    }
+  };
 
   /**
    * Get media connection information.
@@ -383,6 +432,15 @@ export class CallSession {
       ENDED: 'ended',
     };
 
+    this.SPEECH_STATE = {
+      STOPPED: 'stopped',
+      STARTING: 'starting',
+      RUNNING: 'running',
+      STOPPING: 'stopping',
+      STOPPED_AFTER_DETECTION: 'stopped_after_detecting',
+      STOPPED_DUE_TO_NETWORK_ERROR: "stopped_due_to_network_error",
+    };
+
     this.callUUID = options.callUUID ? options.callUUID : null;
     this.sipCallID = options.sipCallID;
     this.stirShakenState = options.stirShakenState;
@@ -390,6 +448,7 @@ export class CallSession {
     this.src = options.src;
     this.dest = options.dest;
     this.state = this.STATE.INITIALIZED;
+    this.speech_state = this.SPEECH_STATE.STOPPED;
     this.extraHeaders = options.extraHeaders;
     this.session = options.session;
     this.connectionStages = [];
@@ -477,6 +536,7 @@ export class CallSession {
     if (clientObject.ringBackToneView && !clientObject.ringBackToneView.paused) {
       stopAudio(C.RINGBACK_ELEMENT_ID);
     }
+
     clientObject.emit('onCallAnswered', this.getCallInfo());
     Plivo.log.debug('Post-Answer detecting OWA');
     setTimeout(() => {
@@ -485,6 +545,11 @@ export class CallSession {
     3000,
     this.session.connection,
     clientObject);
+    // when on user is on mute before answering the call,
+    // webkitSpeechRecognition to start after answering the call
+    if (clientObject.isCallMuted) {
+      this.startSpeechRecognition(clientObject);
+    }
   };
 
   private _onIceCandidate = (
@@ -577,6 +642,7 @@ export class CallSession {
       );
       hangupClearance.call(clientObject, clientObject._currentSession);
       stopVolumeDataStreaming();
+      this.stopSpeechRecognition(clientObject);
     }
   };
 
@@ -595,6 +661,10 @@ export class CallSession {
         err,
       );
     }
+    clientObject.emit('onMediaPermission', {
+      status: 'failure',
+      error: err.message,
+    });
     onMediaFailure.call(clientObject, this, err as Error);
   };
 

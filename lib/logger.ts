@@ -35,6 +35,7 @@ interface Body{
   sdk_v: string,
   sdk_name: string,
   user_agent: string,
+  call_uuid: string,
 }
 
 /**
@@ -190,6 +191,8 @@ class PlivoLogger {
     myHeaders,
     logs: Array<Array<string>>,
     index: number,
+    callUUID: string = "",
+    userName: string | null = "",
   ): Promise<string> => new Promise((resolve, reject) => {
     const sdkVersionParse = getSDKVersion();
     const deviceOs = getOS();
@@ -200,7 +203,16 @@ class PlivoLogger {
       sdk_v: sdkVersionParse.version,
       sdk_name: "BrowserSDK",
       user_agent: deviceOs,
+      call_uuid: client.getCallUUID() ?? "",
     };
+
+    if (callUUID && callUUID !== "") {
+      body.call_uuid = callUUID;
+    }
+
+    if (userName && userName !== "") {
+      body.username = userName;
+    }
 
     if (client.isAccessToken) body.jwt = client.accessToken;
 
@@ -219,7 +231,9 @@ class PlivoLogger {
         } else {
           index += 1;
           if (logs.length > index) {
-            this._sendBatchedLogsToServer(client, myHeaders, logs, index);
+            this._sendBatchedLogsToServer(client, myHeaders, logs, index,
+              body.call_uuid,
+              body.username);
           } else {
             Storage.getInstance().clear();
           }

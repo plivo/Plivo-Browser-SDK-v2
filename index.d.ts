@@ -156,9 +156,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             callDirection: null | string;
             /**
-                * Holds the instance of NoiseSuppression
+                * Holds the SpeechRecognition instance which listens for
+                * speech when the user speaks on mute
                 * @private
                 */
+            speechRecognition: SpeechRecognition;
             noiseSuppresion: NoiseSuppression;
             /**
                 * Specifies whether the noise suppression should be enabled or not
@@ -280,6 +282,12 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             isCallMuted: boolean;
+            /**
+                * Specifically used for SpeechRecognition
+                * Describes whether the call is in mute state or not
+                * @private
+                */
+            isMuteCalled: boolean;
             /**
                 * All audio related information
                 * @public
@@ -703,6 +711,14 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                     FAILED: string;
                     ENDED: string;
             };
+            SPEECH_STATE: {
+                    STOPPED: string;
+                    STARTING: string;
+                    RUNNING: string;
+                    STOPPING: string;
+                    STOPPED_AFTER_DETECTION: string;
+                    STOPPED_DUE_TO_NETWORK_ERROR: string;
+            };
             /**
                 * Unique identifier generated for a call by server
                 * @private
@@ -738,6 +754,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @private
                 */
             state: string;
+            /**
+                * Holds the current status of speechrecgnition
+                * @private
+                */
+            speech_state: string;
             /**
                 * Custom headers which are passed in the INVITE. They should start with 'X-PH'
                 * @private
@@ -788,6 +809,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @param {String} state - active call(Outgoing/Incoming) state(this.STATE)
                 */
             setState: (state: string) => void;
+            setSpeechState: (state: string) => void;
             /**
                 * Add stage at each state of call.
                 * @param {String} stage - Has state name and time at which state change happens
@@ -820,6 +842,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * Get signalling information.
                 */
             getSignallingInfo: () => SignallingInfo;
+            startSpeechRecognition: (clientObj: Client) => void;
             /**
                 * Get media connection information.
                 */
@@ -1000,6 +1023,7 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * If error occurs reject with error.
         */
     export const revealAudioDevices: (arg?: string | undefined) => Promise<MediaStream | string>;
+    export const speechListeners: () => void;
     /**
         * Mute the local stream.
         */

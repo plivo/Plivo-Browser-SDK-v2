@@ -396,7 +396,9 @@ const clearSessionInfo = function (session: CallSession): void {
   const client: Client = this;
   if (session === client._currentSession) {
     // audio element clearence
-    client.remoteView.pause();
+    if (client.remoteView) {
+      client.remoteView.pause();
+    }
     client._lastCallSession = session;
     client.lastCallUUID = session.callUUID;
     client._currentSession = null;
@@ -482,42 +484,46 @@ const stopLocalStream = function (): void {
  * @param {CallSession} session - call session information
  */
 export const hangupClearance = function (session: CallSession) {
-  const client: Client = this;
-  Plivo.AppError.call(client, calcConnStage(session.connectionStages), 'log');
-  session.clearCallStats();
-  clearSessionInfo.call(client, session);
-  const signallingInfo = session.getSignallingInfo();
-  const mediaConnectionInfo = session.getMediaConnectionInfo();
-  if (client.callstatskey) {
-    getAudioDevicesInfo
-      .call(client)
-      .then((deviceInfo) => {
-        sendCallSummaryEvent.call(
-          client,
-          deviceInfo,
-          signallingInfo,
-          mediaConnectionInfo,
-          session,
-        );
-      })
-      .catch(() => {
-        sendCallSummaryEvent.call(
-          client,
-          null,
-          signallingInfo,
-          mediaConnectionInfo,
-          session,
-        );
-      });
+  try {
+    const client: Client = this;
+    Plivo.AppError.call(client, calcConnStage(session.connectionStages), 'log');
+    session.clearCallStats();
+    clearSessionInfo.call(client, session);
+    const signallingInfo = session.getSignallingInfo();
+    const mediaConnectionInfo = session.getMediaConnectionInfo();
+    if (client.callstatskey) {
+      getAudioDevicesInfo
+        .call(client)
+        .then((deviceInfo) => {
+          sendCallSummaryEvent.call(
+            client,
+            deviceInfo,
+            signallingInfo,
+            mediaConnectionInfo,
+            session,
+          );
+        })
+        .catch(() => {
+          sendCallSummaryEvent.call(
+            client,
+            null,
+            signallingInfo,
+            mediaConnectionInfo,
+            session,
+          );
+        });
+    }
+    removeCloseProtectionListeners.call(client);
+    client.isCallMuted = false;
+    if (client._currentSession) return;
+    if (client.storage) client.storage = null;
+    stopLocalStream.call(client);
+    updateAudioDeviceFlags();
+    resetMuteOnHangup();
+    client.noiseSuppresion.stopNoiseSuppresion();
+  } catch (err) {
+    Plivo.log.info(`${LOGCAT.CALL} | error while hangup clearance : ${err.message}`);
   }
-  removeCloseProtectionListeners.call(client);
-  client.isCallMuted = false;
-  if (client._currentSession) return;
-  if (client.storage) client.storage = null;
-  stopLocalStream.call(client);
-  updateAudioDeviceFlags();
-  resetMuteOnHangup();
-  client.noiseSuppresion.stopNoiseSuppresion();
 };
 
 /**

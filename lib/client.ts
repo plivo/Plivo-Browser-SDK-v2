@@ -197,6 +197,13 @@ export class Client extends EventEmitter {
   callDirection: null | string;
 
   /**
+   * Holds the SpeechRecognition instance which listens for
+   * speech when the user speaks on mute
+   * @private
+   */
+  speechRecognition: SpeechRecognition;
+
+  /*
    * Holds the instance of NoiseSuppression
    * @private
    */
@@ -349,6 +356,13 @@ export class Client extends EventEmitter {
    * @private
    */
   isCallMuted: boolean;
+
+  /**
+   * Specifically used for SpeechRecognition
+   * Describes whether the call is in mute state or not
+   * @private
+   */
+  isMuteCalled : boolean;
 
   /**
    * All audio related information
@@ -729,6 +743,35 @@ export class Client extends EventEmitter {
     sendConsoleLogs,
   );
 
+  clearOnLogout(): void {
+    // Store.getInstance().clear();
+    // if logout is called explicitly, make all the related flags to default
+    Plivo.log.send(this);
+    if (this.isAccessToken) {
+      this.isAccessToken = false;
+      this.isOutgoingGrant = false;
+      this.isIncomingGrant = false;
+      this.accessToken = null;
+    }
+    if (this._currentSession) {
+      this._currentSession.addConnectionStage(
+        `logout()@${new Date().getTime()}`,
+      );
+      Plivo.log.debug('Terminating an active call');
+      this._currentSession.session.terminate();
+    }
+    this.isLogoutCalled = true;
+    this.noiseSuppresion.clearNoiseSupression();
+    if (this.phone && this.phone.isRegistered()) {
+      this.phone.stop();
+    }
+
+    if (this.statsSocket) {
+      this.statsSocket.disconnect();
+      this.statsSocket = null;
+    }
+  }
+
   /**
    * @constructor
    * @param options - (Optional) client configuration parameters
@@ -807,6 +850,10 @@ export class Client extends EventEmitter {
     this.isOutgoingGrant = false;
     this.isIncomingGrant = false;
     this.useDefaultAudioDevice = false;
+    if (getBrowserDetails().browser !== 'firefox') {
+      // eslint-disable-next-line new-cap, no-undef
+      this.speechRecognition = new webkitSpeechRecognition();
+    }
     this.audio = {
       availableDevices: audioUtil.availableDevices,
       ringtoneDevices: audioUtil.ringtoneDevices,
@@ -1058,33 +1105,12 @@ export class Client extends EventEmitter {
   };
 
   private _logout = (): boolean => {
-    Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Logout successful!', this.userName);
-    // Store.getInstance().clear();
-    // if logout is called explicitly, make all the related flags to default
-    Plivo.log.send(this);
-    if (this.isAccessToken) {
-      this.isAccessToken = false;
-      this.isOutgoingGrant = false;
-      this.isIncomingGrant = false;
-      this.accessToken = null;
+    if (!this.isLoggedIn) {
+      Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Cannot execute logout: no active login session.', this.userName);
+      return false;
     }
-    if (this._currentSession) {
-      this._currentSession.addConnectionStage(
-        `logout()@${new Date().getTime()}`,
-      );
-      Plivo.log.debug('Terminating an active call');
-      this._currentSession.session.terminate();
-    }
-    this.isLogoutCalled = true;
-    this.noiseSuppresion.clearNoiseSupression();
-    if (this.phone && this.phone.isRegistered()) {
-      this.phone.stop();
-    }
-
-    if (this.statsSocket) {
-      this.statsSocket.disconnect();
-      this.statsSocket = null;
-    }
+    Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Logout initiated!', this.userName);
+    this.clearOnLogout();
     return true;
   };
 
@@ -1213,7 +1239,9 @@ export class Client extends EventEmitter {
             method: 'hangup()',
           });
         }
-        this._currentSession.session.terminate();
+        if (this._currentSession.session && !this._currentSession.session.isEnded()) {
+          this._currentSession.session.terminate();
+        }
 
         if (this.ringBackToneView && !this.ringBackToneView.paused) {
           documentUtil.stopAudio(C.RINGBACK_ELEMENT_ID);
@@ -1377,6 +1405,7 @@ export class Client extends EventEmitter {
     if (this._currentSession) {
       Plivo.log.debug(`${C.LOGCAT.CALL} | Call is muted`);
       try {
+        this.isMuteCalled = true;
         audioUtil.mute.call(this);
         this.isCallMuted = true;
         if (this.callStats) {
@@ -1419,6 +1448,7 @@ export class Client extends EventEmitter {
       Plivo.log.debug(`${C.LOGCAT.CALL} | Call is unmuted`);
       this.shouldMuteCall = false;
       try {
+        this.isMuteCalled = false;
         audioUtil.unmute.call(this);
         this.isCallMuted = false;
         if (this.callStats) {

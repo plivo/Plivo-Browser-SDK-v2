@@ -38,6 +38,8 @@ describe('AudioDevice', () => {
         pc: {},
       }),
       _currentSession: {
+        startSpeechRecognition() {},
+        stopSpeechRecognition() {},
         session: {
           mute() {},
           unmute() {},

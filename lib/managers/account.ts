@@ -312,6 +312,10 @@ class Account {
       state: ConnectionState.CONNECTED,
     };
     this.cs.connectionState = eventData.state;
+    if (this.cs._currentSession && this.cs.isCallMuted) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Speech Recognition restarted after network disruption`);
+      this.cs._currentSession.startSpeechRecognition(this.cs);
+    }
     this.cs.emit('onConnectionChange', eventData);
     if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
       const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
@@ -424,11 +428,12 @@ class Account {
     this.cs.password = null;
 
     this.cs.emit('onLogout');
+    Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Logout successful!');
     if (this.cs.networkChangeInterval) {
       clearInterval(this.cs.networkChangeInterval);
       this.cs.networkChangeInterval = null;
     }
-    this.cs.logout();
+    this.cs.clearOnLogout();
     this.message = null;
     this.cs.isLogoutCalled = false;
   };

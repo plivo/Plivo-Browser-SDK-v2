@@ -5,6 +5,20 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.1 (released@ 14-12-2023)
+
+**Bug Fixes**
+
+* Fixed an "Invalid State" error that occurred during call hang-up.
+* Addressed a Type error encountered when configuring output media devices.
+* Limited the Logout() function to execute only during active sessions.
+
+**Features**
+
+* Trigger an event when media permission is revoked.
+* Notify users when they speak while muted.
+
+
 ## v2.2.10-beta.0 (released@ 26-10-2023)
 
 **Bug Fixes**
