@@ -598,6 +598,7 @@ declare module 'plivo-browser-sdk/client' {
                 * @param {Boolean} sendConsoleLogs - Send browser logs to Plivo
                 */
             submitCallQualityFeedback: (callUUID: string, starRating: string, issues: string[], note: string, sendConsoleLogs: boolean) => Promise<string>;
+            clearOnLogout(): void;
             /**
                 * @constructor
                 * @param options - (Optional) client configuration parameters
@@ -842,6 +843,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * Get signalling information.
                 */
             getSignallingInfo: () => SignallingInfo;
+            stopSpeechRecognition: (clientObj: Client) => void;
             startSpeechRecognition: (clientObj: Client) => void;
             /**
                 * Get media connection information.
