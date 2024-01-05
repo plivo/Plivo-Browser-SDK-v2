@@ -8,6 +8,7 @@ import {
   SessionEndedEvent,
   SessionNewDtmfEvent,
   C as JSSIP_C,
+  SessionNewInfoEvent,
 } from 'plivo-jssip';
 import {
   RINGTONE_ELEMENT_ID,
@@ -283,6 +284,20 @@ const newDTMF = (evt: SessionNewDtmfEvent): void => {
 };
 
 /**
+ * Triggered when INFO is received.
+ * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
+ */
+const newInfo = (evt: SessionNewInfoEvent): void => {
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming Call | emitting remoteAudioStatus: ${evt.info.body}`);
+  if (evt.info.body === 'no-remote-audio') {
+    cs.emit('remoteAudioStatus', false);
+  }
+  if (evt.info.body === 'remote-audio') {
+    cs.emit('remoteAudioStatus', true);
+  }
+};
+
+/**
  * Creates incoming call event listeners.
  */
 export const createIncomingCallListeners = (incomingCall: CallSession): void => {
@@ -295,6 +310,7 @@ export const createIncomingCallListeners = (incomingCall: CallSession): void => 
   incomingCall.session.on('ended', onEnded(incomingCall));
   incomingCall.session.on('noCall' as any, onEnded(incomingCall));
   incomingCall.session.on('newDTMF', newDTMF);
+  incomingCall.session.on('newInfo', newInfo);
   incomingCall.session.on('icecandidate', (event) => incomingCall.onIceCandidate(cs, event));
   incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err as Error));
   incomingCall.session.on('peerconnection:createofferfailed', (err) => incomingCall.handlePeerConnectionFailures(
