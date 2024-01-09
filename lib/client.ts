@@ -135,6 +135,12 @@ export class Client extends EventEmitter {
   ringToneFlag: boolean;
 
   /**
+   * Callback to perform login after previous connection is disconnected successfully
+   * @private
+   */
+  loginCallback: any;
+
+  /**
    * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
    * Otherwise do not play audio.
    * @private
@@ -764,6 +770,7 @@ export class Client extends EventEmitter {
     this.noiseSuppresion.clearNoiseSupression();
     if (this.phone && this.phone.isRegistered()) {
       this.phone.stop();
+      this.phone = null;
     }
 
     if (this.statsSocket) {
@@ -955,9 +962,19 @@ export class Client extends EventEmitter {
     }
 
     const account = new Account(this, username, " ", accessToken, this.options.registrationRefreshTimer ?? C.REGISTER_EXPIRES_SECONDS);
-    const isValid = account.validate();
-    if (!isValid) return false;
-    account.setupUserAccount();
+    const readyForLogin = () => {
+      account.setupUserAccount();
+    };
+    const isValid = account.validate(() => {
+      readyForLogin();
+    });
+
+    if (typeof isValid === 'boolean') {
+      if (!isValid) {
+        return false;
+      }
+      readyForLogin();
+    }
     return true;
   };
 
@@ -1095,11 +1112,20 @@ export class Client extends EventEmitter {
     }
     const account = new Account(this, username, password, null,
       this.options.registrationRefreshTimer ?? C.REGISTER_EXPIRES_SECONDS);
-    const isValid = account.validate();
-    if (!isValid) return false;
-    account.setupUserAccount();
-    if (this.browserDetails.browser === 'safari') {
-      documentUtil.playAudio(C.SILENT_TONE_ELEMENT_ID);
+    const readyForLogin = () => {
+      account.setupUserAccount();
+      if (this.browserDetails.browser === 'safari') {
+        documentUtil.playAudio(C.SILENT_TONE_ELEMENT_ID);
+      }
+    };
+    const isValid = account.validate(() => {
+      readyForLogin();
+    });
+    if (typeof isValid === 'boolean') {
+      if (!isValid) {
+        return false;
+      }
+      readyForLogin();
     }
     return true;
   };
@@ -1119,7 +1145,10 @@ export class Client extends EventEmitter {
       init: new Date().getTime(),
     };
 
-    if (!this.isLoggedIn) {
+    if (!this.isLoggedIn && (this.phone === null
+      || (this.phone
+      && !this.phone.isConnected()
+      && !this.phone.isRegistered()))) {
       Plivo.log.warn(`${C.LOGCAT.LOGIN} | Must be logged in before to make a call`);
       return false;
     }

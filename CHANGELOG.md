@@ -5,6 +5,13 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.2 (released@ 09-01-2024)
+
+**Bug Fixes**
+
+* Enhanced SDK reconnection logic to optimize scenarios where users attempt to log in while already logged in.
+* Added internet access check before registration.
+
 ## v2.2.10-beta.1 (released@ 14-12-2023)
 
 **Bug Fixes**
