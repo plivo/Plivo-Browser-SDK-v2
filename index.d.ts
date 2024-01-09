@@ -104,6 +104,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             ringToneFlag: boolean;
             /**
+                * Callback to perform login after previous connection is disconnected successfully
+                * @private
+                */
+            loginCallback: any;
+            /**
                 * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
                 * Otherwise do not play audio.
                 * @private
