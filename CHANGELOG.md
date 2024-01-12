@@ -5,6 +5,14 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.3 (released@ 12-01-2024)
+
+**Features**
+
+* Introduced a new event 'remoteAudioStatus' that signifies the reception status of audio packets from the remote caller.
+
+**Note:**  This feature works only in case of conference and MPC
+
 ## v2.2.10-beta.2 (released@ 09-01-2024)
 
 **Bug Fixes**
