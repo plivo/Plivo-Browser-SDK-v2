@@ -75,7 +75,8 @@ class Account {
   /**
    * Validate the account credentials and session.
    */
-  public validate = (): boolean => this._validate();
+  public validate = (callback: any):
+  boolean => this._validate(callback);
 
   /**
    * Handles signalling, transport account creation and its listners
@@ -115,7 +116,7 @@ class Account {
     this.fetchIpCount = 0;
   }
 
-  private _validate = (): boolean => {
+  private _validate = (callback: () => void): any => {
     if (
       typeof this.credentials.userName === 'undefined'
       || typeof this.credentials.password === 'undefined'
@@ -138,11 +139,24 @@ class Account {
       );
       return false;
     }
+
+    if (!navigator.onLine) {
+      Plivo.log.warn(
+        `${C.LOGCAT.LOGIN} | Cannot login when there is no internet`,
+      );
+      this.cs.emit(
+        'onLoginFailed',
+        'Cannot login when there is no internet',
+      );
+      return false;
+    }
     // On login failure retry.
-    if (this.cs.phone) {
-      this.cs.phone.stop();
-      this.cs.phone = null;
-      Plivo.log.debug('deleting the existing phone instance');
+    if (this.cs.phone
+      && this.cs.phone.isConnected()) {
+      this.cs.loginCallback = callback;
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | deleting the existing phone instance`);
+      (this.cs.phone as any)._transport.disconnect(true);
+      return this.cs.loginCallback;
     }
     return true;
   };
@@ -316,6 +330,9 @@ class Account {
       Plivo.log.info(`${C.LOGCAT.CALL} | Speech Recognition restarted after network disruption`);
       this.cs._currentSession.startSpeechRecognition(this.cs);
     }
+    if (this.cs.loginCallback) {
+      this.cs.loginCallback = null;
+    }
     this.cs.emit('onConnectionChange', eventData);
     if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
       const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
@@ -411,6 +428,11 @@ class Account {
     };
     this.cs.connectionState = eventData.state;
     this.cs.emit('onConnectionChange', eventData);
+    if (this.cs.loginCallback) {
+      Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  Previous connection disconnected successfully, starting a new one.`);
+      this.cs.loginCallback();
+      this.cs.loginCallback = null;
+    }
     if (!this.cs.isLogoutCalled) {
       return;
     }
@@ -450,6 +472,10 @@ class Account {
     Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause, error.response);
     this.cs.userName = null;
     this.cs.password = null;
+    if (this.cs.phone) {
+      this.cs.phone.stop();
+      this.cs.phone = null;
+    }
 
     const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
     if (this.cs.isAccessTokenGenerator) {

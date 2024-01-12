@@ -95,6 +95,9 @@ export const startPingPong = ({
   if (client.networkChangeInterval == null) {
     client.networkChangeInterval = setInterval(() => {
       // send message only when there is active network connect
+      if (!isConnected) {
+        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} |  Checking for network availablity`);
+      }
       if (
         navigator.onLine
         && client.phone

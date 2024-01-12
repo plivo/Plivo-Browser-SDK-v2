@@ -19,3 +19,4 @@ types
 tsconfig.json
 coverage
 report
+.npmrc
