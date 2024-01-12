@@ -306,6 +306,11 @@ class Account {
     if (this.isPlivoSocketConnected) {
       this.isPlivoSocketConnected = false;
     }
+    if (this.cs.loginCallback) {
+      Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  Previous connection disconnected successfully, starting a new one.`);
+      this.cs.loginCallback();
+      this.cs.loginCallback = null;
+    }
     if (!(evt as any).ignoreReconnection) {
       urlIndex += 1;
       const sipConfig = this.setupUAConfig();
@@ -428,11 +433,6 @@ class Account {
     };
     this.cs.connectionState = eventData.state;
     this.cs.emit('onConnectionChange', eventData);
-    if (this.cs.loginCallback) {
-      Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  Previous connection disconnected successfully, starting a new one.`);
-      this.cs.loginCallback();
-      this.cs.loginCallback = null;
-    }
     if (!this.cs.isLogoutCalled) {
       return;
     }
@@ -469,13 +469,12 @@ class Account {
       return;
     }
     this.cs.isLoggedIn = false;
+    if (this.cs.phone) {
+      this.cs.phone.stop();
+    }
     Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause, error.response);
     this.cs.userName = null;
     this.cs.password = null;
-    if (this.cs.phone) {
-      this.cs.phone.stop();
-      this.cs.phone = null;
-    }
 
     const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
     if (this.cs.isAccessTokenGenerator) {
