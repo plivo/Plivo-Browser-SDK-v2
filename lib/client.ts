@@ -32,8 +32,9 @@ import {
 import getBrowserDetails from './utils/browserDetection';
 import detectFramework from './utils/frameworkDetection';
 import AccessTokenInterface from './utils/token';
-import { setErrorCollector } from './managers/util';
+import { setErrorCollector, setConectionInfo } from './managers/util';
 import { NoiseSuppression } from './rnnoise/NoiseSuppression';
+import { ConnectionState } from './utils/networkManager';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -71,6 +72,7 @@ export interface ConfiguationOptions {
   useDefaultAudioDevice?: boolean
   registrationRefreshTimer?: number;
   enableNoiseReduction?: boolean;
+  reconnectOnHeartbeatFail?: boolean,
   dtmfOptions?: DtmfOptions;
 }
 
@@ -107,6 +109,11 @@ export interface Storage {
     rtt: boolean;
     ice_connection: boolean;
   };
+}
+
+export interface ConnectionInfo {
+  reason: string,
+  state: string
 }
 
 /**
@@ -466,7 +473,7 @@ export class Client extends EventEmitter {
    * Holds the connection state of the SDK
    * @private
    */
-  connectionState: string;
+  connectionInfo: ConnectionInfo;
 
   /**
    * Responsible for playing audio stream of remote user during call
@@ -697,6 +704,24 @@ export class Client extends EventEmitter {
   public getCallUUID = (): string | null => this._getCallUUID();
 
   /**
+ * Check if the client is in registered state.
+ * @returns Current CallUUID
+ */
+  public isRegistered = (): boolean | null => this._isRegistered();
+
+  /**
+* Check if the client is in connecting state.
+* @returns Current CallUUID
+*/
+  public isConnecting = (): boolean | null => this._isConnecting();
+
+  /**
+* Check if the client is in connected state.
+* @returns Current CallUUID
+*/
+  public isConnected = (): boolean | null => this._isConnected();
+
+  /**
    * Get the CallUUID of the latest answered call.
    */
   public getLastCallUUID = (): string | null => this._getLastCallUUID();
@@ -768,6 +793,7 @@ export class Client extends EventEmitter {
     }
     this.isLogoutCalled = true;
     this.noiseSuppresion.clearNoiseSupression();
+    setConectionInfo(this, ConnectionState.DISCONNECTED, "Logout");
     if (this.phone && this.phone.isRegistered()) {
       this.phone.stop();
       this.phone = null;
@@ -815,6 +841,7 @@ export class Client extends EventEmitter {
       useDefaultAudioDevice: _options.useDefaultAudioDevice,
       enableNoiseReduction: _options.enableNoiseReduction,
       dtmfOptions: _options.dtmfOptions,
+      reconnectOnHeartbeatFail: _options.reconnectOnHeartbeatFail,
     };
     Plivo.log.info(`${C.LOGCAT.INIT} | Plivo SDK initialized successfully with options:- `, JSON.stringify(data), `in ${Plivo.log.level()} mode`);
     // instantiates event emitter
@@ -825,6 +852,7 @@ export class Client extends EventEmitter {
     this.isUnregisterPending = null;
     // Default instance flags
     this.browserDetails = getBrowserDetails();
+    this.connectionInfo = { state: "", reason: "" };
     this.permOnClick = false;
     this.ringToneFlag = true;
     this.ringToneBackFlag = true;
@@ -1575,6 +1603,14 @@ export class Client extends EventEmitter {
     }
     return null;
   };
+
+  private _isRegistered = (): boolean | null => this.isLoggedIn
+  && this.phone && this.phone.isRegistered();
+
+  private _isConnecting = (): boolean | null => this.phone
+  && (this.phone as any)._transport.isConnecting();
+
+  private _isConnected = (): boolean | null => this.phone && this.phone.isConnected();
 
   private _startNoiseReduction = (): Promise<boolean> => new Promise((resolve) => {
     if (!this.enableNoiseReduction) {

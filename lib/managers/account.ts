@@ -10,7 +10,7 @@ import {
   createIncomingSession,
 } from './incomingCall';
 import { createOutgoingSession } from './outgoingCall';
-import { getCurrentTime, addMidAttribute } from './util';
+import { getCurrentTime, addMidAttribute, setConectionInfo } from './util';
 import { stopAudio } from '../media/document';
 import { Client } from '../client';
 import {
@@ -156,6 +156,7 @@ class Account {
       this.cs.loginCallback = callback;
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | deleting the existing phone instance`);
       (this.cs.phone as any)._transport.disconnect(true);
+      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "Relogin");
       return this.cs.loginCallback;
     }
     return true;
@@ -302,7 +303,10 @@ class Account {
    * @param {UserAgentDisconnectedEvent} evt
    */
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
-    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed`, evt.reason);
+    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed`, evt.code);
+    if (evt.code) {
+      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, evt.code.toString());
+    }
     if (this.isPlivoSocketConnected) {
       this.isPlivoSocketConnected = false;
     }
@@ -327,10 +331,6 @@ class Account {
     // Parse the response to get the JWT expiry in epoch
     // below is the example to get basic 120 sec expiry from response
     // To do : This needs to be changed in case of login through access Token method
-    const eventData = {
-      state: ConnectionState.CONNECTED,
-    };
-    this.cs.connectionState = eventData.state;
     if (this.cs._currentSession && this.cs.isCallMuted) {
       Plivo.log.info(`${C.LOGCAT.CALL} | Speech Recognition restarted after network disruption`);
       this.cs._currentSession.startSpeechRecognition(this.cs);
@@ -338,12 +338,17 @@ class Account {
     if (this.cs.loginCallback) {
       this.cs.loginCallback = null;
     }
-    this.cs.emit('onConnectionChange', eventData);
+    setConectionInfo(this.cs, ConnectionState.CONNECTED, 'registered');
+    Plivo.log.debug(`${C.LOGCAT.LOGIN} |  websocket connected: ${this.cs.connectionInfo.reason}`);
+    this.cs.emit('onConnectionChange', this.cs.connectionInfo);
+    setConectionInfo(this.cs, "", "");
     if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
       const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
       this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
     }
     if (!this.cs.isLoggedIn && !this.cs.isLoginCalled) {
+      Plivo.log.info(`${C.LOGCAT.NETWORK_CHANGE} | Network changed happened. re-starting the OPTIONS interval`);
+
       // this is case of network change
       clearInterval(this.cs.networkChangeInterval as any);
       this.cs.networkChangeInterval = null;
@@ -426,13 +431,12 @@ class Account {
    */
   private _onUnRegistered = (): void => {
     this.cs.isLoggedIn = false;
-    const eventData: {
-      state: string;
-    } = {
-      state: ConnectionState.DISCONNECTED,
-    };
-    this.cs.connectionState = eventData.state;
-    this.cs.emit('onConnectionChange', eventData);
+    if (this.cs.connectionInfo.state === "") {
+      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "unregistered");
+    }
+    Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  websocket disconnected with reason : ${this.cs.connectionInfo.reason}`);
+    this.cs.emit('onConnectionChange', this.cs.connectionInfo);
+    setConectionInfo(this.cs, "", "");
     if (!this.cs.isLogoutCalled) {
       return;
     }
@@ -465,14 +469,20 @@ class Account {
    * @param {Object} error - Login failure error
    */
   private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
-    if (this.cs.connectionState === ConnectionState.DISCONNECTED && this.cs.isLoggedIn) {
+    Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed with error: `, error.cause, error.response);
+    if (this.cs.connectionInfo.state === ConnectionState.DISCONNECTED && this.cs.isLoggedIn) {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Registration failed when state: ${this.cs.connectionInfo.state} and login: ${this.cs.isLoggedIn} with error: `, error.cause, error.response);
       return;
     }
     this.cs.isLoggedIn = false;
-    if (this.cs.phone) {
+    if (this.cs.phone && this.cs.options.reconnectOnHeartbeatFail) {
       this.cs.phone.stop();
     }
-    Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed : `, error.cause, error.response);
+    if (this.cs.networkChangeInterval && this.cs.options.reconnectOnHeartbeatFail) {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Registration failed with err: ${error.cause}. Clearing the network interval`);
+      clearInterval(this.cs.networkChangeInterval);
+      this.cs.networkChangeInterval = null;
+    }
     this.cs.userName = null;
     this.cs.password = null;
 

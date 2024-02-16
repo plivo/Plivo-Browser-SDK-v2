@@ -123,6 +123,7 @@ const onProgress = (incomingCall: CallSession) => (): void => {
     incomingCall.getCallInfo(),
     callerName,
   );
+  if (cs.options.reconnectOnHeartbeatFail) cs.noiseSuppresion.setLocalMediaStream();
   addCloseProtectionListeners.call(cs);
   Plivo.log.debug('Incoming Call Extra Headers : ', incomingCall.extraHeaders);
 };
@@ -178,6 +179,7 @@ const onAccepted = (incomingCall: CallSession) => (): void => {
       cs, inboundConnection, incomingCall,
     );
     inboundConnection.onconnectionstatechange = () => {
+      Plivo.log.debug(`${LOGCAT.CALL} | onconnectionstatechange is ${inboundConnection.connectionState}`);
       if (inboundConnection.connectionState === "connected") {
         cs.timeTakenForStats.mediaSetup.end = new Date().getTime();
       }
@@ -485,13 +487,14 @@ const getAnswerOptions = function (): Promise<SessionAnswerOptions> {
         video: false,
       };
     }
-    cs.noiseSuppresion.startNoiseSuppression().then((mediaStream) => {
-      opts.mediaStream = mediaStream != null ? mediaStream : (window as any).localStream;
-      // opts.mediaStream = (window as any).localStream || null;
-      // opts.rtcConstraints =  null;
-      opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
-      resolve(opts);
-    });
+    cs.noiseSuppresion.startNoiseSuppression((window as any).localStream ?? null)
+      .then((mediaStream) => {
+        opts.mediaStream = mediaStream != null ? mediaStream : (window as any).localStream;
+        // opts.mediaStream = (window as any).localStream || null;
+        // opts.rtcConstraints =  null;
+        opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
+        resolve(opts);
+      });
   });
 };
 

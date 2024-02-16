@@ -27,6 +27,7 @@ describe('ValidateOptions', () => {
       maxAverageBitrate: 48000,
       enableNoiseReduction: true,
       registrationRefreshTimer: 120,
+      reconnectOnHeartbeatFail: false,
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
       }

@@ -253,6 +253,8 @@ class PlivoLogger {
  * Send logs to Plivo kibana.
  */
   send = (client: Client): void => {
+    if (!process.env.PLIVO_ENV) return;
+
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
 
