@@ -167,6 +167,7 @@ const onSending = (): void => {
       onIceConnectionChange.call(cs, outboundConnection, cs._currentSession);
     };
     outboundConnection.onconnectionstatechange = () => {
+      Plivo.log.debug(`${LOGCAT.CALL} | onconnectionstatechange is ${outboundConnection.connectionState}`);
       if (outboundConnection.connectionState === "connected") {
         cs.timeTakenForStats.mediaSetup.end = new Date().getTime();
       }

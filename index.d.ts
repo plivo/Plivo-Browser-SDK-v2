@@ -47,6 +47,7 @@ declare module 'plivo-browser-sdk/client' {
             useDefaultAudioDevice?: boolean;
             registrationRefreshTimer?: number;
             enableNoiseReduction?: boolean;
+            reconnectOnHeartbeatFail?: boolean;
             dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
@@ -80,6 +81,10 @@ declare module 'plivo-browser-sdk/client' {
                     rtt: boolean;
                     ice_connection: boolean;
             };
+    }
+    export interface ConnectionInfo {
+            reason: string;
+            state: string;
     }
     /**
         * Initializes the client.
@@ -378,7 +383,7 @@ declare module 'plivo-browser-sdk/client' {
                 * Holds the connection state of the SDK
                 * @private
                 */
-            connectionState: string;
+            connectionInfo: ConnectionInfo;
             /**
                 * Responsible for playing audio stream of remote user during call
                 * @private
@@ -566,6 +571,21 @@ declare module 'plivo-browser-sdk/client' {
                 * @returns Current CallUUID
                 */
             getCallUUID: () => string | null;
+            /**
+            * Check if the client is in registered state.
+            * @returns Current CallUUID
+            */
+            isRegistered: () => boolean | null;
+            /**
+         * Check if the client is in connecting state.
+         * @returns Current CallUUID
+         */
+            isConnecting: () => boolean | null;
+            /**
+         * Check if the client is in connected state.
+         * @returns Current CallUUID
+         */
+            isConnected: () => boolean | null;
             /**
                 * Get the CallUUID of the latest answered call.
                 */

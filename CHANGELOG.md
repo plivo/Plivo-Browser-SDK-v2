@@ -5,6 +5,20 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.4 (released@ 16-02-2024)
+
+**Features**
+
+* Enhanced Heartbeat timer for improved network monitoring.
+* The reason for disconnection/connection is published with the onConnectionChange event. 
+* Streamlined the gathering of local media stream during the ringing state for incoming calls.
+* Introduced helper methods (isRegistered, isConnecting, and isConnected) for checking the client connection status.
+
+**Bug Fixes**
+
+* Implemented automatic restart of heartbeat service when the browser fails to reconnect the socket.
+
+
 ## v2.2.10-beta.3 (released@ 12-01-2024)
 
 **Features**
