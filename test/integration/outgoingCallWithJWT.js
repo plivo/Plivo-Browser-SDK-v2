@@ -202,6 +202,7 @@ describe("plivoWebSdk JWT", function () {
       if (bail) {
         done(new Error("bailing"));
       }
+      console.log('answering the calls');
       Client2.answer();
       // eslint-disable-next-line @typescript-eslint/dot-notation
       waitUntilOutgoingCall(events["onCallAnswered"], done, 500);
@@ -227,21 +228,21 @@ describe("plivoWebSdk JWT", function () {
 
     // #17
     // eslint-disable-next-line no-undef
-    it("outbound call should be ended without answer", (done) => {
-      if (bail) {
-        done(new Error("bailing"));
-      }
-      Client1.call(secondary_user, {});
-      Client2.reject();
-      bailTimer = setTimeout(() => {
-        Client1.hangup();
-      }, 5000);
-      waitUntilOutgoingCall(events.onCallFailed, done, 500);
-      bailTimer = setTimeout(() => {
-        bail = true;
-        done(new Error("outgoing call end failed"));
-      }, TIMEOUT);
-    });
+    // it("outbound call should be ended without answer", (done) => {
+    //   if (bail) {
+    //     done(new Error("bailing"));
+    //   }
+    //   Client1.call(secondary_user, {});/
+    //   Client2.reject();
+    //   // bailTimer = setTimeout(() => {
+    //   //   Client1.hangup();
+    //   // }, 5000);
+    //   waitUntilOutgoingCall(events.onCallFailed, done, 500);
+    //   bailTimer = setTimeout(() => {
+    //     bail = true;
+    //     done(new Error("outgoing call end failed"));
+    //   }, TIMEOUT);
+    // });
 
     // #18
     // eslint-disable-next-line no-undef

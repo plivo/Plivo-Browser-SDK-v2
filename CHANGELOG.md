@@ -5,6 +5,19 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.5 (released@ 23-02-2024)
+
+**Features**
+
+* Enhanced CallInfo Object by removing `remoteCancelReason` and introducing granular attributes: `reason`, `protocol`, `errorCode`, and `originator`.
+* Removed google STUN and implemented plivo STUN Servers to improve reliability. This change is now configurable via the `usePlivoStunServer` flag.
+
+**Bug Fixes**
+
+* Resolved type error issue causing `getHeader is not a function`.
+* Improved call management: Calls will now disconnect automatically in the event of a network switch while in the Ringing state.
+
+
 ## v2.2.10-beta.4 (released@ 16-02-2024)
 
 **Features**

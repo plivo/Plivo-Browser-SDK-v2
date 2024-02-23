@@ -43,6 +43,7 @@ import {
   addMidAttribute,
   addCallstatsIOFabric,
   isSessionConfirmed,
+  extractReasonInfo,
 } from './util';
 import { Client, ExtraHeaders } from '../client';
 import { resetPingPong } from '../utils/networkManager';
@@ -236,7 +237,7 @@ const OnProgress = (evt: SessionProgressEvent): void => {
     cs._currentSession.setCallUUID(callUUID);
     cs._currentSession.setState(cs._currentSession.STATE.RINGING);
     cs.callUUID = callUUID;
-    cs.emit('onCallRemoteRinging', cs._currentSession.getCallInfo());
+    cs.emit('onCallRemoteRinging', cs._currentSession.getCallInfo("local"));
     addCloseProtectionListeners.call(cs);
     addMidAttribute.call(cs, evt);
     addCallstatsIOFabric.call(
@@ -332,7 +333,9 @@ const onFailed = (evt: SessionFailedEvent): void => {
     cs._currentSession.setCallUUID(evt.message.getHeader('X-CallUUID') || null);
   }
   handleFailureCauses(evt);
-  cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo());
+  const reasonInfo = extractReasonInfo(evt.message);
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
+  cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
   cs._currentSession.onFailed(cs, evt);
 
   // //  logout if logged in by token and token get expired

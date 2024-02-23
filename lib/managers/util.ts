@@ -323,9 +323,35 @@ export const onIceConnectionChange = function (
       }
     }
     if (iceState === 'connected') {
-      client.emit('onMediaConnected', callSession.getCallInfo());
+      client.emit('onMediaConnected', callSession.getCallInfo("local"));
     }
   }
+};
+
+/**
+ * Extract reason from SIP messages.
+ * @param {string | object} reasonMessage - SIP message
+ */
+export const extractReasonInfo = (reasonMessage) => {
+  if (reasonMessage == null || typeof reasonMessage !== 'object') {
+    Plivo.log.debug(`${LOGCAT.CALL} | evt.message could be null or not an object: ${reasonMessage ? typeof reasonMessage : "null"}`);
+    return { protocol: 'none', cause: -1, text: 'none' };
+  }
+  const reasonHeader = reasonMessage.getHeader("Reason");
+  if (reasonHeader == null) {
+    Plivo.log.debug(`${LOGCAT.CALL} | No reason header present}`);
+    return { protocol: 'none', cause: -1, text: 'none' };
+  }
+
+  const matchCause = reasonHeader.match(/cause=(\d+)/);
+  const matchProtocol = reasonHeader.match(/^([^;]+)/);
+  const matchText = reasonHeader.match(/text="([^"]+)"/);
+
+  const protocol = matchProtocol ? matchProtocol[1] : 'none';
+  const cause = matchCause ? parseInt(matchCause[1], 10) : -1;
+  const text = matchText ? matchText[1] : 'none';
+
+  return { protocol, cause, text };
 };
 
 /**

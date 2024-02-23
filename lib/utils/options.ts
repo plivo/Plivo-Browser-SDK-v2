@@ -33,6 +33,7 @@ const _options: ConfiguationOptions = {
   maxAverageBitrate: C.MAX_AVERAGE_BITRATE,
   dtmfOptions: C.DEFAULT_DTMFOPTIONS,
   enableNoiseReduction: true,
+  usePlivoStunServer: false,
   reconnectOnHeartbeatFail: false,
   registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
 };
@@ -237,6 +238,12 @@ const validateOptions = function (
         case 'useDefaultAudioDevice':
           if (isBoolean(key, options[key])) {
             _options.useDefaultAudioDevice = options[key];
+          }
+          break;
+
+        case 'usePlivoStunServer':
+          if (isBoolean(key, options[key])) {
+            _options.usePlivoStunServer = options[key];
           }
           break;
 

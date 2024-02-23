@@ -75,15 +75,24 @@ export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) 
 
 export const reconnectSocket = (client: Client) => {
   if (navigator.onLine) {
-    Plivo.log.debug(`${LOGCAT.CALL} | re-connecting websocket`);
-    if (!client._currentSession) {
+    Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | re-connecting websocket`);
+    const activeSession = client.lastIncomingCall ?? client._currentSession;
+    if (activeSession && activeSession.state === activeSession.STATE.RINGING) {
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Terminating ${activeSession.direction} call with calluuid ${activeSession.callUUID} due to network change in ringing state`);
+      activeSession.session.terminate();
       (client.phone as any)._transport.disconnect(true);
       (client.phone as any)._transport.connect();
+    } else if (client._currentSession) {
+      const negotiationStarted = client._currentSession
+        ? client._currentSession?.session.renegotiate({
+          rtcOfferConstraints: { iceRestart: true },
+        })
+        : false;
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Renegotiate Ice :: ${negotiationStarted}`);
     } else {
-      const negotiationStarted = client._currentSession.session.renegotiate({
-        rtcOfferConstraints: { iceRestart: true },
-      });
-      Plivo.log.debug(`${LOGCAT.CALL} | Renegotiating Ice :: ${negotiationStarted}`);
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Closing previous websocket connection. Starting a new one`);
+      (client.phone as any)._transport.disconnect(true);
+      (client.phone as any)._transport.connect();
     }
     restartStatSocket(client);
   }
@@ -165,6 +174,13 @@ export const startPingPong = ({
         && !(client.phone as any)._transport.isConnecting()
         && !(client.phone as any).isRegistering()
         && isConnected) {
+        const activeSession = client.lastIncomingCall ?? client._currentSession;
+        if (activeSession && activeSession.state === activeSession.STATE.RINGING) {
+          if (activeSession.direction === 'incoming') {
+            activeSession.session.terminate();
+          }
+          Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Terminating ${activeSession.direction} call with calluuid ${activeSession.callUUID} due to network change in ringing state`);
+        }
         Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Websocket disconnected since internet is not available`);
         setConectionInfo(client, ConnectionState.DISCONNECTED, `No Internet`);
         (client.phone as any)._transport.disconnect(true);

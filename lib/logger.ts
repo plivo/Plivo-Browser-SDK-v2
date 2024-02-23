@@ -223,30 +223,35 @@ class PlivoLogger {
       redirect: 'follow',
     };
     const url = (client.isAccessToken) ? LOG_COLLECTION_JWT : LOG_COLLECTION;
-    fetch(url.trimEnd(), requestOptions)
-      .then((response) => {
-        if (!response.ok) {
-          this.info(`${LOGCAT.NIMBUS} | Error while uploading logs to nimbus`);
-          reject(new Error('failure'));
-        } else {
-          index += 1;
-          if (logs.length > index) {
-            this._sendBatchedLogsToServer(client, myHeaders, logs, index,
-              body.call_uuid,
-              body.username);
+    if (!navigator.onLine) {
+      this.info(`${LOGCAT.NIMBUS} | No internet while pushing logs to nimbus`);
+      resolve('no internet while sending nimbus logs');
+    } else {
+      fetch(url.trimEnd(), requestOptions)
+        .then((response) => {
+          if (!response.ok) {
+            this.info(`${LOGCAT.NIMBUS} | Error while uploading logs to nimbus`);
+            reject(new Error('failure'));
           } else {
-            Storage.getInstance().clear();
+            index += 1;
+            if (logs.length > index) {
+              this._sendBatchedLogsToServer(client, myHeaders, logs, index,
+                body.call_uuid,
+                body.username);
+            } else {
+              Storage.getInstance().clear();
+            }
+            resolve('success');
           }
-          resolve('success');
-        }
 
-        response.text();
-      })
-      .then((result) => console.log(result))
-      .catch((error) => {
-        console.log('error', error);
-        reject(error);
-      });
+          response.text();
+        })
+        .then((result) => console.log(result))
+        .catch((error) => {
+          console.log('error', error);
+          reject(error);
+        });
+    }
   });
 
   /**
