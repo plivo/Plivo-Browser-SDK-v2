@@ -36,6 +36,7 @@ import {
   addCallstatsIOFabric,
   hangupClearance,
   mobileBrowserCheck,
+  extractReasonInfo,
 } from './util';
 import { Client } from '../client';
 import { resetPingPong } from '../utils/networkManager';
@@ -120,7 +121,7 @@ const onProgress = (incomingCall: CallSession) => (): void => {
     'onIncomingCall',
     callerId,
     incomingCall.extraHeaders,
-    incomingCall.getCallInfo(),
+    incomingCall.getCallInfo("local"),
     callerName,
   );
   if (cs.options.reconnectOnHeartbeatFail) cs.noiseSuppresion.setLocalMediaStream();
@@ -214,18 +215,19 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
  */
 const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession): void => {
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause}`);
+  const reasonInfo = extractReasonInfo(evt.message);
   if (evt.cause === JSSIP_C.causes.CANCELED) {
     incomingCall.setState(incomingCall.STATE.CANCELED);
-    const reason = incomingCall.extractReason(String(evt.message), /Reason: .*text="([^"]+)"/);
-    Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${reason}`);
-    cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo(reason));
+    Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}}`);
+    cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
   } else {
+    Plivo.log.info(`${LOGCAT.CALL} | Incoming call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
     if (evt.cause === 'Rejected') {
       incomingCall.setState(incomingCall.STATE.REJECTED);
     } else {
       incomingCall.setState(incomingCall.STATE.FAILED);
     }
-    cs.emit('onCallFailed', evt.cause, incomingCall.getCallInfo());
+    cs.emit('onCallFailed', evt.cause, incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
   }
 };
 
@@ -529,7 +531,7 @@ export const answerIncomingCall = function (
       Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
       curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
       Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${err.message}`);
-      cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo(err.message));
+      cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo("local", "none", err.message, -1));
     }
     if (cs.ringToneView && !cs.ringToneView.paused) {
       stopAudio(RINGTONE_ELEMENT_ID);

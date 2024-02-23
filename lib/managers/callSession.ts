@@ -31,6 +31,7 @@ import {
   handleMediaError,
   hangupClearance,
   setEncodingParameters,
+  extractReasonInfo,
 } from './util';
 import { Logger } from '../logger';
 import { Client, ExtraHeaders } from '../client';
@@ -59,7 +60,10 @@ export interface CallInfo {
   state: string;
   stirShakenState: string;
   extraHeaders: ExtraHeaders;
-  remoteCancelReason: string;
+  protocol: string;
+  originator: string;
+  reason: string;
+  errorCode: number;
 }
 
 export interface SignallingInfo {
@@ -331,7 +335,7 @@ export class CallSession {
   /**
    * Get basic call information.
    */
-  public getCallInfo = (reason: string = "none") : CallInfo => ({
+  public getCallInfo = (originator: string, protocol: string = "none", reason: string = "none", errorCode: number = -1) : CallInfo => ({
     callUUID: this.callUUID as string,
     direction: this.direction,
     src: this.src,
@@ -339,7 +343,10 @@ export class CallSession {
     state: this.state,
     extraHeaders: this.extraHeaders,
     stirShakenState: this.stirShakenState,
-    remoteCancelReason: reason,
+    originator,
+    protocol,
+    reason,
+    errorCode,
   });
 
   /**
@@ -471,18 +478,6 @@ export class CallSession {
     this.stats = null;
   };
 
-  // eslint-disable-next-line class-methods-use-this
-  public extractReason(reasontag: string | undefined, reasonRegex: RegExp): string {
-    if (reasontag == null) {
-      return "Canceled";
-    }
-    const match = reasontag.match(reasonRegex);
-    if (match && match.length >= 2) {
-      return match[1];
-    }
-    return "Canceled";
-  }
-
   private _onAccepted = (clientObject: Client): void => {
     addCloseProtectionListeners.call(clientObject);
     getAudioDevicesInfo
@@ -537,7 +532,7 @@ export class CallSession {
       stopAudio(C.RINGBACK_ELEMENT_ID);
     }
 
-    clientObject.emit('onCallAnswered', this.getCallInfo());
+    clientObject.emit('onCallAnswered', this.getCallInfo("local"));
     Plivo.log.debug('Post-Answer detecting OWA');
     setTimeout(() => {
       owaNotification.bind(clientObject);
@@ -601,7 +596,6 @@ export class CallSession {
   };
 
   private _onFailed = (clientObject: Client, evt: SessionFailedEvent): void => {
-    Plivo.log.send(clientObject);
     this.addConnectionStage(`failed@${getCurrentTime()}`);
     this.updateSignallingInfo({
       hangup_time: getCurrentTime(),
@@ -611,10 +605,10 @@ export class CallSession {
     handleMediaError(evt, this);
     hangupClearance.call(clientObject, this);
     stopVolumeDataStreaming();
+    Plivo.log.send(clientObject);
   };
 
   private _onEnded = (clientObject: Client, evt: SessionEndedEvent): void => {
-    Plivo.log.send(clientObject);
     this.addConnectionStage(`ended@${getCurrentTime()}`);
     this.setState(this.STATE.ENDED);
     this.updateSignallingInfo({
@@ -630,20 +624,25 @@ export class CallSession {
       );
     }
     if (clientObject._currentSession) {
-      let reason = this.extractReason(evt.message?.getHeader("Reason"), /text="([^"]+)"/);
-      if (reason === "SUCCESS" || reason === "Canceled") {
+      const reasonInfo = extractReasonInfo(evt.message);
+      let reason = "";
+      if (reasonInfo.text === "" || reasonInfo.text === "none") {
         reason = evt.cause;
+      } else {
+        reason = reasonInfo.text;
       }
       Plivo.log.info(`${C.LOGCAT.CALL} | onCallTerminated - ${reason}`);
       clientObject.emit(
         'onCallTerminated',
         { originator: evt.originator, reason },
-        clientObject._currentSession.getCallInfo(reason),
+        clientObject._currentSession
+          .getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause),
       );
       hangupClearance.call(clientObject, clientObject._currentSession);
       stopVolumeDataStreaming();
       this.stopSpeechRecognition(clientObject);
     }
+    Plivo.log.send(clientObject);
   };
 
   private _onGetUserMediaFailed = (

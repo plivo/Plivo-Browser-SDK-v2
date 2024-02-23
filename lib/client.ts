@@ -72,6 +72,7 @@ export interface ConfiguationOptions {
   useDefaultAudioDevice?: boolean
   registrationRefreshTimer?: number;
   enableNoiseReduction?: boolean;
+  usePlivoStunServer?: boolean
   reconnectOnHeartbeatFail?: boolean,
   dtmfOptions?: DtmfOptions;
 }
@@ -777,7 +778,6 @@ export class Client extends EventEmitter {
   clearOnLogout(): void {
     // Store.getInstance().clear();
     // if logout is called explicitly, make all the related flags to default
-    Plivo.log.send(this);
     if (this.isAccessToken) {
       this.isAccessToken = false;
       this.isOutgoingGrant = false;
@@ -803,6 +803,7 @@ export class Client extends EventEmitter {
       this.statsSocket.disconnect();
       this.statsSocket = null;
     }
+    Plivo.log.send(this);
   }
 
   /**
@@ -840,6 +841,7 @@ export class Client extends EventEmitter {
       maxAverageBitrate: _options.maxAverageBitrate,
       useDefaultAudioDevice: _options.useDefaultAudioDevice,
       enableNoiseReduction: _options.enableNoiseReduction,
+      usePlivoStunServer: _options.usePlivoStunServer,
       dtmfOptions: _options.dtmfOptions,
       reconnectOnHeartbeatFail: _options.reconnectOnHeartbeatFail,
     };
@@ -888,6 +890,10 @@ export class Client extends EventEmitter {
     if (getBrowserDetails().browser !== 'firefox') {
       // eslint-disable-next-line new-cap, no-undef
       this.speechRecognition = new webkitSpeechRecognition();
+    }
+    if (options.usePlivoStunServer === true
+      && C.STUN_SERVERS.indexOf(C.FALLBACK_STUN_SERVER) === -1) {
+      C.STUN_SERVERS.push(C.FALLBACK_STUN_SERVER);
     }
     this.audio = {
       availableDevices: audioUtil.availableDevices,
@@ -1400,8 +1406,8 @@ export class Client extends EventEmitter {
       }
       // update state and clear session
       IncomingCall.handleIgnoreState(incomingCall);
-      Plivo.log.debug(`${C.LOGCAT.CALL} | On incoming call ignored`, incomingCall.getCallInfo());
-      this.emit('onIncomingCallIgnored', incomingCall.getCallInfo());
+      Plivo.log.debug(`${C.LOGCAT.CALL} | On incoming call ignored`, incomingCall.getCallInfo("local"));
+      this.emit('onIncomingCallIgnored', incomingCall.getCallInfo("local"));
       return true;
     }
     Plivo.log.warn('No incoming calls to ignore');

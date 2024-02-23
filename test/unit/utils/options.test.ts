@@ -28,6 +28,7 @@ describe('ValidateOptions', () => {
       enableNoiseReduction: true,
       registrationRefreshTimer: 120,
       reconnectOnHeartbeatFail: false,
+      usePlivoStunServer: false,
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
       }
