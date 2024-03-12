@@ -79,6 +79,7 @@ export const reconnectSocket = (client: Client) => {
     const activeSession = client.lastIncomingCall ?? client._currentSession;
     if (activeSession && activeSession.state === activeSession.STATE.RINGING) {
       Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Terminating ${activeSession.direction} call with calluuid ${activeSession.callUUID} due to network change in ringing state`);
+      activeSession.isCallTerminatedDuringRinging = true;
       activeSession.session.terminate();
       (client.phone as any)._transport.disconnect(true);
       (client.phone as any)._transport.connect();
@@ -176,6 +177,7 @@ export const startPingPong = ({
         && isConnected) {
         const activeSession = client.lastIncomingCall ?? client._currentSession;
         if (activeSession && activeSession.state === activeSession.STATE.RINGING) {
+          activeSession.isCallTerminatedDuringRinging = true;
           if (activeSession.direction === 'incoming') {
             activeSession.session.terminate();
           }

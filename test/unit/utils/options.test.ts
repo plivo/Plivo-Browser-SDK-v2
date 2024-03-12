@@ -96,6 +96,30 @@ describe('ValidateOptions', () => {
     expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(true);
   });
 
+  it('should check if usePlivoStunServer is valid', () => {
+    const inputOptions = { ...options };
+    inputOptions.usePlivoStunServer = "true";
+    expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(false);
+    inputOptions.usePlivoStunServer = 12345;
+    expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(false);
+    inputOptions.usePlivoStunServer = 12345.12345;
+    expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(false);
+    inputOptions.usePlivoStunServer = true;
+    expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(true);
+  });
+
+  it('should check if reconnectOnHeartbeatFail is valid', () => {
+    const inputOptions = { ...options };
+    inputOptions.reconnectOnHeartbeatFail = "true";
+    expect(validateOptions(inputOptions).reconnectOnHeartbeatFail).toStrictEqual(false);
+    inputOptions.reconnectOnHeartbeatFail = 12345;
+    expect(validateOptions(inputOptions).reconnectOnHeartbeatFail).toStrictEqual(false);
+    inputOptions.reconnectOnHeartbeatFail = 12345.12345;
+    expect(validateOptions(inputOptions).reconnectOnHeartbeatFail).toStrictEqual(false);
+    inputOptions.reconnectOnHeartbeatFail = true;
+    expect(validateOptions(inputOptions).reconnectOnHeartbeatFail).toStrictEqual(true);
+  });
+
   it('should validate invalid options', () => {
     const inputOptions = { ...options };
     inputOptions.username = 'test';

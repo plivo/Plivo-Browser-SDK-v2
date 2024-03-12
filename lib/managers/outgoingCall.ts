@@ -22,6 +22,7 @@ import {
   MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
   LOGCAT,
+  LOCAL_ERROR_CODES,
 } from '../constants';
 import { CallSession } from './callSession';
 import { checkExtraHeaderKey, checkExtraHeaderVal, checkExtraHeaderJWTVal } from '../utils/headers';
@@ -43,7 +44,7 @@ import {
   addMidAttribute,
   addCallstatsIOFabric,
   isSessionConfirmed,
-  extractReasonInfo,
+  extractReason,
 } from './util';
 import { Client, ExtraHeaders } from '../client';
 import { resetPingPong } from '../utils/networkManager';
@@ -333,7 +334,13 @@ const onFailed = (evt: SessionFailedEvent): void => {
     cs._currentSession.setCallUUID(evt.message.getHeader('X-CallUUID') || null);
   }
   handleFailureCauses(evt);
-  const reasonInfo = extractReasonInfo(evt.message);
+  let reasonInfo = { protocol: 'none', cause: -1, text: 'none' };
+  if (evt.originator === 'local' && cs._currentSession.isCallTerminatedDuringRinging) {
+    reasonInfo = { protocol: 'none', cause: LOCAL_ERROR_CODES['Network switch while ringing'], text: 'Network switch while ringing' };
+    cs._currentSession.isCallTerminatedDuringRinging = false;
+  } else {
+    reasonInfo = extractReason(evt);
+  }
   Plivo.log.info(`${LOGCAT.CALL} | Outgoing call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
   cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
   cs._currentSession.onFailed(cs, evt);

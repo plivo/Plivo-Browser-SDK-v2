@@ -20,6 +20,7 @@ import {
   MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
   LOGCAT,
+  LOCAL_ERROR_CODES,
 } from '../constants';
 import { CallSession } from './callSession';
 import { receiveExtraHeader } from '../utils/headers';
@@ -36,7 +37,7 @@ import {
   addCallstatsIOFabric,
   hangupClearance,
   mobileBrowserCheck,
-  extractReasonInfo,
+  extractReason,
 } from './util';
 import { Client } from '../client';
 import { resetPingPong } from '../utils/networkManager';
@@ -215,7 +216,13 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
  */
 const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession): void => {
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause}`);
-  const reasonInfo = extractReasonInfo(evt.message);
+  let reasonInfo = { protocol: 'none', cause: -1, text: 'none' };
+  if (evt.originator === 'local' && incomingCall.isCallTerminatedDuringRinging) {
+    reasonInfo = { protocol: 'none', cause: LOCAL_ERROR_CODES['Network switch while ringing'], text: 'Network switch while ringing' };
+    incomingCall.isCallTerminatedDuringRinging = false;
+  } else {
+    reasonInfo = extractReason(evt);
+  }
   if (evt.cause === JSSIP_C.causes.CANCELED) {
     incomingCall.setState(incomingCall.STATE.CANCELED);
     Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}}`);
@@ -531,7 +538,7 @@ export const answerIncomingCall = function (
       Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
       curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
       Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${err.message}`);
-      cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo("local", "none", err.message, -1));
+      cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo("local", "none", "call answer fail", LOCAL_ERROR_CODES['call answer fail']));
     }
     if (cs.ringToneView && !cs.ringToneView.paused) {
       stopAudio(RINGTONE_ELEMENT_ID);

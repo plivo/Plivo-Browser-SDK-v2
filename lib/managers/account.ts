@@ -315,7 +315,13 @@ class Account {
       this.cs.loginCallback();
       this.cs.loginCallback = null;
     }
-    if (!(evt as any).ignoreReconnection) {
+    if (this.cs.onLoginFailedCallback && this.cs.options.reconnectOnHeartbeatFail) {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Emitting onLoginFailed after connection is closed`);
+      this.cs.onLoginFailedCallback();
+      this.cs.onLoginFailedCallback = null;
+    }
+    if (!(evt as any).ignoreReconnection && !this.cs.options.reconnectOnHeartbeatFail) {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | starting new transport`);
       urlIndex += 1;
       const sipConfig = this.setupUAConfig();
       this.cs.phone!.createNewUATransport(sipConfig);
@@ -341,7 +347,6 @@ class Account {
     setConectionInfo(this.cs, ConnectionState.CONNECTED, 'registered');
     Plivo.log.debug(`${C.LOGCAT.LOGIN} |  websocket connected: ${this.cs.connectionInfo.reason}`);
     this.cs.emit('onConnectionChange', this.cs.connectionInfo);
-    setConectionInfo(this.cs, "", "");
     if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
       const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
       this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
@@ -431,12 +436,11 @@ class Account {
    */
   private _onUnRegistered = (): void => {
     this.cs.isLoggedIn = false;
-    if (this.cs.connectionInfo.state === "") {
+    if (this.cs.connectionInfo.state === "" || this.cs.connectionInfo.state === ConnectionState.CONNECTED) {
       setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "unregistered");
     }
     Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  websocket disconnected with reason : ${this.cs.connectionInfo.reason}`);
     this.cs.emit('onConnectionChange', this.cs.connectionInfo);
-    setConectionInfo(this.cs, "", "");
     if (!this.cs.isLogoutCalled) {
       return;
     }
@@ -478,21 +482,24 @@ class Account {
     if (this.cs.phone && this.cs.options.reconnectOnHeartbeatFail) {
       this.cs.phone.stop();
     }
-    if (this.cs.networkChangeInterval && this.cs.options.reconnectOnHeartbeatFail) {
-      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Registration failed with err: ${error.cause}. Clearing the network interval`);
-      clearInterval(this.cs.networkChangeInterval);
-      this.cs.networkChangeInterval = null;
-    }
-    this.cs.userName = null;
-    this.cs.password = null;
 
-    const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
-    if (this.cs.isAccessTokenGenerator) {
-      this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
-    } else if (error.cause && errorCode === 401) {
-      this.cs.emit('onLoginFailed', error.cause);
-    } else {
-      this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
+    this.cs.onLoginFailedCallback = () => {
+      this.cs.userName = null;
+      this.cs.password = null;
+      const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
+      if (this.cs.isAccessTokenGenerator) {
+        this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
+      } else if (error.cause && errorCode === 401) {
+        this.cs.emit('onLoginFailed', error.cause);
+      } else {
+        this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
+      }
+    };
+
+    if (!this.cs.options.reconnectOnHeartbeatFail) {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Emitting onLoginFailed instantly`);
+      this.cs.onLoginFailedCallback();
+      this.cs.onLoginFailedCallback = null;
     }
   };
 

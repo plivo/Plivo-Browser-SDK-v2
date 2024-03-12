@@ -115,6 +115,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             loginCallback: any;
             /**
+                * Callback to send onLoginFailed after websocket disconnection
+                * @private
+                */
+            onLoginFailedCallback: any;
+            /**
                 * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
                 * Otherwise do not play audio.
                 * @private
@@ -784,6 +789,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @private
                 */
             state: string;
+            /**
+                * Holds the status if call is terminated during ringing state
+                * @private
+                */
+            isCallTerminatedDuringRinging: boolean;
             /**
                 * Holds the current status of speechrecgnition
                 * @private

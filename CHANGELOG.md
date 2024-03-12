@@ -5,6 +5,20 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.6 (released@ 12-03-2024)
+
+**Features**
+
+* Implemented new local hangup reasons to provide additional insights into the cause of call hangups.
+
+**Bug Fix**
+
+* Graceful disconnection of the websocket before emitting `onLoginFailed`.
+* Resolved a type error issue resulting in: "Cannot assign to read-only property 'uri' of object".
+* Preventing the establishment of a new websocket connection if there is an ongoing connection.
+
+Note: The `errorCode` in the callinfo object has been renamed to `code`.
+
 ## v2.2.10-beta.5 (released@ 23-02-2024)
 
 **Features**
