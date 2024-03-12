@@ -478,10 +478,6 @@ class Account {
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | Registration failed when state: ${this.cs.connectionInfo.state} and login: ${this.cs.isLoggedIn} with error: `, error.cause, error.response);
       return;
     }
-    this.cs.isLoggedIn = false;
-    if (this.cs.phone && this.cs.options.reconnectOnHeartbeatFail) {
-      this.cs.phone.stop();
-    }
 
     this.cs.onLoginFailedCallback = () => {
       this.cs.userName = null;
@@ -495,6 +491,11 @@ class Account {
         this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
       }
     };
+
+    this.cs.isLoggedIn = false;
+    if (this.cs.phone && this.cs.options.reconnectOnHeartbeatFail) {
+      this.cs.phone.stop();
+    }
 
     if (!this.cs.options.reconnectOnHeartbeatFail) {
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | Emitting onLoginFailed instantly`);

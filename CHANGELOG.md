@@ -5,6 +5,12 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.7 (released@ 13-03-2024)
+
+**Bug Fix**
+
+* Resolved a issue where the `onLoginFailed` event was not emitted when encountering registration failure.
+
 ## v2.2.10-beta.6 (released@ 12-03-2024)
 
 **Features**
