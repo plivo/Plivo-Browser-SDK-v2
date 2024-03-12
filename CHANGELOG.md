@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 **Bug Fix**
 
-* Graceful disconnection of the websocket before emitting "onloginfailed".
+* Graceful disconnection of the websocket before emitting `onLoginFailed`.
 * Resolved a type error issue resulting in: "Cannot assign to read-only property 'uri' of object".
 * Preventing the establishment of a new websocket connection if there is an ongoing connection.
 
