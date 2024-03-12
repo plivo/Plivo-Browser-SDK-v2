@@ -58,6 +58,16 @@ export const SIP_ERROR_CODE = {
   502: 'There is an issue with the Carrier Gateway',
 };
 
+export const LOCAL_ERROR_CODES = {
+  'No Answer': 3000,
+  Canceled: 1000,
+  Rejected: 3020,
+  Terminated: 11001,
+  Ignored: 11002,
+  "call answer fail": 11003,
+  "Network switch while ringing": 11004,
+};
+
 // Options
 export const DEFAULT_CODECS = ['OPUS', 'PCMU'];
 export const DTMF_OPTIONS = ['INBAND', 'OUTBAND'];

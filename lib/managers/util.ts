@@ -25,7 +25,7 @@ import { Logger } from '../logger';
 import { Client } from '../client';
 import { CallSession } from './callSession';
 import {
-  STATS_ANALYSIS_WAIT_TIME, DEFAULT_MDNS_CANDIDATE, LOGCAT,
+  STATS_ANALYSIS_WAIT_TIME, DEFAULT_MDNS_CANDIDATE, LOGCAT, LOCAL_ERROR_CODES,
 } from '../constants';
 import getBrowserDetails from '../utils/browserDetection';
 
@@ -352,6 +352,13 @@ export const extractReasonInfo = (reasonMessage) => {
   const text = matchText ? matchText[1] : 'none';
 
   return { protocol, cause, text };
+};
+
+export const extractReason = (evt:SessionFailedEvent) => {
+  if (evt.originator === 'local') {
+    return { protocol: 'none', cause: LOCAL_ERROR_CODES[evt.cause], text: evt.cause };
+  }
+  return extractReasonInfo(evt.message);
 };
 
 /**

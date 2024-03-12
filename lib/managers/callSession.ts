@@ -31,7 +31,7 @@ import {
   handleMediaError,
   hangupClearance,
   setEncodingParameters,
-  extractReasonInfo,
+  extractReason,
 } from './util';
 import { Logger } from '../logger';
 import { Client, ExtraHeaders } from '../client';
@@ -63,7 +63,7 @@ export interface CallInfo {
   protocol: string;
   originator: string;
   reason: string;
-  errorCode: number;
+  code: number;
 }
 
 export interface SignallingInfo {
@@ -160,6 +160,12 @@ export class CallSession {
    * @private
    */
   state: string;
+
+  /**
+   * Holds the status if call is terminated during ringing state
+   * @private
+   */
+  isCallTerminatedDuringRinging: boolean;
 
   /**
    * Holds the current status of speechrecgnition
@@ -335,7 +341,7 @@ export class CallSession {
   /**
    * Get basic call information.
    */
-  public getCallInfo = (originator: string, protocol: string = "none", reason: string = "none", errorCode: number = -1) : CallInfo => ({
+  public getCallInfo = (originator: string, protocol: string = "none", reason: string = "none", code: number = -1) : CallInfo => ({
     callUUID: this.callUUID as string,
     direction: this.direction,
     src: this.src,
@@ -346,7 +352,7 @@ export class CallSession {
     originator,
     protocol,
     reason,
-    errorCode,
+    code,
   });
 
   /**
@@ -460,6 +466,7 @@ export class CallSession {
     this.session = options.session;
     this.connectionStages = [];
     this.gotInitalIce = false;
+    this.isCallTerminatedDuringRinging = false;
     this.stats = null;
     this.signallingInfo = {};
     this.mediaConnectionInfo = {};
@@ -624,17 +631,11 @@ export class CallSession {
       );
     }
     if (clientObject._currentSession) {
-      const reasonInfo = extractReasonInfo(evt.message);
-      let reason = "";
-      if (reasonInfo.text === "" || reasonInfo.text === "none") {
-        reason = evt.cause;
-      } else {
-        reason = reasonInfo.text;
-      }
-      Plivo.log.info(`${C.LOGCAT.CALL} | onCallTerminated - ${reason}`);
+      const reasonInfo = extractReason(evt);
+      Plivo.log.info(`${C.LOGCAT.CALL} | onCallTerminated - ${evt.cause}`);
       clientObject.emit(
         'onCallTerminated',
-        { originator: evt.originator, reason },
+        { originator: evt.originator, reason: evt.cause },
         clientObject._currentSession
           .getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause),
       );

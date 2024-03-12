@@ -35,6 +35,7 @@ import AccessTokenInterface from './utils/token';
 import { setErrorCollector, setConectionInfo } from './managers/util';
 import { NoiseSuppression } from './rnnoise/NoiseSuppression';
 import { ConnectionState } from './utils/networkManager';
+import { LOCAL_ERROR_CODES } from './constants';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -147,6 +148,12 @@ export class Client extends EventEmitter {
    * @private
    */
   loginCallback: any;
+
+  /**
+   * Callback to send onLoginFailed after websocket disconnection
+   * @private
+   */
+  onLoginFailedCallback: any;
 
   /**
    * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
@@ -1132,6 +1139,14 @@ export class Client extends EventEmitter {
     Plivo.log.info(
       `${C.LOGCAT.LOGIN} | Login initiated with Endpoint - ${username}`,
     );
+    if (this.isConnecting()
+      && this.userName === username
+      && !this.isAccessToken) {
+      Plivo.log.warn(
+        `${C.LOGCAT.LOGIN} | Already connecting with the endpoint provided - ${this.userName}.`,
+      );
+      return true;
+    }
     if (
       this.phone
       && this.phone.isRegistered()
@@ -1406,8 +1421,8 @@ export class Client extends EventEmitter {
       }
       // update state and clear session
       IncomingCall.handleIgnoreState(incomingCall);
-      Plivo.log.debug(`${C.LOGCAT.CALL} | On incoming call ignored`, incomingCall.getCallInfo("local"));
-      this.emit('onIncomingCallIgnored', incomingCall.getCallInfo("local"));
+      Plivo.log.debug(`${C.LOGCAT.CALL} | On incoming call ignored`, incomingCall.getCallInfo("local", "none", "Ignored", LOCAL_ERROR_CODES.Ignored));
+      this.emit('onIncomingCallIgnored', incomingCall.getCallInfo("local", "none", "Ignored", LOCAL_ERROR_CODES.Ignored));
       return true;
     }
     Plivo.log.warn('No incoming calls to ignore');
