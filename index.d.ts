@@ -706,7 +706,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             protocol: string;
             originator: string;
             reason: string;
-            errorCode: number;
+            code: number;
     }
     export interface SignallingInfo {
             call_initiation_time?: number;
@@ -896,7 +896,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             /**
                 * Get basic call information.
                 */
-            getCallInfo: (originator: string, protocol?: string, reason?: string, errorCode?: number) => CallInfo;
+            getCallInfo: (originator: string, protocol?: string, reason?: string, code?: number) => CallInfo;
             /**
                 * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
                 * @param {Client} clientObject - client reference
