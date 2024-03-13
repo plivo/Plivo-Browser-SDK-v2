@@ -1139,9 +1139,9 @@ export class Client extends EventEmitter {
     Plivo.log.info(
       `${C.LOGCAT.LOGIN} | Login initiated with Endpoint - ${username}`,
     );
-    if (this.isConnecting()) {
+    if (this.phone && (this.isConnecting() || (this.phone as any).isRegistering())) {
       Plivo.log.warn(
-        `${C.LOGCAT.LOGIN} | Already connecting with the endpoint provided - ${this.userName}.`,
+        `${C.LOGCAT.LOGIN} | Already ${this.isConnecting() ? 'connecting' : 'registering'}`,
       );
       return true;
     }
