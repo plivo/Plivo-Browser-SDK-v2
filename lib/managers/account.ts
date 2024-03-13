@@ -151,11 +151,10 @@ class Account {
       return false;
     }
     // On login failure retry.
-    if (this.cs.phone
-      && this.cs.phone.isConnected()) {
+    if (this.cs.phone) {
       this.cs.loginCallback = callback;
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | deleting the existing phone instance`);
-      (this.cs.phone as any)._transport.disconnect(true);
+      this.cs.phone.stop();
       setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "Relogin");
       return this.cs.loginCallback;
     }
@@ -315,11 +314,6 @@ class Account {
       this.cs.loginCallback();
       this.cs.loginCallback = null;
     }
-    if (this.cs.onLoginFailedCallback && this.cs.options.reconnectOnHeartbeatFail) {
-      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Emitting onLoginFailed after connection is closed`);
-      this.cs.onLoginFailedCallback();
-      this.cs.onLoginFailedCallback = null;
-    }
     if (!(evt as any).ignoreReconnection && !this.cs.options.reconnectOnHeartbeatFail) {
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | starting new transport`);
       urlIndex += 1;
@@ -478,29 +472,17 @@ class Account {
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | Registration failed when state: ${this.cs.connectionInfo.state} and login: ${this.cs.isLoggedIn} with error: `, error.cause, error.response);
       return;
     }
-
-    this.cs.onLoginFailedCallback = () => {
-      this.cs.userName = null;
-      this.cs.password = null;
-      const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
-      if (this.cs.isAccessTokenGenerator) {
-        this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
-      } else if (error.cause && errorCode === 401) {
-        this.cs.emit('onLoginFailed', error.cause);
-      } else {
-        this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
-      }
-    };
-
     this.cs.isLoggedIn = false;
-    if (this.cs.phone && this.cs.options.reconnectOnHeartbeatFail) {
-      this.cs.phone.stop();
-    }
 
-    if (!this.cs.options.reconnectOnHeartbeatFail) {
-      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Emitting onLoginFailed instantly`);
-      this.cs.onLoginFailedCallback();
-      this.cs.onLoginFailedCallback = null;
+    this.cs.userName = null;
+    this.cs.password = null;
+    const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
+    if (this.cs.isAccessTokenGenerator) {
+      this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
+    } else if (error.cause && errorCode === 401) {
+      this.cs.emit('onLoginFailed', error.cause);
+    } else {
+      this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
     }
   };
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 **Bug Fix**
 
-* Resolved a issue where the `onLoginFailed` event was not emitted when encountering registration failure.
+* Resolved a race condition that led to unexpected results when emitting the 'onLoginFailed' event.
 
 ## v2.2.10-beta.6 (released@ 12-03-2024)
 

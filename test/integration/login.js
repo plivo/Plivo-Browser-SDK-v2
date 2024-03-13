@@ -136,7 +136,7 @@ describe("plivoWebSdk", function () {
         Client1.on("onLogin", () => {
           done();
         });
-      }, 2000);
+      }, 3000);
       bailTimer = setTimeout(() => {
         done(new Error("login should have failed"));
       }, TIMEOUT);
