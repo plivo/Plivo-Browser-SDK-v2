@@ -29,10 +29,11 @@ export class NoiseSuppression {
     }
   }
 
-  public initNoiseSuppresionEffect = function (): Promise<void> {
+  private initNoiseSuppresionEffect = function (): Promise<void> {
     return new Promise((resolve) => {
       this.noiseSuppresionEffect = new NoiseSuppressionEffect();
       this.noiseSuppresionEffect.prepareAudioWorklet().then(() => {
+        this.client.emit('onNoiseReductionReady');
         resolve();
       });
     });
@@ -49,9 +50,10 @@ export class NoiseSuppression {
           && this.noiseSuppresionEffect.noiseSuppressorNode && this.started) {
           Plivo.log.debug(`${C.LOGCAT.CALL_QUALITY} | Noise Suppression started. Starting effect on current stream`);
           this.noiseSupressionRunning = true;
-          const processedStream = this.noiseSuppresionEffect.startEffect(mediaStream);
-          (window as any).localStream = processedStream;
-          resolve(processedStream);
+          this.noiseSuppresionEffect.startEffect(mediaStream).then((processedStream) => {
+            (window as any).localStream = processedStream;
+            resolve(processedStream);
+          });
         } else {
           Plivo.log.debug(`${C.LOGCAT.CALL_QUALITY} | Noise Suppression is not running, returning mediastream`);
           (window as any).localStream = mediaStream;
@@ -65,9 +67,10 @@ export class NoiseSuppression {
               && this.noiseSuppresionEffect.noiseSuppressorNode && this.started) {
               Plivo.log.info(`${C.LOGCAT.CALL_QUALITY} | Noise Suppression started. Starting effect on new stream`);
               this.noiseSupressionRunning = true;
-              const processedStream = this.noiseSuppresionEffect.startEffect(stream);
-              (window as any).localStream = processedStream;
-              resolve(processedStream);
+              this.noiseSuppresionEffect.startEffect(stream).then((processedStream) => {
+                (window as any).localStream = processedStream;
+                resolve(processedStream);
+              });
             } else {
               Plivo.log.info(`${C.LOGCAT.CALL_QUALITY} | Noise Suppression is not running, returning new stream without processing`);
               resolve(stream);

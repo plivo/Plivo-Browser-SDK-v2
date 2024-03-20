@@ -1147,7 +1147,6 @@ declare module 'plivo-browser-sdk/rnnoise/NoiseSuppression' {
         noiseSupressionRunning: boolean;
         started: boolean;
         constructor(client: Client);
-        initNoiseSuppresionEffect: () => Promise<void>;
         startNoiseSuppression: (mediaStream?: MediaStream | undefined) => Promise<MediaStream | null>;
         stopNoiseSuppresion: () => void;
         setLocalMediaStream: () => Promise<MediaStream | null>;
