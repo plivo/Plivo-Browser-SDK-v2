@@ -1135,7 +1135,6 @@ export class Client extends EventEmitter {
 
   // private methods
   private _login = (username: string, password: string): boolean => {
-    this.isLoginCalled = true;
     Plivo.log.info(
       `${C.LOGCAT.LOGIN} | Login initiated with Endpoint - ${username}`,
     );
@@ -1157,6 +1156,8 @@ export class Client extends EventEmitter {
       );
       return true;
     }
+
+    this.isLoginCalled = true;
     const account = new Account(this, username, password, null,
       this.options.registrationRefreshTimer ?? C.REGISTER_EXPIRES_SECONDS);
     const readyForLogin = () => {

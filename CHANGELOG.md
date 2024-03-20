@@ -5,6 +5,16 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.8 (released@ 20-03-2024)
+
+**Bug fix**
+
+* Resolved an issue where noise reduction failed to initiate as anticipated due to necessitating a user gesture.
+
+**Feature**
+
+* A new event named `onNoiseReductionReady` has been introduced, which is triggered when the noise reduction is prepared to commence.
+
 ## v2.2.10-beta.7 (released@ 13-03-2024)
 
 **Bug Fix**

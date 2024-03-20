@@ -303,7 +303,7 @@ export const onIceConnectionChange = function (
 ): void {
   const client: Client = this;
   const iceState = connection.iceConnectionState;
-  Plivo.log.debug(`${LOGCAT.CALL} | oniceconnectionstatechange is ${connection.connectionState}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | oniceconnectionstatechange is ${iceState}`);
   Plivo.log.debug(`oniceconnectionstatechange:: ${iceState}`);
   callSession.addConnectionStage(
     `iceConnectionState-${iceState}@${getCurrentTime()}`,

@@ -2,8 +2,6 @@
 import { Logger } from "../logger";
 import * as C from "../constants";
 
-let audioContext: AudioContext;
-
 const Plivo = {
   log: Logger,
 };
@@ -13,20 +11,19 @@ const Plivo = {
  *
  * @returns {Promise<AudioWorkletNode | undefined>}
  */
-function initializeKRnnoise(): Promise<AudioWorkletNode | undefined> {
+function initializeKRnnoise(audioContext: AudioContext): Promise<AudioWorkletNode | undefined> {
   return new Promise((resolve) => {
-    audioContext.resume().then(() => {
-      const distjs = `https://csdk-test.s3.ap-south-1.amazonaws.com/processor.js`;
+    const distjs = `https://csdk-test.s3.ap-south-1.amazonaws.com/processor.js`;
 
-      try {
-        audioContext.audioWorklet.addModule(distjs).then(() => {
-          resolve(new AudioWorkletNode(audioContext, 'NoiseSuppressorWorklet-ts'));
-        });
-      } catch (e) {
-        Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Error while initializing noise suppression effect ${e}`);
-        resolve(undefined);
-      }
-    });
+    try {
+      audioContext.audioWorklet.addModule(distjs).then(() => {
+        Plivo.log.debug(`${C.LOGCAT.CALL_QUALITY} | audioWorklet setup is completed`);
+        resolve(new AudioWorkletNode(audioContext, 'NoiseSuppressorWorklet-ts'));
+      });
+    } catch (e) {
+      Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Error while initializing noise suppression effect ${e}`);
+      resolve(undefined);
+    }
   });
 }
 
@@ -62,20 +59,31 @@ export class NoiseSuppressionEffect {
 
   private init: any;
 
+  private audioContext: AudioContext;
+
   prepareAudioWorklet = function (): Promise<AudioWorkletNode | undefined> {
     return new Promise((resolve) => {
-      if (!audioContext) {
-        audioContext = new AudioContext();
-      }
+      const initRnnoise = () => {
+        initializeKRnnoise(this.audioContext).then((node) => {
+          if (node) {
+            this.noiseSuppressorNode = node;
+            resolve(this.noiseSuppressorNode);
+          } else {
+            resolve(undefined);
+          }
+        });
+      };
 
-      initializeKRnnoise().then((node) => {
-        if (node) {
-          this.noiseSuppressorNode = node;
-          resolve(this.noiseSuppressorNode);
-        } else {
-          resolve(undefined);
-        }
-      });
+      if (!this.audioContext) {
+        Plivo.log.debug(`${C.LOGCAT.CALL_QUALITY} | Creating new instance of AudioContext`);
+        this.audioContext = new AudioContext();
+        initRnnoise();
+      } else {
+        Plivo.log.debug(`${C.LOGCAT.CALL_QUALITY} | AudioContext instance already created. Resuming it.`);
+        this.audioContext.resume().then(() => {
+          initRnnoise();
+        });
+      }
     });
   };
 
@@ -88,33 +96,38 @@ export class NoiseSuppressionEffect {
    * @param {MediaStream} audioStream - Audio stream which will be mixed with _mixAudio.
    * @returns {MediaStream} - MediaStream containing both audio tracks mixed together.
    */
-  startEffect(audioStream: MediaStream): MediaStream {
-    try {
-      // eslint-disable-next-line prefer-destructuring
-      this.originalMediaTrack = audioStream.getAudioTracks()[0];
-      this.audioSource = audioContext.createMediaStreamSource(audioStream);
-      this.audioDestination = audioContext.createMediaStreamDestination();
-      // eslint-disable-next-line prefer-destructuring
-      this.outputMediaTrack = this.audioDestination.stream.getAudioTracks()[0];
+  startEffect(audioStream: MediaStream): Promise<MediaStream> {
+    return new Promise((resolve) => {
+      try {
+        // eslint-disable-next-line prefer-destructuring
+        this.audioContext.resume().then(() => {
+          // eslint-disable-next-line prefer-destructuring
+          this.originalMediaTrack = audioStream.getAudioTracks()[0];
+          this.audioSource = this.audioContext.createMediaStreamSource(audioStream);
+          this.audioDestination = this.audioContext.createMediaStreamDestination();
+          // eslint-disable-next-line prefer-destructuring
+          this.outputMediaTrack = this.audioDestination.stream.getAudioTracks()[0];
 
-      if (this.noiseSuppressorNode && this.audioSource && this.audioDestination) {
-        this.audioSource.connect(this.noiseSuppressorNode);
-        this.noiseSuppressorNode.connect(this.audioDestination);
+          if (this.noiseSuppressorNode && this.audioSource && this.audioDestination) {
+            this.audioSource.connect(this.noiseSuppressorNode);
+            this.noiseSuppressorNode.connect(this.audioDestination);
+          }
+
+          // Sync the effect track muted state with the original track state.
+          this.outputMediaTrack.enabled = this.originalMediaTrack.enabled;
+
+          // // We enable the audio on the original track because
+          // mute/unmute action will only affect the audio destination
+          // // output track from this point on.
+          this.originalMediaTrack.enabled = true;
+
+          resolve(this.audioDestination.stream);
+        });
+      } catch (e) {
+        Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Error while starting noise suppression effect ${e}`);
+        resolve(audioStream);
       }
-
-      // Sync the effect track muted state with the original track state.
-      this.outputMediaTrack.enabled = this.originalMediaTrack.enabled;
-
-      // // We enable the audio on the original track because
-      // mute/unmute action will only affect the audio destination
-      // // output track from this point on.
-      this.originalMediaTrack.enabled = true;
-
-      return this.audioDestination.stream;
-    } catch (e) {
-      Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Error while starting noise suppression effect ${e}`);
-      return audioStream;
-    }
+    });
   }
 
   /**
@@ -169,8 +182,7 @@ export class NoiseSuppressionEffect {
       this.audioDestination?.disconnect();
       this.noiseSuppressorNode?.disconnect();
       this.audioSource?.disconnect();
-
-      audioContext.suspend();
+      this.audioContext.suspend();
     } catch (e) {
       Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Error while clearing noise suppression effect ${e}`);
     }
