@@ -237,6 +237,7 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
     const retryCounts = DTMF_TONE_PLAY_RETRY_ATTEMPTS;
     const audioElement = document.getElementById(elementId) as HTMLAudioElement;
     // Unmute audio for playing audio during call
+    Plivo.log.debug(`${LOGCAT.CALL} | Unmuting audio for element: ${elementId}`);
     audioElement.muted = false;
     let dtmfOption:string = "";
     if (elementId.includes('dtmf')) {
@@ -264,6 +265,7 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
     };
 
     const audioPromise = audioElement.play().then(() => {
+      Plivo.log.debug(`${LOGCAT.CALL} | Audio played for element: ${elementId}`);
       // onended event called after DTMF play tone is finished playing, unmute called
       if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') {
         audioElement.onended = (() => {
@@ -275,15 +277,19 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
       }
     });
 
-    if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') checkForDTMFTOne(retryCounts);
     // Avoids unhandled promise rejection while playing audio
     if (audioPromise !== undefined) {
-      audioPromise.catch(() => {}).then(() => {});
+      audioPromise.catch((err) => {
+        Plivo.log.error(`${LOGCAT.CALL} | error while playing audio for element: ${elementId}, err: ${err.name}`);
+      });
     }
-    Plivo.log.debug(`playAudio - ${elementId}`);
+
+    if (elementId.includes('dtmf') && dtmfOption.toUpperCase() === 'OUTBAND') checkForDTMFTOne(retryCounts);
+
+    Plivo.log.debug(`${LOGCAT.CALL} | playAudio - ${elementId}`);
   } catch (e) {
-    Plivo.log.debug(
-      `failed to play audio for elementId ${elementId} Cause: ${e}`,
+    Plivo.log.error(
+      `${LOGCAT.CALL} | failed to play audio for elementId ${elementId} Cause: ${e}`,
     );
   }
 };
@@ -294,14 +300,15 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
  */
 export const stopAudio = function (elementId: string): void {
   try {
+    Plivo.log.debug(`${LOGCAT.CALL} | stopping audio for element - ${elementId}`);
     const audioElement = document.getElementById(elementId) as HTMLAudioElement;
     audioElement.pause();
     // Mute audio so that audio can not be played through media keys
     audioElement.muted = true;
-    Plivo.log.debug(`stopAudio - ${elementId}`);
+    Plivo.log.debug(`${LOGCAT.CALL} | stopAudio - ${elementId}`);
   } catch (e) {
-    Plivo.log.debug(
-      `failed to stop audio for elementId ${elementId} Cause: ${e}`,
+    Plivo.log.error(
+      `${LOGCAT.CALL} | failed to stop audio for elementId ${elementId} Cause: ${e}`,
     );
   }
 };

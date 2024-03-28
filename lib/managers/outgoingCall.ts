@@ -341,6 +341,7 @@ const onFailed = (evt: SessionFailedEvent): void => {
   } else {
     reasonInfo = extractReason(evt);
   }
+  cs._currentSession.disconnectWatchRTC(cs);
   Plivo.log.info(`${LOGCAT.CALL} | Outgoing call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
   cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
   cs._currentSession.onFailed(cs, evt);

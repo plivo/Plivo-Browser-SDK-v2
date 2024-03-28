@@ -110,14 +110,14 @@ describe('Document', () => {
     } as any));
     const consoleSpy = jest.spyOn(console, 'debug');
     playAudio(C.RINGBACK_ELEMENT_ID);
-    expect(consoleSpy.mock.calls[0][1]).toBe('playAudio - plivo_ringbacktone');
+    expect(consoleSpy.mock.calls[1][1]).toBe('CALLING | playAudio - plivo_ringbacktone');
     getElementFn.mockRestore();
     consoleSpy.mockClear();
   });
 
   it('should fail to play audio based on element id', () => {
     const getElementFn = jest.spyOn(document, 'getElementById').mockImplementation(() => ({} as any));
-    const consoleSpy = jest.spyOn(console, 'debug');
+    const consoleSpy = jest.spyOn(console, 'error');
     playAudio(C.RINGBACK_ELEMENT_ID);
     expect(consoleSpy.mock.calls[0][1]).toMatch(/failed to play audio for elementId plivo_ringbacktone/);
     getElementFn.mockRestore();
@@ -130,14 +130,14 @@ describe('Document', () => {
     } as any));
     const consoleSpy = jest.spyOn(console, 'debug');
     stopAudio(C.RINGBACK_ELEMENT_ID);
-    expect(consoleSpy.mock.calls[0][1]).toBe('stopAudio - plivo_ringbacktone');
+    expect(consoleSpy.mock.calls[3][1]).toBe('CALLING | stopAudio - plivo_ringbacktone');
     getElementFn.mockRestore();
     consoleSpy.mockClear();
   });
 
   it('should fail to stop audio based on element id', () => {
     const getElementFn = jest.spyOn(document, 'getElementById').mockImplementation(() => ({} as any));
-    const consoleSpy = jest.spyOn(console, 'debug');
+    const consoleSpy = jest.spyOn(console, 'error');
     stopAudio(C.RINGBACK_ELEMENT_ID);
     expect(consoleSpy.mock.calls[0][1]).toMatch(/failed to stop audio for elementId plivo_ringbacktone/);
     getElementFn.mockRestore();
