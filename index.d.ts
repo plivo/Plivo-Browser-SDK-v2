@@ -412,6 +412,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             isLogoutCalled: boolean;
             /**
+                * status watchRTC socket connection status
+                * @private
+                */
+            isWatchRTCConnected: boolean;
+            /**
                 * Maintains a setInterval which checks for network change in idle state
                 * @private
                 */
@@ -956,6 +961,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @private
                 */
             constructor(options: CallSessionOptions);
+            disconnectWatchRTC: (clientObject: Client) => void;
     }
 }
 

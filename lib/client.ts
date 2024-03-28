@@ -2,6 +2,7 @@
 /* eslint-disable import/no-cycle */
 import { EventEmitter } from 'events';
 import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
+import watchRTC from "@testrtc/watchrtc-sdk";
 import * as C from './constants';
 import {
   Logger, AvailableLogMethods, AvailableFlagValues, DtmfOptions,
@@ -509,6 +510,12 @@ export class Client extends EventEmitter {
   isLogoutCalled: boolean;
 
   /**
+   * status watchRTC socket connection status
+   * @private
+   */
+  isWatchRTCConnected : boolean;
+
+  /**
    * Maintains a setInterval which checks for network change in idle state
    * @private
    */
@@ -852,6 +859,26 @@ export class Client extends EventEmitter {
       dtmfOptions: _options.dtmfOptions,
       reconnectOnHeartbeatFail: _options.reconnectOnHeartbeatFail,
     };
+    try {
+      Plivo.log.debug(`${C.LOGCAT.INIT} | watchRTC initilaization`);
+      watchRTC.init({
+        rtcApiKey: "ed1ca43d-348e-4d8d-8bb4-bea4f2d11e61",
+        rtcRoomId: "plivo-room",
+        rtcPeerId: "plivo",
+        collectionInterval: 8,
+      });
+      const stateListener = (state) => {
+        Plivo.log.debug(`${C.LOGCAT.CALL} | state of watchRTC ${state.connectionStatus}`);
+        if (state.connectionStatus === 'connected') {
+          this.isWatchRTCConnected = true;
+        } else {
+          this.isWatchRTCConnected = false;
+        }
+      };
+      watchRTC.addStateListener(stateListener);
+    } catch (error) {
+      Plivo.log.error(`${C.LOGCAT.INIT} | watchRTC initilaization failed `, error);
+    }
     Plivo.log.info(`${C.LOGCAT.INIT} | Plivo SDK initialized successfully with options:- `, JSON.stringify(data), `in ${Plivo.log.level()} mode`);
     // instantiates event emitter
     EventEmitter.call(this);
@@ -1420,6 +1447,7 @@ export class Client extends EventEmitter {
       }
       // update state and clear session
       IncomingCall.handleIgnoreState(incomingCall);
+      incomingCall.disconnectWatchRTC(this);
       Plivo.log.debug(`${C.LOGCAT.CALL} | On incoming call ignored`, incomingCall.getCallInfo("local", "none", "Ignored", LOCAL_ERROR_CODES.Ignored));
       this.emit('onIncomingCallIgnored', incomingCall.getCallInfo("local", "none", "Ignored", LOCAL_ERROR_CODES.Ignored));
       return true;

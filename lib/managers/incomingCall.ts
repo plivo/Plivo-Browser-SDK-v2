@@ -54,11 +54,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     isBrowserInBackground = false;
     if (isIncomingCallRinging && mobileBrowserCheck()) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Move to foreground. playing audio`);
       playAudio(RINGTONE_ELEMENT_ID);
     }
   } else {
     isBrowserInBackground = true;
     if (isIncomingCallRinging && mobileBrowserCheck()) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Move to background. stopping audio`);
       stopAudio(RINGTONE_ELEMENT_ID);
     }
   }
@@ -100,24 +102,29 @@ const onProgress = (incomingCall: CallSession) => (): void => {
   });
   incomingCall.setState(incomingCall.STATE.RINGING);
   incomingCall.setPostDialDelayEndTime(getCurrentTime());
-  Plivo.log.debug('call ringing with 180 code, incoming call in progress');
+  Plivo.log.debug(`${LOGCAT.CALL} | Call ringing with 180 code, incoming call in progress`);
   const callerUri = incomingCall.session.remote_identity.uri.toString();
   // Fetch the caller name
   const callerName = incomingCall.session.remote_identity.display_name;
   // if already on an incomingCall then do not play the ringtone
+  Plivo.log.debug(`${LOGCAT.CALL} | ringtone enabled : ${cs.ringToneFlag}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | no session is active currently: ${!cs._currentSession}`);
   if (cs.ringToneFlag !== false && !cs._currentSession) {
-    Plivo.log.debug('ringtone enabled : ', cs.ringToneFlag);
     if (!mobileBrowserCheck()) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Not a mobile browser. Playing ring tone`);
       playAudio(RINGTONE_ELEMENT_ID);
     } else if (!isBrowserInBackground) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Not in background. Playing ring tone`);
       playAudio(RINGTONE_ELEMENT_ID);
     }
+    Plivo.log.debug(`${LOGCAT.CALL} | incoming call ringtone started`);
     isIncomingCallRinging = true;
   }
   const callerId = `${callerUri.substring(
     4,
     callerUri.indexOf('@'),
   )}@${DOMAIN}`;
+  Plivo.log.debug(`${LOGCAT.CALL} | Emitting onIncomingCall`);
   cs.emit(
     'onIncomingCall',
     callerId,
@@ -217,6 +224,7 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
 const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession): void => {
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause}`);
   let reasonInfo = { protocol: 'none', cause: -1, text: 'none' };
+  incomingCall.disconnectWatchRTC(cs);
   if (evt.originator === 'local' && incomingCall.isCallTerminatedDuringRinging) {
     reasonInfo = { protocol: 'none', cause: LOCAL_ERROR_CODES['Network switch while ringing'], text: 'Network switch while ringing' };
     incomingCall.isCallTerminatedDuringRinging = false;
