@@ -233,6 +233,7 @@ export const speechListeners = function (): void {
  * Mute the local stream.
  */
 export const mute = function (): void {
+  Plivo.log.debug(`${LOGCAT.CALL} | call mute`);
   const client: Client = this;
   this._currentSession?.startSpeechRecognition(client);
   if (currentLocalStream) {
@@ -945,6 +946,7 @@ export const ringtoneDevices = ((): RingToneDevices => ({
  * Unmute the local stream.
  */
 export const unmute = function (): void {
+  Plivo.log.debug(`${LOGCAT.CALL} | call unmute`);
   const client: Client = this;
   if (currentLocalStream) {
     currentLocalStream.getAudioTracks()[0].enabled = true;
