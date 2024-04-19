@@ -273,6 +273,17 @@ const onAccepted = (evt: SessionAcceptedEvent): void => {
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
     Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Answered`);
+    if (evt.response.getHeader('X-FeatureFlags')) {
+      cs._currentSession.serverFeatureFlags = evt.response.getHeader('X-FeatureFlags').split(',');
+      cs._currentSession.serverFeatureFlags.forEach((value) => value.trim());
+      if (cs.phone) {
+        if (cs._currentSession.serverFeatureFlags.indexOf('ft_info') !== -1) {
+          cs.phone.sendReInviteOnTransportConnect = false;
+        } else {
+          cs.phone.sendReInviteOnTransportConnect = true;
+        }
+      }
+    }
     cs._currentSession.onAccepted(cs);
     cs._currentSession.setPostDialDelayEndTime(getCurrentTime());
     addCallstatsIOFabric.call(
@@ -405,7 +416,7 @@ const newDTMF = (evt: SessionNewDtmfEvent): void => {
  * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
  */
 const newInfo = (evt: SessionNewInfoEvent): void => {
-  Plivo.log.info(`${LOGCAT.CALL} | Outgoing Call | emitting remoteAudioStatus: ${evt.info.body}`);
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing Call | ${evt.originator} INFO packet with body : ${evt.info.body}`);
   if (evt.info.body === 'no-remote-audio') {
     cs.emit('remoteAudioStatus', false);
   }

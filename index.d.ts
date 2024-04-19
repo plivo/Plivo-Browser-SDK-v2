@@ -422,6 +422,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             networkChangeInterval: null | ReturnType<typeof setInterval>;
             /**
+             * Maintains a setInterval which checks for WS reconnection
+             * @private
+             */
+            connectionRetryInterval: null | ReturnType<typeof setInterval>;
+            /**
                 * Calculate time taken for different stats
                 * @private
                 */
@@ -829,6 +834,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @private
                 */
             stats: GetRTPStats | null;
+            /**
+                * Holds the server flags received in 200 OK
+                * @private
+                */
+            serverFeatureFlags: Array<string>;
             /**
                 * Holds timestamp for each state of call
                 * @private

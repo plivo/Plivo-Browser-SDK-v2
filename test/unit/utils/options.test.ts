@@ -1,5 +1,3 @@
-import { C } from 'plivo-jssip';
-import { Logger } from '../../../lib/logger';
 import validateOptions from '../../../lib/utils/options';
 
 describe('ValidateOptions', () => {

@@ -3,7 +3,7 @@
 /* eslint-disable no-underscore-dangle */
 import * as SipLib from 'plivo-jssip';
 import { Client } from '../client';
-import { LOGCAT } from '../constants';
+import { LOGCAT, WS_RECONNECT_RETRY_COUNT, WS_RECONNECT_RETRY_INTERVAL } from '../constants';
 import { Logger } from '../logger';
 import { sendEvents } from '../stats/nonRTPStats';
 import { createStatsSocket } from '../stats/setup';
@@ -35,6 +35,40 @@ export const restartStatSocket = (client: Client) => {
   }
 };
 
+export const socketReconnectionRetry = (client) => {
+  let socketReconnectCount = 1;
+  clearInterval(client.connectionRetryInterval as any);
+  client.connectionRetryInterval = null;
+  if (!client.isConnected()) {
+    Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Starting the connection interval`);
+    client.connectionRetryInterval = setInterval(() => {
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Checking WS connection status with count ${socketReconnectCount}`);
+      if ((client.phone as any)._transport.socket._ws
+        && (client.phone as any)._transport.socket._ws.readyState === 0) {
+        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | WS is not ready state`);
+        if (socketReconnectCount >= WS_RECONNECT_RETRY_COUNT) {
+          Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Retry count exhausted. Changing domain`);
+          // disconnect the socket with ignoreReconnection param as false
+          // in order to move to the  fallback domain
+          (client.phone as any)._transport.disconnect();
+          socketReconnectCount = 1;
+        } else {
+          Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Connection cannot be established. Increasing the reconnect count`);
+          (client.phone as any)._transport.disconnect(true);
+          (client.phone as any)._transport.connect();
+          socketReconnectCount += 1;
+        }
+      } else {
+        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | WS is in ready state or WS instance is available: ${!!((client.phone as any)._transport.socket._ws)}. Clearing the connection check interval`);
+        clearInterval(client.connectionRetryInterval as any);
+        client.connectionRetryInterval = null;
+      }
+    }, WS_RECONNECT_RETRY_INTERVAL);
+  } else {
+    Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Already connected: ${client.isConnected()}. Cannot start another connection attempt interval`);
+  }
+};
+
 export const getNetworkData = (client: Client, ipAddress: string | Error) => {
   const newNetworkType = (navigator as any).connection
     ? (navigator as any).connection.effectiveType
@@ -53,6 +87,24 @@ export const getNetworkData = (client: Client, ipAddress: string | Error) => {
   };
 };
 
+export const sendInfoReInvite = (client: Client, ipAddress: string) => {
+  if (client._currentSession) {
+    const networkInfo = getNetworkData(client, ipAddress);
+    if (networkInfo.newNetworkInfo.ip === networkInfo.previousNetworkInfo.ip) {
+      Plivo.log.info(`${LOGCAT.CALL} | ip did not changed. Sending info`);
+      client._currentSession.session.sendInfo('command/reconnect');
+    } else {
+      Plivo.log.info(`${LOGCAT.CALL} | Ip changed. Sending re-invite`);
+      (client._currentSession.session as any).renegotiate({
+        rtcOfferConstraints: { iceRestart: true },
+        sendReinviteOnly: true,
+      });
+    }
+  } else {
+    Plivo.log.info(`${LOGCAT.CALL} | No Active Session to send info or re-invite`);
+  }
+};
+
 export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) => {
   const networkInfo = getNetworkData(client, ipAddress);
   const obj = {
@@ -63,6 +115,9 @@ export const sendNetworkChangeEvent = async (client: Client, ipAddress: string) 
     disconnectionTimestamp: client.networkDisconnectedTimestamp,
   };
   Plivo.log.info(`${LOGCAT.CALL} | The network changed from ${JSON.stringify(obj.previousNetworkInfo)} to ${JSON.stringify(obj.newNetworkInfo)}`);
+  if (client._currentSession && client._currentSession.serverFeatureFlags.indexOf('ft_info') !== -1) {
+    sendInfoReInvite(client, ipAddress);
+  }
   sendEvents.call(client, obj, client._currentSession!);
   // update current network info
   client.currentNetworkInfo = {
@@ -81,9 +136,7 @@ export const reconnectSocket = (client: Client) => {
       Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Terminating ${activeSession.direction} call with calluuid ${activeSession.callUUID} due to network change in ringing state`);
       activeSession.isCallTerminatedDuringRinging = true;
       activeSession.session.terminate();
-      (client.phone as any)._transport.disconnect(true);
-      (client.phone as any)._transport.connect();
-    } else if (client._currentSession) {
+    } else if (client._currentSession && client._currentSession.serverFeatureFlags.indexOf('ft_info') === -1) {
       const negotiationStarted = client._currentSession
         ? client._currentSession?.session.renegotiate({
           rtcOfferConstraints: { iceRestart: true },
@@ -94,6 +147,7 @@ export const reconnectSocket = (client: Client) => {
       Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Closing previous websocket connection. Starting a new one`);
       (client.phone as any)._transport.disconnect(true);
       (client.phone as any)._transport.connect();
+      socketReconnectionRetry(client);
     }
     restartStatSocket(client);
   }
@@ -128,7 +182,7 @@ export const startPingPong = ({
         if (!isConnected) {
           isConnected = true;
           isReconnectionStarted = true;
-          if (client._currentSession) {
+          if (client._currentSession && client._currentSession.serverFeatureFlags.indexOf('ft_info') === -1) {
             const negotiationStarted = client._currentSession.session.renegotiate({
               rtcOfferConstraints: { iceRestart: true },
             });
@@ -136,6 +190,7 @@ export const startPingPong = ({
           } else {
             Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Restarting Connection`);
             (client.phone as any)._transport.connect();
+            socketReconnectionRetry(client);
           }
         }
         // timeout to check whether we receive failed event in 5 seconds
