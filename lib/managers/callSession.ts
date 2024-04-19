@@ -205,6 +205,12 @@ export class CallSession {
   stats: GetRTPStats | null;
 
   /**
+   * Holds the server flags received in 200 OK
+   * @private
+   */
+  serverFeatureFlags: Array<string>;
+
+  /**
    * Holds timestamp for each state of call
    * @private
    */
@@ -461,6 +467,7 @@ export class CallSession {
     this.direction = options.direction;
     this.src = options.src;
     this.dest = options.dest;
+    this.serverFeatureFlags = [];
     this.state = this.STATE.INITIALIZED;
     this.speech_state = this.SPEECH_STATE.STOPPED;
     this.extraHeaders = options.extraHeaders;

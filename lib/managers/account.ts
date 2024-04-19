@@ -18,6 +18,7 @@ import {
   startPingPong,
   getNetworkData,
   ConnectionState,
+  socketReconnectionRetry,
 } from '../utils/networkManager';
 import { StatsSocket } from '../stats/ws';
 import { NoiseSuppression } from '../rnnoise/NoiseSuppression';
@@ -196,6 +197,7 @@ class Account {
       urlIndex = 0;
     }
 
+    Plivo.log.debug(`${C.LOGCAT.LOGIN} | Connecting WS with domain ${wsServers[urlIndex]}`);
     this.cs.plivoSocket = new SipLib.WebSocketInterface(wsServers[urlIndex]) as any;
     const sipConfig = {
       sockets: [this.cs.plivoSocket],
@@ -223,7 +225,7 @@ class Account {
           `X-Plivo-Jwt: ${this.accessTokenCredentials.accessToken}`,
         ]);
       }
-
+      socketReconnectionRetry(this.cs);
       this.cs.phone.start();
     }
   };
@@ -274,6 +276,12 @@ class Account {
   private _onConnected = (evt: SipLib.UserAgentConnectedEvent): void => {
     Plivo.log.info('websocket connection established', evt);
     Plivo.log.info(`${C.LOGCAT.LOGIN} | websocket connection established`);
+
+    if (this.cs.connectionRetryInterval) {
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | websocket connected. Clearing the connection check interval`);
+      clearInterval(this.cs.connectionRetryInterval);
+      this.cs.connectionRetryInterval = null;
+    }
     if (!this.isPlivoSocketConnected) {
       this.isPlivoSocketConnected = true;
       if (!this.cs.didFetchInitialNetworkInfo) {
@@ -302,7 +310,7 @@ class Account {
    * @param {UserAgentDisconnectedEvent} evt
    */
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
-    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed`, evt.code);
+    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed with code ${evt.code} and reason ${evt.reason}`);
     if (evt.code) {
       setConectionInfo(this.cs, ConnectionState.DISCONNECTED, evt.code.toString());
     }
@@ -314,9 +322,10 @@ class Account {
       this.cs.loginCallback();
       this.cs.loginCallback = null;
     }
-    if (!(evt as any).ignoreReconnection && !this.cs.options.reconnectOnHeartbeatFail) {
+    if (!(evt as any).ignoreReconnection) {
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | starting new transport`);
       urlIndex += 1;
+      socketReconnectionRetry(this.cs);
       const sipConfig = this.setupUAConfig();
       this.cs.phone!.createNewUATransport(sipConfig);
       this.cs.phone!.start();

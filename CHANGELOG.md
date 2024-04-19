@@ -5,6 +5,12 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.10 (released@ 19-04-2024)
+
+**Bug Fixes**
+* Enhanced WebSocket connection optimization and refined fallback mechanisms to minimize delays in establishing a connection.
+* Streamlined the process for reconnecting active calls during network changes for improved stability and reliability.
+
 ## v2.2.10-beta.9 (released@ 28-03-2024)
 
 **Feature**

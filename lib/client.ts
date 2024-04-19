@@ -1,8 +1,8 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable import/no-cycle */
 import { EventEmitter } from 'events';
-import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
 import watchRTC from "@testrtc/watchrtc-sdk";
+import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
 import * as C from './constants';
 import {
   Logger, AvailableLogMethods, AvailableFlagValues, DtmfOptions,
@@ -522,6 +522,12 @@ export class Client extends EventEmitter {
   networkChangeInterval: null | ReturnType<typeof setInterval>;
 
   /**
+  * Maintains a setInterval which checks for WS reconnection
+  * @private
+  */
+  connectionRetryInterval: null | ReturnType<typeof setInterval>;
+
+  /**
    * Calculate time taken for different stats
    * @private
    */
@@ -917,6 +923,7 @@ export class Client extends EventEmitter {
     this.isLoginCalled = false;
     this.isLogoutCalled = false;
     this.networkChangeInterval = null;
+    this.connectionRetryInterval = null;
     this.shouldMuteCall = false;
     this.isOutgoingGrant = false;
     this.isIncomingGrant = false;

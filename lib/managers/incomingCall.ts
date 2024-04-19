@@ -303,11 +303,11 @@ const newDTMF = (evt: SessionNewDtmfEvent): void => {
 };
 
 /**
- * Triggered when INFO is received.
+ * Triggered when INFO is received/sent.
  * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
  */
 const newInfo = (evt: SessionNewInfoEvent): void => {
-  Plivo.log.info(`${LOGCAT.CALL} | Incoming Call | emitting remoteAudioStatus: ${evt.info.body}`);
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming Call | ${evt.originator} INFO packet with body : ${evt.info.body}`);
   if (evt.info.body === 'no-remote-audio') {
     cs.emit('remoteAudioStatus', false);
   }
@@ -399,6 +399,17 @@ export const createIncomingSession = (
     client: cs,
     stirShakenState: stirVerificationValue,
   });
+  if (evt.request.getHeader('X-FeatureFlags')) {
+    incomingCall.serverFeatureFlags = evt.request.getHeader('X-FeatureFlags').split(',');
+    incomingCall.serverFeatureFlags.forEach((value) => value.trim());
+    if (cs.phone) {
+      if (incomingCall.serverFeatureFlags.indexOf('ft_info') !== -1) {
+        cs.phone.sendReInviteOnTransportConnect = false;
+      } else {
+        cs.phone.sendReInviteOnTransportConnect = true;
+      }
+    }
+  }
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);
 };
