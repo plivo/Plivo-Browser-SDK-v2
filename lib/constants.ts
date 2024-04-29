@@ -117,6 +117,22 @@ export const LOGCAT = {
   CALL_QUALITY: 'CALL_QUALITY_FEEDBACK',
   NETWORK_CHANGE: 'NETWORK_CHANGE',
   NIMBUS: 'NIMBUS',
+  WS: 'WS',
+};
+
+export type CandidateListType = {
+  ip: string;
+  port: number;
+  candidateType: string;
+  isLocal: boolean;
+};
+
+export type CandidatePairListType = {
+  iceConnectionState: string,
+  localCandidateId: string;
+  remoteCandidateId: string;
+  state: string;
+  timeStamp: string;
 };
 
 // Media

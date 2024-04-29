@@ -32,6 +32,7 @@ const remoteOffer = function (
   pc: RTCPeerConnection,
   sdp: RTCSessionDescriptionInit,
 ): void {
+  Plivo.log.debug(`${LOGCAT.CALL} creating remote offer`);
   pc.setRemoteDescription(sdp)
     .then(() => {
       if (sdp.type === 'offer') {
@@ -54,6 +55,7 @@ const remoteOffer = function (
  * @param {Any} pc - rtcp connection
  */
 const localOffer = function (pc: any): void {
+  Plivo.log.debug(`${LOGCAT.CALL} creating local offer`);
   pc.addStream(localStream);
   pc.createOffer()
     .then((des: RTCSessionDescriptionInit) => {
@@ -86,6 +88,7 @@ const onIceCandidate = function (
  * Stop local stream after detecting one way audio.
  */
 const stopStream = function (): void {
+  Plivo.log.debug(`${LOGCAT.CALL} stopping local stream after detecting one way audio`);
   if (localStream) {
     localStream.getTracks().forEach((track) => {
       track.stop();
@@ -218,7 +221,7 @@ export const owaCallback = function (
     onError(`media - ${err.name}`);
     return false;
   }
-  Plivo.log.debug('getUserMedia precheck ', res);
+  Plivo.log.debug(`${LOGCAT.LOGIN} getUserMedia precheck `, res);
   if (Number(res.bytesSent) === 0 && Number(res.audioInputLevel) === 0) {
     Plivo.log.error(`${LOGCAT.CALL} | chrome lost access to microphone - restart browser`, err.message);
     emitMetrics.call(

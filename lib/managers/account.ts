@@ -163,6 +163,7 @@ class Account {
   };
 
   private sendReInvite = () => {
+    Plivo.log.debug(`${C.LOGCAT.LOGIN} | reInvite initiated`);
     if (this.cs._currentSession && this.cs.phone) {
       // replace current session ua with newly created ua
       this.cs._currentSession.session.replaceUA(this.cs.phone);
@@ -196,7 +197,6 @@ class Account {
     if (urlIndex >= wsServers.length) {
       urlIndex = 0;
     }
-
     Plivo.log.debug(`${C.LOGCAT.LOGIN} | Connecting WS with domain ${wsServers[urlIndex]}`);
     this.cs.plivoSocket = new SipLib.WebSocketInterface(wsServers[urlIndex]) as any;
     const sipConfig = {
@@ -218,6 +218,7 @@ class Account {
     const isCreated = this._create();
     if (!isCreated) return;
     Plivo.log.info('Ready to login');
+    Plivo.log.debug(`${C.LOGCAT.CALL} | Establishing user accounts and configuring the callback listener`);
     this._createListeners();
     if (this.cs.phone) {
       if (this.accessTokenCredentials.accessToken != null) {
@@ -236,7 +237,8 @@ class Account {
       this.cs.phone = new SipLib.UA(sipConfig);
       return true;
     } catch (e) {
-      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Failed to create user agent${e.message}`);
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Failed to create user agent ${e.message}`);
+      this.cs.emit('onLoginFailed', 'Failed to create user agent');
       return false;
     }
   };
@@ -274,8 +276,8 @@ class Account {
    * @param {UserAgentConnectedEvent} evt
    */
   private _onConnected = (evt: SipLib.UserAgentConnectedEvent): void => {
-    Plivo.log.info('websocket connection established', evt);
-    Plivo.log.info(`${C.LOGCAT.LOGIN} | websocket connection established`);
+    Plivo.log.debug('websocket connection established', evt);
+    Plivo.log.info(`${C.LOGCAT.WS} | websocket connection established`);
 
     if (this.cs.connectionRetryInterval) {
       Plivo.log.info(`${C.LOGCAT.LOGIN} | websocket connected. Clearing the connection check interval`);
@@ -348,7 +350,7 @@ class Account {
       this.cs.loginCallback = null;
     }
     setConectionInfo(this.cs, ConnectionState.CONNECTED, 'registered');
-    Plivo.log.debug(`${C.LOGCAT.LOGIN} |  websocket connected: ${this.cs.connectionInfo.reason}`);
+    Plivo.log.debug(`${C.LOGCAT.WS} |  websocket connected: ${this.cs.connectionInfo.reason}`);
     this.cs.emit('onConnectionChange', this.cs.connectionInfo);
     if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
       const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
@@ -371,8 +373,8 @@ class Account {
         fetchIPAddress(this.cs).then((ipAddress) => {
           const networkInfo = getNetworkData(this.cs, ipAddress);
 
-          Plivo.log.info(`${C.LOGCAT.NETWORK_CHANGE} | Network changed from ${JSON.stringify(networkInfo.previousNetworkInfo)}
-          to ${JSON.stringify(networkInfo.newNetworkInfo)} in idle state`);
+          Plivo.log.info(`${C.LOGCAT.NETWORK_CHANGE} | Network changed from ${JSON.stringify(networkInfo.previousNetworkInfo).slice(1, -1)}
+          to ${JSON.stringify(networkInfo.newNetworkInfo).slice(1, -1)} in idle state`);
 
           this.cs.currentNetworkInfo = {
             networkType: networkInfo.newNetworkInfo.networkType,
@@ -442,7 +444,7 @@ class Account {
     if (this.cs.connectionInfo.state === "" || this.cs.connectionInfo.state === ConnectionState.CONNECTED) {
       setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "unregistered");
     }
-    Plivo.log.debug(`${C.LOGCAT.LOGOUT} |  websocket disconnected with reason : ${this.cs.connectionInfo.reason}`);
+    Plivo.log.debug(`${C.LOGCAT.WS} |  websocket disconnected with reason : ${this.cs.connectionInfo.reason}`);
     this.cs.emit('onConnectionChange', this.cs.connectionInfo);
     if (!this.cs.isLogoutCalled) {
       return;
@@ -459,9 +461,8 @@ class Account {
     this.cs.networkDisconnectedTimestamp = new Date().getTime();
     this.cs.userName = null;
     this.cs.password = null;
-
     this.cs.emit('onLogout');
-    Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Logout successful!');
+    Plivo.log.info(C.LOGCAT.LOGOUT, ' | Logout successful!');
     if (this.cs.networkChangeInterval) {
       clearInterval(this.cs.networkChangeInterval);
       this.cs.networkChangeInterval = null;
@@ -469,6 +470,7 @@ class Account {
     this.cs.clearOnLogout();
     this.message = null;
     this.cs.isLogoutCalled = false;
+    Plivo.log.send(this.cs);
   };
 
   /**
@@ -476,13 +478,12 @@ class Account {
    * @param {Object} error - Login failure error
    */
   private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
-    Plivo.log.debug(`${C.LOGCAT.LOGIN} | Login failed with error: `, error.cause, error.response);
+    Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: `, error.cause, error.response);
     if (this.cs.connectionInfo.state === ConnectionState.DISCONNECTED && this.cs.isLoggedIn) {
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | Registration failed when state: ${this.cs.connectionInfo.state} and login: ${this.cs.isLoggedIn} with error: `, error.cause, error.response);
       return;
     }
     this.cs.isLoggedIn = false;
-
     this.cs.userName = null;
     this.cs.password = null;
     const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
@@ -505,6 +506,9 @@ class Account {
     // Do not have any other logic here
     // Invite Server Trasaction(ist) gives us the incoming invite timestamp.
     if (evt.transaction.type === 'ist') {
+      const callID = evt.transaction.request.getHeader('Call-ID') ?? "";
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | new Transaction created, incoming call received callUUID: ${callID}`);
+      this.cs.loggerUtil.setSipCallID(callID);
       Plivo.log.info('<----- INCOMING ----->');
       const callUUID = evt.transaction.request.getHeader('X-Calluuid') || null;
       this.cs.incomingCallsInitiationTime.set(callUUID, getCurrentTime());
@@ -517,7 +521,11 @@ class Account {
    * @param {UserAgentNewRtcSessionEvent} evt
    */
   private _onNewRTCSession = (evt: SipLib.UserAgentNewRtcSessionEvent): void => {
-    Plivo.log.debug('new rtc session');
+    if (evt.originator === 'local') {
+      const sipCallID = (evt.request as SipLib.OutgoingRequest).call_id;
+      this.cs.loggerUtil.setSipCallID(sipCallID);
+    }
+    Plivo.log.debug(`${C.LOGCAT.CALL} | new rtc session created, originator:${evt.originator}`);
     // create stats socket
     createStatsSocket.call(this.cs);
     if (!this._validateRTCSession(evt)) return;
@@ -549,6 +557,7 @@ class Account {
       this.cs.callDirection = null;
     }
     if (this.cs.incomingInvites.size) {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Remove the incoming call from map if it is failed but not removed properly, invite-size: ${this.cs.incomingInvites?.size ?? "none"}`);
       this.cs.incomingInvites.forEach((invite) => {
         // Remove the incoming call from map if it is failed but not removed properly
         if (invite.session.isEnded()) {
@@ -562,7 +571,8 @@ class Account {
       || this.cs.incomingInvites.size
       >= C.NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED
     ) {
-      Plivo.log.debug(`${C.LOGCAT.CALL} | Already on call, sending busy signal.`);
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Already on call, Sending busy call due to existing call, invite-size: ${this.cs.incomingInvites.size} }`);
+      this.cs.loggerUtil.setSipCallID("");
       const opts = {
         status_code: 486,
         reason_phrase: 'Busy Here',

@@ -1,7 +1,7 @@
 {
   "name": "plivo-browser-sdk",
   "title": "plivo-browser-sdk",
-  "version": "2.2.10-beta.10",
+  "version": "2.2.10-beta.11",
   "description": "This library allows you to connect with plivo's voice enviroment from browser",
   "main": "./dist/plivobrowsersdk.js",
   "types": "index.d.ts",
@@ -46,16 +46,15 @@
     "build"
   ],
   "dependencies": {
-    "@testrtc/watchrtc-sdk": "^1.38.3",
     "@types/audioworklet": "^0.0.50",
     "@types/emscripten": "^1.39.8",
     "compare-versions": "^3.6.0",
     "debug": "^4.2.0",
     "events": "^3.2.0",
     "null-loader": "4.0.1",
-    "plivo-jssip": "^1.0.3",
     "sdp-transform": "^2.14.0",
     "semver-parser": "^3.0.5",
+    "plivo-jssip": "^1.0.3",
     "uuid": "^8.3.0",
     "wasm-feature-detect": "^1.5.1",
     "wasm-pack": "^0.12.1",

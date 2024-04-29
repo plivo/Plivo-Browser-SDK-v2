@@ -6,7 +6,6 @@ import {
   SessionFailedEvent,
   SessionEndedEvent,
 } from 'plivo-jssip';
-import watchRTC from "@testrtc/watchrtc-sdk";
 import {
   sendCallAnsweredEvent,
   onIceFailure,
@@ -32,6 +31,7 @@ import {
   handleMediaError,
   hangupClearance,
   setEncodingParameters,
+  logCandidatePairs,
   extractReason,
 } from './util';
 import { Logger } from '../logger';
@@ -227,6 +227,10 @@ export class CallSession {
    * @private
    */
   postDialDelayEndTime: number | null;
+
+  candidateList: Map<string, C.CandidateListType> = new Map();
+
+  candidatePairsList: Map<string, C.CandidatePairListType> = new Map();
 
   /**
    * Update CallUUID in session.
@@ -483,27 +487,11 @@ export class CallSession {
       this.signallingInfo.call_initiation_time = options.call_initiation_time;
     }
     this.postDialDelayEndTime = null;
-    try {
-      Plivo.log.debug(`${C.LOGCAT.CALL} | watchRTC init for the session`);
-      watchRTC.setConfig({
-        rtcApiKey: "ed1ca43d-348e-4d8d-8bb4-bea4f2d11e61",
-        rtcRoomId: options.sipCallID == null ? "plivo_csdk" : options.sipCallID,
-        rtcPeerId: options.client.userName as string,
-        collectionInterval: 8,
-      });
-      if (!options.client.isWatchRTCConnected) {
-        Plivo.log.debug(`${C.LOGCAT.CALL} | watchRTC connecting`);
-        watchRTC.connect();
-      } else {
-        Plivo.log.debug(`${C.LOGCAT.CALL} | watchRTC connection already connected!`);
-      }
-    } catch (error) {
-      Plivo.log.error(`${C.LOGCAT.CALL} | 'watchRTC init for the session failed: `, error);
-    }
   }
 
   private _clearCallStats = (): void => {
     if (!this.stats) return;
+    Plivo.log.debug(`${C.LOGCAT.CALL} | clearing out stats`);
     clearInterval(this.stats.statsTimer);
     clearInterval(this.stats.audioTimer);
     this.stats.stop();
@@ -628,6 +616,7 @@ export class CallSession {
   };
 
   private _onFailed = (clientObject: Client, evt: SessionFailedEvent): void => {
+    logCandidatePairs(clientObject._currentSession);
     this.addConnectionStage(`failed@${getCurrentTime()}`);
     this.updateSignallingInfo({
       hangup_time: getCurrentTime(),
@@ -638,9 +627,11 @@ export class CallSession {
     hangupClearance.call(clientObject, this);
     stopVolumeDataStreaming();
     Plivo.log.send(clientObject);
+    clientObject.loggerUtil.setSipCallID("");
   };
 
   private _onEnded = (clientObject: Client, evt: SessionEndedEvent): void => {
+    logCandidatePairs(clientObject._currentSession);
     this.addConnectionStage(`ended@${getCurrentTime()}`);
     this.setState(this.STATE.ENDED);
     this.updateSignallingInfo({
@@ -658,7 +649,6 @@ export class CallSession {
     if (clientObject._currentSession) {
       const reasonInfo = extractReason(evt);
       Plivo.log.info(`${C.LOGCAT.CALL} | onCallTerminated - ${evt.cause}`);
-      this.disconnectWatchRTC(clientObject);
       clientObject.emit(
         'onCallTerminated',
         { originator: evt.originator, reason: evt.cause },
@@ -670,13 +660,14 @@ export class CallSession {
       this.stopSpeechRecognition(clientObject);
     }
     Plivo.log.send(clientObject);
+    clientObject.loggerUtil.setSipCallID("");
   };
 
   private _onGetUserMediaFailed = (
     clientObject: Client,
     err: Error,
   ): void => {
-    Plivo.log.error(`${C.LOGCAT.CALL} | getusermediafailed: ${err.message}`);
+    Plivo.log.error(`${C.LOGCAT.CALL} | UserMedia:failed ${err.message}`);
     if (clientObject.userName && clientObject.callStats) {
       // eslint-disable-next-line no-param-reassign
       (err as Error).message = 'getusermediafailed';
@@ -711,18 +702,5 @@ export class CallSession {
       );
     }
     onSDPfailure.call(clientObject, this, err as Error);
-  };
-
-  public disconnectWatchRTC = (clientObject: Client) : void => {
-    try {
-      if (clientObject.isWatchRTCConnected) {
-        watchRTC.disconnect();
-        Plivo.log.debug(`${C.LOGCAT.CALL} | Disconnecting WatchRTC`);
-      } else {
-        Plivo.log.debug(`${C.LOGCAT.CALL} | watchRTC connection already disconnected!`);
-      }
-    } catch (error) {
-      Plivo.log.error(`${C.LOGCAT.CALL} | watchRTC disconnection failed`, error);
-    }
   };
 }
