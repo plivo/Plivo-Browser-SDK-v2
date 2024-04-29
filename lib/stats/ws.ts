@@ -125,7 +125,7 @@ export class StatsSocket {
    */
   connect = (): void => {
     if (!this.ws) {
-      Plivo.log.debug('opening stats socket');
+      Plivo.log.debug(`${C.LOGCAT.CALL}| opening stats socket`);
       try {
         this.isConnecting = true;
         this.ws = new WebSocket(this.url);
@@ -154,6 +154,8 @@ export class StatsSocket {
 
       this.ws.close();
       this.ws = null;
+    } else {
+      Plivo.log.debug(`${C.LOGCAT.LOGOUT}| webSocket instance not found`);
     }
   };
 

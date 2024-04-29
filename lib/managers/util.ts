@@ -292,19 +292,52 @@ export const setEncodingParameters = function (): void {
   }
 };
 
+export const getUTCTImeString = function (): string {
+  const date = new Date();
+  return `${date.toISOString().substring(0, 10)} ${date.toISOString().split('T')[1].split('.')[0]}.${date.getUTCMilliseconds()}`;
+};
+
+async function fetchCandidatePairs(connection: RTCPeerConnection, callSession: CallSession) {
+  const stats = await connection.getStats();
+  stats.forEach((report) => {
+    switch (report.type) {
+      case 'candidate-pair':
+        callSession.candidatePairsList.set(report.id, {
+          iceConnectionState: connection.iceConnectionState,
+          localCandidateId: report.localCandidateId,
+          remoteCandidateId: report.remoteCandidateId,
+          state: report.state,
+          timeStamp: getUTCTImeString(),
+        });
+        break;
+      case 'local-candidate':
+      case 'remote-candidate':
+        callSession.candidateList.set(report.id, {
+          ip: report.ip,
+          port: report.port,
+          candidateType: report.candidateType,
+          isLocal: report.type === 'local-candidate',
+        });
+        break;
+      default:
+        break;
+    }
+  });
+}
+
 /**
  * Handle ice connection change.
  * @param {RTCPeerConnection} connection - media connection
  * @param {CallSession} callSession - call session information
  */
-export const onIceConnectionChange = function (
+export const onIceConnectionChange = async function (
   connection: RTCPeerConnection,
   callSession: CallSession,
-): void {
+): Promise<void> {
   const client: Client = this;
   const iceState = connection.iceConnectionState;
   Plivo.log.debug(`${LOGCAT.CALL} | oniceconnectionstatechange is ${iceState}`);
-  Plivo.log.debug(`oniceconnectionstatechange:: ${iceState}`);
+  fetchCandidatePairs(connection, callSession);
   callSession.addConnectionStage(
     `iceConnectionState-${iceState}@${getCurrentTime()}`,
   );
@@ -619,6 +652,7 @@ export const handleMediaError = function (
 ): void {
   const client: Client = this;
   if (client.callStats && callSession.callUUID && !evt.cause.match('edia')) {
+    Plivo.log.debug(`${LOGCAT.CALL} | Sending error to stats when media error occurs`);
     if (callSession.session.connection) {
       client.callStats.reportError(
         callSession.session.connection,
@@ -688,4 +722,15 @@ export const mobileBrowserCheck = function (): boolean {
 export const setConectionInfo = function (client: Client, state: string, reason: string): void {
   client.connectionInfo.state = state;
   client.connectionInfo.reason = reason;
+};
+
+export const logCandidatePairs = function (callSession: CallSession | null) {
+  if (callSession) {
+    const { candidateList } = callSession;
+    callSession.candidatePairsList.forEach((value, key) => {
+      Plivo.log.debug(`${LOGCAT.CALL}| iceConnectionState-${value.iceConnectionState}, CandidatePair(${key}): state-${value.state} at [${value.timeStamp}] has local-candidate(${value.localCandidateId}):[${JSON.stringify(candidateList.get(value.localCandidateId)).slice(1, -1)}] and remote-candidate(${value.remoteCandidateId}):[${JSON.stringify(candidateList.get(value.remoteCandidateId)).slice(1, -1)}]`);
+    });
+  } else {
+    Plivo.log.debug(`${LOGCAT.CALL} |can't logCandidatePairs, callSession is null`);
+  }
 };

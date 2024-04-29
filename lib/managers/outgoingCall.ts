@@ -70,17 +70,16 @@ const validateSession = (phoneNumber: string): boolean => {
     || phoneNumber === null
     || phoneNumber.length <= 0
   ) {
-    Plivo.log.warn(
-      'Destination address cannot be null and the length must be > 0',
-    );
+    Plivo.log.warn(`${LOGCAT.CALL} | Destination address cannot be null and the length must be > 0`);
     return false;
   }
+
   if (cs._currentSession) {
-    Plivo.log.warn('Cannot make another call while in call');
+    Plivo.log.warn(`${LOGCAT.CALL} | Cannot make another call while in call`);
     return false;
   }
   if (cs.incomingInvites.size) {
-    Plivo.log.warn('Cannot make a call while there is an incoming call');
+    Plivo.log.warn(`${LOGCAT.CALL} | Cannot make a call while there is an incoming call`);
     return false;
   }
   outboundCallNumber = phoneNumber;
@@ -104,7 +103,7 @@ const getValidPhoneNumber = (phoneNumber: string): string => {
  * @param {RTCTrackEvent} evt - rtcsession track information
  */
 const onTrack = (evt: RTCTrackEvent): void => {
-  Plivo.log.debug('Outgoing call received addStream');
+  Plivo.log.debug('Outgoing remote Audio stream received');
   if (!cs._currentSession) return;
   cs._currentSession.addConnectionStage(
     `addStream-success@${getCurrentTime()}`,
@@ -125,6 +124,7 @@ const onTrack = (evt: RTCTrackEvent): void => {
     ) {
       setTimeout(() => {
         if (cs._currentSession && !isSessionConfirmed(cs._currentSession.session)) {
+          Plivo.log.debug('playAudio - session confirmed');
           cs.remoteView.pause();
         }
       }, 100);
@@ -149,7 +149,7 @@ const onTrack = (evt: RTCTrackEvent): void => {
  * Triggered when outgoing call is performed and INVITE sent.
  */
 const onSending = (): void => {
-  Plivo.log.debug('Outgoing call sending');
+  Plivo.log.debug(`${LOGCAT.CALL} | Outgoing call sending`);
   if (cs._currentSession) {
     cs._currentSession.addConnectionStage(`O-invite@${getCurrentTime()}`);
     cs._currentSession.updateSignallingInfo({
@@ -182,6 +182,7 @@ const onSending = (): void => {
  * @param {SessionSdpEvent} evt - rtcsession sdp information
  */
 const onSDP = (evt: SessionSdpEvent): void => {
+  Plivo.log.debug(`${LOGCAT.CALL} | ${evt.originator} SDP found`);
   try {
     // eslint-disable-next-line no-param-reassign
     evt.sdp = checkCodecPreference(
@@ -196,7 +197,7 @@ const onSDP = (evt: SessionSdpEvent): void => {
     // eslint-disable-next-line no-param-reassign
     evt.sdp = replaceMdnsIceCandidates(evt.sdp);
   } catch (err) {
-    Plivo.log.debug('checkCodecPreference err - ', err);
+    Plivo.log.debug(`${LOGCAT.CALL} checkCodecPreference err - `, err);
   }
 };
 
@@ -205,7 +206,7 @@ const onSDP = (evt: SessionSdpEvent): void => {
  * @param {SessionProgressEvent} evt - rtcsession progress information
  */
 const handleProgressTone = (evt: SessionProgressEvent): void => {
-  Plivo.log.debug(`ringback tone enabled : ${cs.ringToneBackFlag}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | ringback tone enabled : ${cs.ringToneBackFlag} audioPaused: ${cs.connectToneView.paused}`);
   if (!cs.connectToneView.paused) {
     stopAudio(CONNECT_TONE_ELEMENT_ID);
   }
@@ -232,12 +233,12 @@ const handleProgressTone = (evt: SessionProgressEvent): void => {
 const OnProgress = (evt: SessionProgressEvent): void => {
   cs.timeTakenForStats.pdd.end = new Date().getTime();
   if (cs._currentSession && evt.response) {
-    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing`);
     cs._currentSession.onRinging(cs);
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
     cs._currentSession.setState(cs._currentSession.STATE.RINGING);
     cs.callUUID = callUUID;
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing, CallUUID: ${cs.callUUID}`);
     cs.emit('onCallRemoteRinging', cs._currentSession.getCallInfo("local"));
     addCloseProtectionListeners.call(cs);
     addMidAttribute.call(cs, evt);
@@ -261,6 +262,8 @@ const OnProgress = (evt: SessionProgressEvent): void => {
     if (cs.shouldMuteCall) {
       cs.mute();
     }
+  } else {
+    Plivo.log.debug(`${LOGCAT.CALL} | inavlid response received, while call in progress`);
   }
 };
 
@@ -352,7 +355,6 @@ const onFailed = (evt: SessionFailedEvent): void => {
   } else {
     reasonInfo = extractReason(evt);
   }
-  cs._currentSession.disconnectWatchRTC(cs);
   Plivo.log.info(`${LOGCAT.CALL} | Outgoing call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
   cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
   cs._currentSession.onFailed(cs, evt);
@@ -529,6 +531,8 @@ const makingCall = (opts: SessionAnswerOptions, destinationUri: string): void =>
   try {
     if (cs.phone) {
       cs.phone.call(destinationUri, opts);
+    } else {
+      Plivo.log.debug(`${LOGCAT.CALL} | phone instance is null`);
     }
     Plivo.log.debug(
       'Outgoing call options : ',
@@ -566,6 +570,7 @@ export const makeCall = (
   extraHeaders: ExtraHeaders,
   phoneNumber: string,
 ): boolean => {
+  Plivo.log.debug(`${LOGCAT.CALL} | Outgoing call initiating to ${phoneNumber} with headers ${JSON.stringify(extraHeaders)}`);
   cs = clientObject;
   outBoundConnectionStages = [];
   outBoundConnectionStages.push(`call()@${getCurrentTime()}`);
@@ -574,8 +579,7 @@ export const makeCall = (
     // eslint-disable-next-line no-param-reassign
     phoneNumberStr = String(phoneNumber);
   }
-  const isValid = validateSession(phoneNumberStr);
-  if (!isValid) return false;
+  if (!validateSession(phoneNumberStr)) return false;
   const destinationUri = getValidPhoneNumber(phoneNumberStr);
   (() => {
     getOptions(extraHeaders)
@@ -602,7 +606,8 @@ export const createOutgoingSession = (
     sip_call_id: sipCallID,
     extra_headers: outboundExtraHeaders,
   };
-  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call initiated with header:- `, JSON.stringify(headers));
+  cs.loggerUtil.setSipCallID(sipCallID ?? "");
+  Plivo.log.info(`${LOGCAT.CALL} | Outgoing call initiated to ${outboundCallNumber} with header:- `, JSON.stringify(headers));
   cs._currentSession = new CallSession({
     sipCallID,
     direction: 'outgoing',
@@ -620,6 +625,6 @@ export const createOutgoingSession = (
     cs._currentSession!.addConnectionStage(stage);
   });
   outBoundConnectionStages = [];
-  Plivo.log.debug('new RTCSession outgoing');
+  Plivo.log.debug(`${LOGCAT.CALL} | outgoing session created`);
   cs.emit('onCalling');
 };

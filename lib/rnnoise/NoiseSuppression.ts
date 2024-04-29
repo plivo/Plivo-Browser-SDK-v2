@@ -116,7 +116,7 @@ export class NoiseSuppression {
             reject(err);
           });
       } else {
-        Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | getUserMedia not available`);
+        Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Usermedia:Not available, Noise suppression will not work`);
         reject(new Error('getUserMedia not available'));
       }
     });

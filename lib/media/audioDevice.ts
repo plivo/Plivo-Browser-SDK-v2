@@ -155,7 +155,7 @@ export const revealAudioDevices = function (
           }
         })
         .catch((err) => {
-          Plivo.log.error(`${LOGCAT.CALL} | Failed to get user media during init :: ${err.message}`);
+          Plivo.log.error(`${LOGCAT.CALL} | Failed to get user media during init ${err.message}`);
           reject(err.name);
         });
     } else {
@@ -300,6 +300,7 @@ export const startVolumeDataStreaming = function (client: Client): void {
  */
 export const stopVolumeDataStreaming = function (): void {
   setTimeout(() => {
+    Plivo.log.debug(`${LOGCAT.CALL} | stopping the emission of audio level`);
     if ((window as any)._localContext) {
       (window as any)._localContext.suspend();
     }

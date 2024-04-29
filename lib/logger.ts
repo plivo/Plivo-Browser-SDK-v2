@@ -8,6 +8,8 @@ import {
 } from './constants';
 import Storage from './storage';
 import { getOS, getSDKVersion } from './utils/device';
+// eslint-disable-next-line import/no-cycle
+import { LoggerUtil } from './utils/loggerUtil';
 
 /* eslint-disable no-undef */
 const consoleLogsArr: string[] = [];
@@ -45,6 +47,8 @@ class PlivoLogger {
   private options:LoggerOptions;
 
   private logMethod:AvailableLogMethods;
+
+  private loggerUtil:LoggerUtil;
 
   constructor(options:LoggerOptions = {}) {
     this.options = options;
@@ -102,6 +106,10 @@ class PlivoLogger {
     }
   };
 
+  setLoggerUtil(loggerUtil: LoggerUtil) {
+    this.loggerUtil = loggerUtil;
+  }
+
   private _appendToQueue = (premsg, arg1, arg2) => {
     let flag : boolean = false;
 
@@ -113,6 +121,7 @@ class PlivoLogger {
     if (arg1.includes(LOGCAT.CALL_QUALITY)) flag = true;
     if (arg1.includes(LOGCAT.NETWORK_CHANGE)) flag = true;
     if (arg1.includes(LOGCAT.NIMBUS)) flag = true;
+    if (arg1.includes(LOGCAT.WS)) flag = true;
 
     if (flag) Storage.getInstance().setData(premsg, arg1, arg2);
   };
@@ -132,8 +141,13 @@ class PlivoLogger {
       const loggingName = this.options.loggingName || '';
       const date = new Date();
       let msdate = '';
-      if (enableDate) msdate = `[${date.toISOString().substring(0, 10)} ${date.toString().split(' ')[4]}.${date.getMilliseconds()}]`;
-      const premsg = `${msdate} [${ucFilter}] ${loggingName} :: `;
+      if (enableDate) msdate = `[${date.toISOString().substring(0, 10)} ${date.toISOString().split('T')[1].split('.')[0]}.${date.getUTCMilliseconds()}]`;
+      let premsg = "";
+      if (this.loggerUtil) {
+        premsg = `${msdate} ${loggingName} : ${this.loggerUtil?.getUserName()} ${this.loggerUtil?.getSipCallID()} [${ucFilter}] `;
+      } else {
+        premsg = `${msdate} ${loggingName} :[${ucFilter}] `;
+      }
       // Number of logs which sdk store in memory
       if (consoleLogsArr.length >= CONSOLE_LOGS_BUFFER_SIZE) consoleLogsArr.shift();
       consoleLogsArr.push(`${premsg + arg1 + arg2} \n`);
@@ -203,7 +217,7 @@ class PlivoLogger {
       sdk_v: sdkVersionParse.version,
       sdk_name: "BrowserSDK",
       user_agent: deviceOs,
-      call_uuid: client.getCallUUID() ?? "",
+      call_uuid: "",
     };
 
     if (callUUID && callUUID !== "") {

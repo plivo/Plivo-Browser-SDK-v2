@@ -1,7 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable import/no-cycle */
 import { EventEmitter } from 'events';
-import watchRTC from "@testrtc/watchrtc-sdk";
 import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
 import * as C from './constants';
 import {
@@ -36,7 +35,8 @@ import AccessTokenInterface from './utils/token';
 import { setErrorCollector, setConectionInfo } from './managers/util';
 import { NoiseSuppression } from './rnnoise/NoiseSuppression';
 import { ConnectionState } from './utils/networkManager';
-import { LOCAL_ERROR_CODES } from './constants';
+import { LOCAL_ERROR_CODES, LOGCAT } from './constants';
+import { LoggerUtil } from './utils/loggerUtil';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -224,6 +224,13 @@ export class Client extends EventEmitter {
    * @private
    */
   speechRecognition: SpeechRecognition;
+
+  /**
+   * Holds the loggerUtil instance which keeps the
+   * value of username and sipCallID to attached to each log
+   * @private
+   */
+  loggerUtil: LoggerUtil;
 
   /*
    * Holds the instance of NoiseSuppression
@@ -508,12 +515,6 @@ export class Client extends EventEmitter {
    * @private
    */
   isLogoutCalled: boolean;
-
-  /**
-   * status watchRTC socket connection status
-   * @private
-   */
-  isWatchRTCConnected : boolean;
 
   /**
    * Maintains a setInterval which checks for network change in idle state
@@ -808,7 +809,7 @@ export class Client extends EventEmitter {
       this._currentSession.addConnectionStage(
         `logout()@${new Date().getTime()}`,
       );
-      Plivo.log.debug('Terminating an active call');
+      Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Terminating an active call, before logging out`);
       this._currentSession.session.terminate();
     }
     this.isLogoutCalled = true;
@@ -818,7 +819,6 @@ export class Client extends EventEmitter {
       this.phone.stop();
       this.phone = null;
     }
-
     if (this.statsSocket) {
       this.statsSocket.disconnect();
       this.statsSocket = null;
@@ -865,26 +865,6 @@ export class Client extends EventEmitter {
       dtmfOptions: _options.dtmfOptions,
       reconnectOnHeartbeatFail: _options.reconnectOnHeartbeatFail,
     };
-    try {
-      Plivo.log.debug(`${C.LOGCAT.INIT} | watchRTC initilaization`);
-      watchRTC.init({
-        rtcApiKey: "ed1ca43d-348e-4d8d-8bb4-bea4f2d11e61",
-        rtcRoomId: "plivo-room",
-        rtcPeerId: "plivo",
-        collectionInterval: 8,
-      });
-      const stateListener = (state) => {
-        Plivo.log.debug(`${C.LOGCAT.CALL} | state of watchRTC ${state.connectionStatus}`);
-        if (state.connectionStatus === 'connected') {
-          this.isWatchRTCConnected = true;
-        } else {
-          this.isWatchRTCConnected = false;
-        }
-      };
-      watchRTC.addStateListener(stateListener);
-    } catch (error) {
-      Plivo.log.error(`${C.LOGCAT.INIT} | watchRTC initilaization failed `, error);
-    }
     Plivo.log.info(`${C.LOGCAT.INIT} | Plivo SDK initialized successfully with options:- `, JSON.stringify(data), `in ${Plivo.log.level()} mode`);
     // instantiates event emitter
     EventEmitter.call(this);
@@ -932,6 +912,8 @@ export class Client extends EventEmitter {
       // eslint-disable-next-line new-cap, no-undef
       this.speechRecognition = new webkitSpeechRecognition();
     }
+    this.loggerUtil = new LoggerUtil(this);
+    Plivo.log.setLoggerUtil(this.loggerUtil);
     if (options.usePlivoStunServer === true
       && C.STUN_SERVERS.indexOf(C.FALLBACK_STUN_SERVER) === -1) {
       C.STUN_SERVERS.push(C.FALLBACK_STUN_SERVER);
@@ -968,7 +950,7 @@ export class Client extends EventEmitter {
     // store this instance as window object
     window['_PlivoInstance' as any] = this as any;
     Plivo.log.info(
-      `PlivoWebSdk initialized in ${Plivo.log.level()} mode, version: PLIVO_LIB_VERSION`,
+      `${C.LOGCAT.INIT} | PlivoWebSdk initialized in ${Plivo.log.level()} mode, version: PLIVO_LIB_VERSION , browser: ${this.browserDetails.browser}-${this.browserDetails.version}`,
     );
     this.jsFramework = detectFramework();
   }
@@ -1018,6 +1000,9 @@ export class Client extends EventEmitter {
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
       return JSON.parse(jsonPayload);
     } catch (err) {
+      Plivo.log.error(
+        `${C.LOGCAT.LOGIN}| parsing of jwt failed ${err.message}`,
+      );
       return null;
     }
   };
@@ -1169,6 +1154,7 @@ export class Client extends EventEmitter {
 
   // private methods
   private _login = (username: string, password: string): boolean => {
+    this.loggerUtil.setUserName(username);
     Plivo.log.info(
       `${C.LOGCAT.LOGIN} | Login initiated with Endpoint - ${username}`,
     );
@@ -1330,6 +1316,7 @@ export class Client extends EventEmitter {
 
   private _hangup = (): boolean => {
     if (this._currentSession) {
+      this.loggerUtil.setSipCallID(this._currentSession.sipCallID ?? "");
       Plivo.log.debug(`hangup - ${this._currentSession.callUUID}`);
       if (
         this._currentSession.session
@@ -1341,7 +1328,7 @@ export class Client extends EventEmitter {
         );
       }
       try {
-        Plivo.log.info('hangup initialized');
+        Plivo.log.debug(`${LOGCAT.CALL} | hangup initialized`);
         audioUtil.updateAudioDeviceFlags();
         if (Plivo.AppError) {
           Plivo.AppError.call(this, {
@@ -1358,7 +1345,7 @@ export class Client extends EventEmitter {
           documentUtil.stopAudio(C.RINGBACK_ELEMENT_ID);
         }
       } catch (err) {
-        Plivo.log.error('Could not hangup, Reason: ', err);
+        Plivo.log.error(`${LOGCAT.CALL} | Could not hangup, Reason: `, err);
         if (Plivo.AppError && Plivo.sendEvents) {
           Plivo.AppError.call(this, {
             name: err.name,
@@ -1378,7 +1365,7 @@ export class Client extends EventEmitter {
         }
       }
     } else {
-      Plivo.log.warn('No call session exists to hangup');
+      Plivo.log.warn(`${LOGCAT.CALL} | No call session exists to hangup`);
       return false;
     }
     return true;
@@ -1387,12 +1374,13 @@ export class Client extends EventEmitter {
   private _reject = (callUUID: string): boolean => {
     const incomingCall = IncomingCall.getCurrentIncomingCall(callUUID, this);
     if (!incomingCall) {
-      Plivo.log.warn('No call session exists to reject()');
+      Plivo.log.warn(`${LOGCAT.CALL} | No call session exists to reject()`);
       return false;
     }
-    Plivo.log.debug(`reject - ${incomingCall.callUUID}`);
+    this.loggerUtil.setSipCallID(incomingCall.sipCallID ?? "");
+    Plivo.log.debug(`${LOGCAT.CALL} | reject - ${incomingCall.callUUID}`);
     if (incomingCall.session && incomingCall.session.isEstablished()) {
-      Plivo.log.warn('call already answerd, please use hangup() method');
+      Plivo.log.warn(`${LOGCAT.CALL} |call already answerd, please use hangup() method`);
       return false;
     }
     if (incomingCall) {
@@ -1444,6 +1432,7 @@ export class Client extends EventEmitter {
   private _ignore = (callUUID: string): boolean => {
     const incomingCall = IncomingCall.getCurrentIncomingCall(callUUID, this);
     if (incomingCall) {
+      this.loggerUtil.setSipCallID(incomingCall.sipCallID ?? "");
       Plivo.log.debug(`ignore - ${incomingCall.callUUID}`);
       (incomingCall.session as any).removeAllListeners();
       this.incomingInvites.delete(incomingCall.callUUID as string);
@@ -1454,7 +1443,6 @@ export class Client extends EventEmitter {
       }
       // update state and clear session
       IncomingCall.handleIgnoreState(incomingCall);
-      incomingCall.disconnectWatchRTC(this);
       Plivo.log.debug(`${C.LOGCAT.CALL} | On incoming call ignored`, incomingCall.getCallInfo("local", "none", "Ignored", LOCAL_ERROR_CODES.Ignored));
       this.emit('onIncomingCallIgnored', incomingCall.getCallInfo("local", "none", "Ignored", LOCAL_ERROR_CODES.Ignored));
       return true;
@@ -1465,6 +1453,9 @@ export class Client extends EventEmitter {
   };
 
   private _sendDtmf = (digit: number | string): void => {
+    if (!navigator.onLine) {
+      return Plivo.log.warn(`${C.LOGCAT.CALL} | Unable to send DTMF: No internet connection`);
+    }
     const dtmfFlags = C.DTMF_TONE_FLAG as any;
     if (typeof digit === 'undefined' || digit == null) {
       return Plivo.log.warn(`${C.LOGCAT.CALL} | DTMF digit can not be null`);
@@ -1597,6 +1588,7 @@ export class Client extends EventEmitter {
   };
 
   private _setRingTone = (val: string | boolean): boolean => {
+    Plivo.log.debug(`${C.LOGCAT.CALL}| setting ringtone`);
     if (val === false || val === null) {
       this.ringToneFlag = false;
     } else if (typeof val === 'string') {
@@ -1612,6 +1604,7 @@ export class Client extends EventEmitter {
   };
 
   private _setRingToneBack = (val: string | boolean): boolean => {
+    Plivo.log.debug(`${C.LOGCAT.CALL}| setting ringtoneback`);
     if (val === false || val === null) {
       this.ringToneBackFlag = false;
     } else if (typeof val === 'string') {
@@ -1627,6 +1620,7 @@ export class Client extends EventEmitter {
   };
 
   private _setConnectTone = (val: boolean): boolean => {
+    Plivo.log.debug(`${C.LOGCAT.CALL}| setting connect tone`);
     if (!val) {
       this.connectToneFlag = false;
     } else {
@@ -1636,6 +1630,7 @@ export class Client extends EventEmitter {
   };
 
   private _setDtmfTone = (digit: string, url: string | boolean): boolean => {
+    Plivo.log.debug(`${C.LOGCAT.CALL}| setting dtmf tone`);
     const dtmfFlag = C.DTMF_TONE_FLAG as any;
     if (url === false || url === null) {
       dtmfFlag[digit] = false;

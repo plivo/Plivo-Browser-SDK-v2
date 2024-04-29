@@ -5,6 +5,13 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10-beta.11 (released@ 29-04-2024)
+
+**Bug Fixes**
+* Improved error handling by emitting "LoginFailed" event upon unsuccessful creation of User Agent (UA).
+* Implemented a check to prevent sending DTMF signals when there is no internet connection.
+
+
 ## v2.2.10-beta.10 (released@ 19-04-2024)
 
 **Bug Fixes**
