@@ -49,7 +49,6 @@ declare module 'plivo-browser-sdk/client' {
             registrationRefreshTimer?: number;
             enableNoiseReduction?: boolean;
             usePlivoStunServer?: boolean;
-            reconnectOnHeartbeatFail?: boolean;
             dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
@@ -115,11 +114,6 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             loginCallback: any;
-            /**
-                * Callback to send onLoginFailed after websocket disconnection
-                * @private
-                */
-            onLoginFailedCallback: any;
             /**
                 * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
                 * Otherwise do not play audio.
@@ -1221,6 +1215,7 @@ declare module 'plivo-browser-sdk/constants' {
     export const NETWORK_CHANGE_INTERVAL = 10000;
     export const STUN_SERVERS: string[];
     export const FALLBACK_STUN_SERVER = "stun:stun-fb.plivo.com:3478";
+    export const GOOG_STUN_SERVER = "stun:stun.l.google.com:19302";
     export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
     export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
     export const DTMF_TONE_PLAY_RETRY_ATTEMPTS = 4;

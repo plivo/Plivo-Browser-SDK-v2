@@ -75,7 +75,6 @@ export interface ConfiguationOptions {
   registrationRefreshTimer?: number;
   enableNoiseReduction?: boolean;
   usePlivoStunServer?: boolean
-  reconnectOnHeartbeatFail?: boolean,
   dtmfOptions?: DtmfOptions;
 }
 
@@ -149,12 +148,6 @@ export class Client extends EventEmitter {
    * @private
    */
   loginCallback: any;
-
-  /**
-   * Callback to send onLoginFailed after websocket disconnection
-   * @private
-   */
-  onLoginFailedCallback: any;
 
   /**
    * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
@@ -863,7 +856,6 @@ export class Client extends EventEmitter {
       enableNoiseReduction: _options.enableNoiseReduction,
       usePlivoStunServer: _options.usePlivoStunServer,
       dtmfOptions: _options.dtmfOptions,
-      reconnectOnHeartbeatFail: _options.reconnectOnHeartbeatFail,
     };
     Plivo.log.info(`${C.LOGCAT.INIT} | Plivo SDK initialized successfully with options:- `, JSON.stringify(data), `in ${Plivo.log.level()} mode`);
     // instantiates event emitter
@@ -914,9 +906,13 @@ export class Client extends EventEmitter {
     }
     this.loggerUtil = new LoggerUtil(this);
     Plivo.log.setLoggerUtil(this.loggerUtil);
-    if (options.usePlivoStunServer === true
+    if (this.options.usePlivoStunServer === true
       && C.STUN_SERVERS.indexOf(C.FALLBACK_STUN_SERVER) === -1) {
       C.STUN_SERVERS.push(C.FALLBACK_STUN_SERVER);
+    }
+    if (this.options.usePlivoStunServer === false
+      && C.STUN_SERVERS.indexOf(C.GOOG_STUN_SERVER) === -1) {
+      C.STUN_SERVERS.push(C.GOOG_STUN_SERVER);
     }
     this.audio = {
       availableDevices: audioUtil.availableDevices,
@@ -1506,7 +1502,7 @@ export class Client extends EventEmitter {
 
   private _mute = (): boolean => {
     if (this._currentSession) {
-      Plivo.log.debug(`${C.LOGCAT.CALL} | Call is muted`);
+      Plivo.log.debug(`${C.LOGCAT.CALL} | mute method is called`);
       try {
         this.isMuteCalled = true;
         audioUtil.mute.call(this);
@@ -1548,7 +1544,7 @@ export class Client extends EventEmitter {
 
   private _unmute = (): boolean => {
     if (this._currentSession) {
-      Plivo.log.debug(`${C.LOGCAT.CALL} | Call is unmuted`);
+      Plivo.log.debug(`${C.LOGCAT.CALL} | unmute method is called`);
       this.shouldMuteCall = false;
       try {
         this.isMuteCalled = false;
@@ -1588,7 +1584,7 @@ export class Client extends EventEmitter {
   };
 
   private _setRingTone = (val: string | boolean): boolean => {
-    Plivo.log.debug(`${C.LOGCAT.CALL}| setting ringtone`);
+    Plivo.log.debug(`${C.LOGCAT.INIT}| setting ringtone`);
     if (val === false || val === null) {
       this.ringToneFlag = false;
     } else if (typeof val === 'string') {
@@ -1604,7 +1600,7 @@ export class Client extends EventEmitter {
   };
 
   private _setRingToneBack = (val: string | boolean): boolean => {
-    Plivo.log.debug(`${C.LOGCAT.CALL}| setting ringtoneback`);
+    Plivo.log.debug(`${C.LOGCAT.INIT}| setting ringtoneback`);
     if (val === false || val === null) {
       this.ringToneBackFlag = false;
     } else if (typeof val === 'string') {
@@ -1620,7 +1616,7 @@ export class Client extends EventEmitter {
   };
 
   private _setConnectTone = (val: boolean): boolean => {
-    Plivo.log.debug(`${C.LOGCAT.CALL}| setting connect tone`);
+    Plivo.log.debug(`${C.LOGCAT.INIT}| setting connect tone`);
     if (!val) {
       this.connectToneFlag = false;
     } else {

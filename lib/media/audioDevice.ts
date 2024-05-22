@@ -233,7 +233,7 @@ export const speechListeners = function (): void {
  * Mute the local stream.
  */
 export const mute = function (): void {
-  Plivo.log.debug(`${LOGCAT.CALL} | call mute`);
+  Plivo.log.debug(`${LOGCAT.CALL} | call is now muted`);
   const client: Client = this;
   this._currentSession?.startSpeechRecognition(client);
   if (currentLocalStream) {
@@ -788,7 +788,7 @@ export const inputDevices = ((): InputDevices => ({
       getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
         const clientObj = clientObject;
         if (clientObj !== null) {
-          Plivo.log.info(`${LOGCAT.CALL} Audio device toggled to`, JSON.stringify(device));
+          Plivo.log.info(`${LOGCAT.CALL} | Audio device toggled to`, JSON.stringify(device));
           const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
           sendEvents.call(clientObject, obj, clientObj._currentSession);
           clientObj.deviceToggledInCurrentSession = true;
@@ -947,7 +947,7 @@ export const ringtoneDevices = ((): RingToneDevices => ({
  * Unmute the local stream.
  */
 export const unmute = function (): void {
-  Plivo.log.debug(`${LOGCAT.CALL} | call unmute`);
+  Plivo.log.debug(`${LOGCAT.CALL} | call is now unmuted`);
   const client: Client = this;
   if (currentLocalStream) {
     currentLocalStream.getAudioTracks()[0].enabled = true;

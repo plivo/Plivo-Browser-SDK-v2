@@ -35,6 +35,7 @@ export const STUN_SERVERS = [
   'stun:stun.plivo.com:3478',
 ];
 export const FALLBACK_STUN_SERVER = 'stun:stun-fb.plivo.com:3478';
+export const GOOG_STUN_SERVER = 'stun:stun.l.google.com:19302';
 export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
 export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
 export const DTMF_TONE_PLAY_RETRY_ATTEMPTS = 4;

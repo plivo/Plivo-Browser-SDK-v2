@@ -132,7 +132,7 @@ const onProgress = (incomingCall: CallSession) => (): void => {
     incomingCall.getCallInfo("local"),
     callerName,
   );
-  if (cs.options.reconnectOnHeartbeatFail) cs.noiseSuppresion.setLocalMediaStream();
+  cs.noiseSuppresion.setLocalMediaStream();
   addCloseProtectionListeners.call(cs);
   Plivo.log.debug(`${LOGCAT.CALL} | Incoming Call Extra Headers : ${JSON.stringify(incomingCall.extraHeaders)}`);
 };
@@ -409,6 +409,8 @@ export const createIncomingSession = (
         cs.phone.sendReInviteOnTransportConnect = true;
       }
     }
+  } else if (cs.phone) {
+    cs.phone.sendReInviteOnTransportConnect = true;
   }
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);
