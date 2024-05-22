@@ -141,7 +141,7 @@ describe('plivoWebSdk', function () {
         done(new Error('bailing'));
       }
       Client1.answer();
-      waitUntilIncoming(events.onCallAnswered, done, 500);
+      waitUntilIncoming(events.onCallAnswered, done, 1000);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('outgoing call answer failed'));

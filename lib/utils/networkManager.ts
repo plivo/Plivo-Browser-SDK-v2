@@ -210,8 +210,7 @@ export const startPingPong = ({
           isFailedMessageTriggered = true;
           if (eventCheckTimeout) clearTimeout(eventCheckTimeout);
           // reconnect if ping OPTIONS packet fails OR UA is not connected/registered
-          if (client.options.reconnectOnHeartbeatFail
-            && !isReconnectionStarted
+          if (!isReconnectionStarted
             && (err.cause !== 'Not Found'
             || !client.phone?.isConnected()
             || !client.phone?.isRegistered())) {
@@ -221,8 +220,7 @@ export const startPingPong = ({
             message = null;
           }
           isReconnectionStarted = false;
-          // TODO just for debugging purposes. remove it later.
-          if (client.options.reconnectOnHeartbeatFail) client.emit('onOptionsMessage', err.cause);
+          client.emit('onOptionsMessage', err.cause);
         });
         message.send('admin', 'pong', 'OPTIONS');
       }

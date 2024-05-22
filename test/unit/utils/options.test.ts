@@ -25,7 +25,6 @@ describe('ValidateOptions', () => {
       maxAverageBitrate: 48000,
       enableNoiseReduction: true,
       registrationRefreshTimer: 120,
-      reconnectOnHeartbeatFail: false,
       usePlivoStunServer: false,
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
@@ -104,18 +103,6 @@ describe('ValidateOptions', () => {
     expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(false);
     inputOptions.usePlivoStunServer = true;
     expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(true);
-  });
-
-  it('should check if reconnectOnHeartbeatFail is valid', () => {
-    const inputOptions = { ...options };
-    inputOptions.reconnectOnHeartbeatFail = "true";
-    expect(validateOptions(inputOptions).reconnectOnHeartbeatFail).toStrictEqual(false);
-    inputOptions.reconnectOnHeartbeatFail = 12345;
-    expect(validateOptions(inputOptions).reconnectOnHeartbeatFail).toStrictEqual(false);
-    inputOptions.reconnectOnHeartbeatFail = 12345.12345;
-    expect(validateOptions(inputOptions).reconnectOnHeartbeatFail).toStrictEqual(false);
-    inputOptions.reconnectOnHeartbeatFail = true;
-    expect(validateOptions(inputOptions).reconnectOnHeartbeatFail).toStrictEqual(true);
   });
 
   it('should validate invalid options', () => {

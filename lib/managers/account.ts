@@ -312,7 +312,7 @@ class Account {
    * @param {UserAgentDisconnectedEvent} evt
    */
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
-    Plivo.log.info(`${C.LOGCAT.LOGOUT} | websocket connection closed with code ${evt.code} and reason ${evt.reason}`);
+    Plivo.log.info(`${C.LOGCAT.LOGOUT} | WebSocket Connection Closed - Code: ${evt.code ?? 'Unknown code'}, Reason: ${evt.reason ?? 'No reason provided'}, Socket URL: ${evt.socket.url}`);
     if (evt.code) {
       setConectionInfo(this.cs, ConnectionState.DISCONNECTED, evt.code.toString());
     }

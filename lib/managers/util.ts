@@ -734,3 +734,7 @@ export const logCandidatePairs = function (callSession: CallSession | null) {
     Plivo.log.debug(`${LOGCAT.CALL} |can't logCandidatePairs, callSession is null`);
   }
 };
+
+export const removeSpaces = function (inputString: string): string {
+  return inputString.replace(/\s/g, '');
+};

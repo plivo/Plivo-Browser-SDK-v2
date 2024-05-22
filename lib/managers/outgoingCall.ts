@@ -45,6 +45,7 @@ import {
   addCallstatsIOFabric,
   isSessionConfirmed,
   extractReason,
+  removeSpaces,
 } from './util';
 import { Client, ExtraHeaders } from '../client';
 import { resetPingPong } from '../utils/networkManager';
@@ -286,6 +287,8 @@ const onAccepted = (evt: SessionAcceptedEvent): void => {
           cs.phone.sendReInviteOnTransportConnect = true;
         }
       }
+    } else if (cs.phone) {
+      cs.phone.sendReInviteOnTransportConnect = true;
     }
     cs._currentSession.onAccepted(cs);
     cs._currentSession.setPostDialDelayEndTime(getCurrentTime());
@@ -576,8 +579,7 @@ export const makeCall = (
   outBoundConnectionStages.push(`call()@${getCurrentTime()}`);
   let phoneNumberStr = '';
   if (phoneNumber) {
-    // eslint-disable-next-line no-param-reassign
-    phoneNumberStr = String(phoneNumber);
+    phoneNumberStr = removeSpaces(String(phoneNumber));
   }
   if (!validateSession(phoneNumberStr)) return false;
   const destinationUri = getValidPhoneNumber(phoneNumberStr);

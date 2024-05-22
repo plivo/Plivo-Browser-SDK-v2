@@ -32,9 +32,8 @@ const _options: ConfiguationOptions = {
   useDefaultAudioDevice: false,
   maxAverageBitrate: C.MAX_AVERAGE_BITRATE,
   dtmfOptions: C.DEFAULT_DTMFOPTIONS,
-  enableNoiseReduction: true,
+  enableNoiseReduction: false,
   usePlivoStunServer: false,
-  reconnectOnHeartbeatFail: false,
   registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
 };
 
@@ -220,12 +219,6 @@ const validateOptions = function (
         case 'enableNoiseReduction':
           if (isBoolean(key, options[key])) {
             _options.enableNoiseReduction = options[key];
-          }
-          break;
-
-        case 'reconnectOnHeartbeatFail':
-          if (isBoolean(key, options[key])) {
-            _options.reconnectOnHeartbeatFail = options[key];
           }
           break;
 

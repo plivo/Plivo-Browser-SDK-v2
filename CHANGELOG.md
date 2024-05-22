@@ -5,6 +5,37 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10 (released@ 22-05-2024)
+
+**Bug Fixes**
+* Improved error handling by emitting "LoginFailed" event upon unsuccessful creation of User Agent (UA).
+* Added a check to prevent sending DTMF signals when there is no internet connection, which was causing call disconnections.
+* Enhanced WebSocket connection optimization and improved fallback mechanisms to reduce delays in establishing a connection.
+* Streamlined the process for reconnecting active calls during network changes for improved stability and reliability.
+* Improved SDK reconnection logic to prevent redundant WebSocket connections and optimize login scenarios during active sessions.
+* Implemented a fix for the graceful disconnection of calls when a network switch occurs while the call is in the ring state, addressing call quality issues
+* Implemented an internet access check prior to registration.
+* Limited the Logout() function to execute only during active sessions.
+* Other minor bug fixes and improvements.
+
+**Feature**
+
+* Enhanced the `callinfo` object by introducing new attributes: Reason, Protocol, ErrorCode, and Originator, providing more detailed statistics.
+*Implemented Plivo STUN Servers to enhance reliability. This modification is now customizable through the 'usePlivoStunServer' flag which defaults to false.
+* The reason for disconnection/connection is now published with the onConnectionChange event.
+* Introduced helper methods (isRegistered, isConnecting, and isConnected) for checking the client connection status.
+* Introduced a new event 'remoteAudioStatus' that signifies the reception status of audio packets from the remote caller.
+
+  *Note: This feature works only in case of conference and MPC*
+
+* Introduced a noise suppression feature to enhance audio quality by eliminating unwanted background noise during active calls. This feature can be enabled or disabled using the `enableNoiseReduction` flag, which is set to false by default. Additionally, a new event, `onNoiseReductionReady`, is triggered when the noise reduction is ready to commence.	
+
+  *Note: This functionality is not compatible with Safari.*
+* `onMediaPermission` event will be triggered when media permission is revoked.
+* Users will receive a `mediaMetric` event when speaking while the SDK is muted.
+		
+    *Note: This functionality is not compatible with Firefox.*
+
 ## v2.2.10-beta.11 (released@ 29-04-2024)
 
 **Bug Fixes**
