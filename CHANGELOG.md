@@ -5,6 +5,161 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.10 (released@ 22-05-2024)
+
+**Bug Fixes**
+* Improved error handling by emitting "LoginFailed" event upon unsuccessful creation of User Agent (UA).
+* Added a check to prevent sending DTMF signals when there is no internet connection, which was causing call disconnections.
+* Enhanced WebSocket connection optimization and improved fallback mechanisms to reduce delays in establishing a connection.
+* Streamlined the process for reconnecting active calls during network changes for improved stability and reliability.
+* Improved SDK reconnection logic to prevent redundant WebSocket connections and optimize login scenarios during active sessions.
+* Implemented a fix for the graceful disconnection of calls when a network switch occurs while the call is in the ring state, addressing call quality issues
+* Implemented an internet access check prior to registration.
+* Limited the Logout() function to execute only during active sessions.
+* Other minor bug fixes and improvements.
+
+**Feature**
+
+* Enhanced the `callinfo` object by introducing new attributes: Reason, Protocol, ErrorCode, and Originator, providing more detailed statistics.
+*Implemented Plivo STUN Servers to enhance reliability. This modification is now customizable through the 'usePlivoStunServer' flag which defaults to false.
+* The reason for disconnection/connection is now published with the onConnectionChange event.
+* Introduced helper methods (isRegistered, isConnecting, and isConnected) for checking the client connection status.
+* Introduced a new event 'remoteAudioStatus' that signifies the reception status of audio packets from the remote caller.
+
+  *Note: This feature works only in case of conference and MPC*
+
+* Introduced a noise suppression feature to enhance audio quality by eliminating unwanted background noise during active calls. This feature can be enabled or disabled using the `enableNoiseReduction` flag, which is set to false by default. Additionally, a new event, `onNoiseReductionReady`, is triggered when the noise reduction is ready to commence.	
+
+  *Note: This functionality is not compatible with Safari.*
+* `onMediaPermission` event will be triggered when media permission is revoked.
+* Users will receive a `mediaMetric` event when speaking while the SDK is muted.
+		
+    *Note: This functionality is not compatible with Firefox.*
+
+## v2.2.10-beta.11 (released@ 29-04-2024)
+
+**Bug Fixes**
+* Improved error handling by emitting "LoginFailed" event upon unsuccessful creation of User Agent (UA).
+* Implemented a check to prevent sending DTMF signals when there is no internet connection.
+
+
+## v2.2.10-beta.10 (released@ 19-04-2024)
+
+**Bug Fixes**
+* Enhanced WebSocket connection optimization and refined fallback mechanisms to minimize delays in establishing a connection.
+* Streamlined the process for reconnecting active calls during network changes for improved stability and reliability.
+
+## v2.2.10-beta.9 (released@ 28-03-2024)
+
+**Feature**
+
+* Implemented webRTC logging service for monitoring calls.
+
+## v2.2.10-beta.8 (released@ 20-03-2024)
+
+**Bug fix**
+
+* Resolved an issue where noise reduction failed to initiate as anticipated due to necessitating a user gesture.
+
+**Feature**
+
+* A new event named `onNoiseReductionReady` has been introduced, which is triggered when the noise reduction is prepared to commence.
+
+## v2.2.10-beta.7 (released@ 13-03-2024)
+
+**Bug Fix**
+
+* Resolved a race condition that led to unexpected results when emitting the 'onLoginFailed' event.
+
+## v2.2.10-beta.6 (released@ 12-03-2024)
+
+**Features**
+
+* Implemented new local hangup reasons to provide additional insights into the cause of call hangups.
+
+**Bug Fix**
+
+* Graceful disconnection of the websocket before emitting `onLoginFailed`.
+* Resolved a type error issue resulting in: "Cannot assign to read-only property 'uri' of object".
+* Preventing the establishment of a new websocket connection if there is an ongoing connection.
+
+Note: The `errorCode` in the callinfo object has been renamed to `code`.
+
+## v2.2.10-beta.5 (released@ 23-02-2024)
+
+**Features**
+
+* Enhanced CallInfo Object by removing `remoteCancelReason` and introducing granular attributes: `reason`, `protocol`, `errorCode`, and `originator`.
+* Removed google STUN and implemented plivo STUN Servers to improve reliability. This change is now configurable via the `usePlivoStunServer` flag.
+
+**Bug Fixes**
+
+* Resolved type error issue causing `getHeader is not a function`.
+* Improved call management: Calls will now disconnect automatically in the event of a network switch while in the Ringing state.
+
+
+## v2.2.10-beta.4 (released@ 16-02-2024)
+
+**Features**
+
+* Enhanced Heartbeat timer for improved network monitoring.
+* The reason for disconnection/connection is published with the onConnectionChange event. 
+* Streamlined the gathering of local media stream during the ringing state for incoming calls.
+* Introduced helper methods (isRegistered, isConnecting, and isConnected) for checking the client connection status.
+
+**Bug Fixes**
+
+* Implemented automatic restart of heartbeat service when the browser fails to reconnect the socket.
+
+
+## v2.2.10-beta.3 (released@ 12-01-2024)
+
+**Features**
+
+* Introduced a new event 'remoteAudioStatus' that signifies the reception status of audio packets from the remote caller.
+
+**Note:**  This feature works only in case of conference and MPC
+
+## v2.2.10-beta.2 (released@ 09-01-2024)
+
+**Bug Fixes**
+
+* Enhanced SDK reconnection logic to optimize scenarios where users attempt to log in while already logged in.
+* Added internet access check before registration.
+
+## v2.2.10-beta.1 (released@ 14-12-2023)
+
+**Bug Fixes**
+
+* Fixed an "Invalid State" error that occurred during call hang-up.
+* Addressed a Type error encountered when configuring output media devices.
+* Limited the Logout() function to execute only during active sessions.
+
+**Features**
+
+* Trigger an event when media permission is revoked.
+* Notify users when they speak while muted.
+
+
+## v2.2.10-beta.0 (released@ 26-10-2023)
+
+**Bug Fixes**
+
+* Fixed: Call mutes when input/output devices change.
+
+**Features**
+
+* Included noise suppression feature to enhance audio quality, which effectively eliminates unwanted background noise during active calls. You can enable or disable this feature using the `enableNoiseReduction` flag.
+
+**Note:** This functionality is not compatible with Safari.
+
+## v2.2.9-beta.0 (released@ 17-10-2023)
+**Features**
+
+* Added a new property `remoteCancelReason` under the `CallInfo` object, which indicates the reason for call termination for both incoming and outgoing calls.
+
+**Note:** `remoteCancelReason` will be none during call state: ringing, answered.
+
 ## v2.2.9 (released@ 29-09-2023)
 **Bug Fixes**
 

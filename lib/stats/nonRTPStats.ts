@@ -26,7 +26,8 @@ export interface AnsweredEvent{
   devicePlatform: string;
   deviceOs: string;
   setupOptions: ConfiguationOptions;
-  audioDeviceInfo?: DeviceAudioInfo
+  audioDeviceInfo?: DeviceAudioInfo,
+  noiseReduction: NoiseReduction
 }
 
 export interface DeviceAudioInfo {
@@ -62,6 +63,7 @@ export interface RingingEvent {
   isAudioDeviceToggled?: boolean;
   isNetworkChanged?: boolean;
   jsFramework: string[];
+  noiseReduction: NoiseReduction;
 
 }
 
@@ -85,7 +87,13 @@ export interface SummaryEvent {
   isAudioDeviceToggled?: boolean;
   isNetworkChanged?: boolean;
   jsFramework: string[];
+  noiseReduction: NoiseReduction
 
+}
+
+export interface NoiseReduction {
+  enabled: boolean,
+  noiseSuprressionStarted: boolean
 }
 
 interface CallInfoEvent {
@@ -166,7 +174,7 @@ export const sendEvents = function (statMsg: any, session: CallSession): void {
   } else {
     Plivo.log.debug(
       `${C.LOGCAT.CALL} | Cannot send event `,
-      statMsg,
+      statMsg.msg,
       ' mandatory parameters (statsSocket, sipCallID, callstatskey) not defined ',
     );
   }
@@ -234,6 +242,10 @@ export const sendCallAnsweredEvent = function (
     sdkVersionPatch: sdkVersionParse.patch,
     devicePlatform: navigator.platform,
     deviceOs,
+    noiseReduction: {
+      enabled: client.enableNoiseReduction ?? false,
+      noiseSuprressionStarted: client.noiseSuppresion.started,
+    },
     setupOptions: client.options,
   };
   if (deviceInfo) {
@@ -284,6 +296,10 @@ export const sendCallSummaryEvent = function (
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
+    noiseReduction: {
+      enabled: client.enableNoiseReduction ?? false,
+      noiseSuprressionStarted: client.noiseSuppresion.started,
+    },
     isAudioDeviceToggled: client.deviceToggledInCurrentSession,
     isNetworkChanged: client.networkChangeInCurrentSession,
     jsFramework: client.jsFramework,
@@ -326,6 +342,10 @@ export const sendCallRingingEvent = function (
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
+    noiseReduction: {
+      enabled: client.enableNoiseReduction ?? false,
+      noiseSuprressionStarted: client.noiseSuppresion.started,
+    },
     isAudioDeviceToggled: client.deviceToggledInCurrentSession,
     isNetworkChanged: client.networkChangeInCurrentSession,
     jsFramework: client.jsFramework,

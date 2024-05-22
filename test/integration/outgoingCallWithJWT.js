@@ -202,6 +202,7 @@ describe("plivoWebSdk JWT", function () {
       if (bail) {
         done(new Error("bailing"));
       }
+      console.log('answering the calls');
       Client2.answer();
       // eslint-disable-next-line @typescript-eslint/dot-notation
       waitUntilOutgoingCall(events["onCallAnswered"], done, 500);
@@ -232,10 +233,9 @@ describe("plivoWebSdk JWT", function () {
         done(new Error("bailing"));
       }
       Client1.call(secondary_user, {});
-      Client2.reject();
       bailTimer = setTimeout(() => {
         Client1.hangup();
-      }, 5000);
+      }, 2000);
       waitUntilOutgoingCall(events.onCallFailed, done, 500);
       bailTimer = setTimeout(() => {
         bail = true;

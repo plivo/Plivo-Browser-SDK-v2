@@ -116,6 +116,11 @@ const startAudioTimer = function (): void {
         }).then((stream) => stream).then((stream) => {
           getStatsRef.senderMediaStream = stream;
           getStatsRef.localAudioLevelHelper = new AudioLevel(getStatsRef.senderMediaStream);
+        }).catch((err) => {
+          this.clientScope.emit('onMediaPermission', {
+            status: 'failure',
+            error: err.message,
+          });
         });
       }
     }

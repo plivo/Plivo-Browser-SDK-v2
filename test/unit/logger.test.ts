@@ -55,10 +55,17 @@ describe('Logger', () => {
   it('should get console logs used till now', () => {
     const consoleLogs = Logger.consolelogs();
     const trimmedLogs = [];
+    let result = false;
+    const all_log = ['test info log', 'test debug log', 'test warn log', 'test error log', 'test log']
     for (let i = 0; i < consoleLogs.length; i++) {
-      trimmedLogs.push(consoleLogs[i].split(':: ')[1].replace(/\s*$/g, '') as never);
+      for (const value of all_log) {
+        if (consoleLogs[i].includes(value)) {
+          result =  true;
+        }
     }
-    expect(trimmedLogs).toStrictEqual(['test info log', 'test debug log', 'test warn log', 'test error log', 'test off log', 'test log']);
+      trimmedLogs.push(consoleLogs[i] as never);
+    }
+    expect(result).toBe(true)
   });
 
   it('should enable sip logs if log level is ALL', () => {

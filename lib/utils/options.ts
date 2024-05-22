@@ -32,6 +32,8 @@ const _options: ConfiguationOptions = {
   useDefaultAudioDevice: false,
   maxAverageBitrate: C.MAX_AVERAGE_BITRATE,
   dtmfOptions: C.DEFAULT_DTMFOPTIONS,
+  enableNoiseReduction: false,
+  usePlivoStunServer: false,
   registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
 };
 
@@ -214,6 +216,12 @@ const validateOptions = function (
           }
           break;
 
+        case 'enableNoiseReduction':
+          if (isBoolean(key, options[key])) {
+            _options.enableNoiseReduction = options[key];
+          }
+          break;
+
         case 'codecs':
           if (checkCodecs(options[key])) {
             _options.codecs = options[key];
@@ -223,6 +231,12 @@ const validateOptions = function (
         case 'useDefaultAudioDevice':
           if (isBoolean(key, options[key])) {
             _options.useDefaultAudioDevice = options[key];
+          }
+          break;
+
+        case 'usePlivoStunServer':
+          if (isBoolean(key, options[key])) {
+            _options.usePlivoStunServer = options[key];
           }
           break;
 

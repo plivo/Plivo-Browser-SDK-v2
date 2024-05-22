@@ -15,6 +15,7 @@ import { Client, PlivoObject } from '../client';
 import { DeviceAudioInfo, sendEvents } from '../stats/nonRTPStats';
 import getBrowserDetails from '../utils/browserDetection';
 import { setupRemoteView } from './document';
+import { emitMetrics } from '../stats/mediaMetrics';
 import { AudioLevel } from './audioLevel';
 
 export interface RingToneDevices {
@@ -154,7 +155,7 @@ export const revealAudioDevices = function (
           }
         })
         .catch((err) => {
-          Plivo.log.error(`${LOGCAT.CALL} | Failed to get user media during init :: ${err.message}`);
+          Plivo.log.error(`${LOGCAT.CALL} | Failed to get user media during init ${err.message}`);
           reject(err.name);
         });
     } else {
@@ -164,14 +165,84 @@ export const revealAudioDevices = function (
   });
 };
 
+export const speechListeners = function (): void {
+  if (this._currentSession.state !== this._currentSession.STATE.ANSWERED) {
+    return;
+  }
+  const client: Client = this;
+  client.speechRecognition.stop();
+  client.speechRecognition.continuous = true;
+  client.speechRecognition.interimResults = true;
+  client.speechRecognition.onerror = (error) => {
+    Plivo.log.error(`${LOGCAT.CALL} | Error in Recognizing speech :`, error.error);
+    if (error.error === "network") {
+      client
+        ._currentSession?.setSpeechState(client
+          ._currentSession.SPEECH_STATE.STOPPED_DUE_TO_NETWORK_ERROR);
+      Plivo.log.info(`${LOGCAT.CALL} | Speech Recognition stopped due to network disruption`);
+    }
+  };
+
+  client.speechRecognition.onend = () => {
+    Plivo.log.info(`${LOGCAT.CALL} | Recognizing speech Stopped`);
+    if (client.isMuteCalled
+      && (client._currentSession?.speech_state
+        !== client._currentSession?.SPEECH_STATE.STOPPED_AFTER_DETECTION
+          && client._currentSession?.speech_state
+            !== client._currentSession?.SPEECH_STATE.STOPPED_DUE_TO_NETWORK_ERROR)) {
+      client._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.STOPPED);
+      client._currentSession?.startSpeechRecognition(client);
+    } else {
+      client._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.STOPPED);
+    }
+  };
+  client.speechRecognition.onstart = () => {
+    Plivo.log.info(`${LOGCAT.CALL} | Recognizing speech Running`);
+    if (!client.isMuteCalled
+      && (client._currentSession?.speech_state
+        !== client._currentSession?.SPEECH_STATE.STOPPED
+          || client._currentSession?.speech_state
+            !== client._currentSession?.SPEECH_STATE.STOPPING)) {
+      client
+        ._currentSession?.stopSpeechRecognition(client);
+    } else {
+      client._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.RUNNING);
+    }
+  };
+  client.speechRecognition.onresult = () => {
+    emitMetrics.call(
+      this,
+      'audio',
+      'warning',
+      'speaking_on_mute',
+      0,
+      true,
+      'User is trying to speak on mute',
+      '',
+    );
+    client
+      ._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.STOPPED_AFTER_DETECTION);
+    client.speechRecognition.stop();
+    Plivo.log.info(`${LOGCAT.CALL} | User speaking on mute`);
+  };
+  client._currentSession?.setSpeechState(client._currentSession.SPEECH_STATE.STARTING);
+  client.speechRecognition.start();
+};
+
 /**
  * Mute the local stream.
  */
 export const mute = function (): void {
+  Plivo.log.debug(`${LOGCAT.CALL} | call is now muted`);
+  const client: Client = this;
+  this._currentSession?.startSpeechRecognition(client);
   if (currentLocalStream) {
     currentLocalStream.getAudioTracks()[0].enabled = false;
   } else {
     this._currentSession.session.mute();
+  }
+  if (client.noiseSuppresion) {
+    client.noiseSuppresion.muteStream();
   }
   currentAudioState = false;
 };
@@ -182,6 +253,14 @@ export const mute = function (): void {
  */
 const updateAudioState = function (client: Client): void {
   mute.call(client);
+};
+
+/**
+ * Mute audio state.
+ * @param {Client} client - client reference
+ */
+export const resetMuteOnHangup = function (): void {
+  currentAudioState = true;
 };
 
 /**
@@ -196,6 +275,9 @@ export const startVolumeDataStreaming = function (client: Client): void {
     if (currentLocalStream) {
       localStream = currentLocalStream;
       setTimeout(() => {
+        if (!client._currentSession) {
+          return;
+        }
         audioVisual.start(client, localStream, remoteStream);
       }, 3000);
     } else {
@@ -218,6 +300,7 @@ export const startVolumeDataStreaming = function (client: Client): void {
  */
 export const stopVolumeDataStreaming = function (): void {
   setTimeout(() => {
+    Plivo.log.debug(`${LOGCAT.CALL} | stopping the emission of audio level`);
     if ((window as any)._localContext) {
       (window as any)._localContext.suspend();
     }
@@ -225,6 +308,79 @@ export const stopVolumeDataStreaming = function (): void {
       audioVisual.stop();
     }
   }, 3000);
+};
+
+export const replaceStream = function (client: Client, constraints: any): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const pc = client._currentSession ? client._currentSession.session.connection : null;
+    if (!pc) {
+      Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | session is not active while replacing stream`);
+      resolve();
+    } else if (navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices
+        .getUserMedia(constraints)
+        .then((stream) => {
+          Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Got new stream while replacing stream`);
+          let sender: any = null;
+          // eslint-disable-next-line
+          sender = pc.getSenders()[0];
+          if (currentLocalStream) {
+            Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Stopping current local stream in replacing stream`);
+            currentLocalStream.getTracks().forEach((track) => track.stop());
+            currentLocalStream = null;
+          }
+          if (sender) {
+            Plivo.log.debug(`replaced sender : `, sender);
+            client.noiseSuppresion.updateProcessingStream(stream)
+              .then((updatedStream: MediaStream | null) => {
+                if (updatedStream != null) {
+                  stream = updatedStream;
+                }
+
+                currentLocalStream = stream;
+                if (currentAudioState === false) {
+                  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | call was muted before replacing stream. Muting new stream`);
+                  updateAudioState(client);
+                }
+                if (client._currentSession && client._currentSession.stats) {
+                  client._currentSession.stats.senderMediaStream = stream;
+                  client._currentSession.stats.localAudioLevelHelper = new AudioLevel(
+                    client._currentSession.stats.senderMediaStream,
+                  );
+                }
+                Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | replacing track`);
+                sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {
+                  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | error in replacing track`);
+                  const pc2 = clientObject?.getPeerConnection().pc;
+                  // eslint-disable-next-line
+                  if (pc2) {
+                    // eslint-disable-next-line prefer-destructuring
+                    sender = pc2.getSenders()[0];
+                    if (sender) sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => { });
+                  }
+                });
+              });
+          }
+        }).catch((err) => {
+          Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | error in replacing stream ${err}`);
+          reject(err);
+        })
+        .then(() => {
+          stopVolumeDataStreaming();
+        })
+        .then(() => {
+          startVolumeDataStreaming(client);
+          resolve();
+        })
+        .catch((err) => {
+          Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | main error in replacing stream ${err}`);
+          reject(err);
+        });
+    } else {
+      Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | No getUserMedia support in replaceStream`);
+      reject(new Error('No getUserMedia support'));
+    }
+  });
 };
 
 /**
@@ -235,15 +391,11 @@ export const stopVolumeDataStreaming = function (): void {
  * @param {String} label - input or output audio device label
  */
 const replaceAudioTrack = function (
-  deviceId: string, client: Client, state: string, label: string, waitForEnded?: boolean,
+  deviceId: string, client: Client, state: string, label: string,
 ): void {
-  Plivo.log.debug(`inside replacetrack device id  : ${deviceId}`);
-  let sender: any = null;
+  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} |inside replacetrack with device id  : ${deviceId}`);
   let constraints: MediaStreamConstraints;
-  let pc: any = null;
-  if (client._currentSession) {
-    pc = client._currentSession.session.connection;
-  } else {
+  if (!client._currentSession) {
     if (currentLocalStream) {
       currentLocalStream.getTracks().forEach((track) => track.stop());
     } else if (!client.permOnClick) {
@@ -259,17 +411,37 @@ const replaceAudioTrack = function (
     return;
   }
   if (state === 'added') {
+    if (
+      typeof Plivo.audioConstraints === 'object'
+      && 'optional' in Plivo.audioConstraints
+    ) {
+      (Plivo.audioConstraints as any).optional.forEach((e: any) => {
+        Object.entries(e).forEach(([constraint, value]) => {
+          if (Plivo.audioConstraints) {
+            constraint = constraint.replace(/goog(.)/i, (_, match) => match.toLowerCase());
+            Plivo.audioConstraints[constraint] = value;
+          }
+        });
+      });
+      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
+      delete (Plivo.audioConstraints as any).optional;
+      updateGroupIdDeviceIdMap(availableAudioDevices);
+    } else if (typeof Plivo.audioConstraints === 'boolean') {
+      Plivo.audioConstraints = { deviceId };
+    } else {
+      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
+    }
     constraints = {
-      audio: {
-        deviceId: deviceId ? { exact: deviceId } : undefined,
-      },
+      audio: Plivo.audioConstraints,
       video: false,
     };
   } else {
     let audioConstraints: any = null;
     if (isSafari) {
       const newDeviceId = activeDeviceLabelDeviceIdMap[label];
-      audioConstraints = { deviceId: newDeviceId ? { exact: newDeviceId } : undefined };
+      audioConstraints = {
+        deviceId: newDeviceId ? { exact: newDeviceId } : undefined,
+      };
     } else {
       audioConstraints = true;
     }
@@ -278,71 +450,8 @@ const replaceAudioTrack = function (
       video: false,
     };
   }
-  const replaceStream = (stream: MediaStream) => {
-    if (pc) {
-      // eslint-disable-next-line
-      sender = pc.getSenders()[0];
-      if (currentLocalStream) {
-        currentLocalStream.getTracks().forEach((track) => track.stop());
-        currentLocalStream = null;
-      }
-      if (sender) {
-        Plivo.log.debug(`replaced sender : `, sender);
-        currentLocalStream = stream;
-        if (currentAudioState === false) {
-          updateAudioState(client);
-        }
 
-        // update the local stream to calculate the correct audio level.
-        if (client._currentSession && client._currentSession.stats) {
-          client._currentSession.stats.senderMediaStream = stream;
-          client._currentSession.stats.localAudioLevelHelper = new AudioLevel(
-            client._currentSession.stats.senderMediaStream,
-          );
-        }
-
-        sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {
-          const pc2 = clientObject?.getPeerConnection().pc;
-          // eslint-disable-next-line
-          if (pc2) {
-            // eslint-disable-next-line prefer-destructuring
-            sender = pc2.getSenders()[0];
-            if (sender) sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {});
-          }
-        });
-      }
-    }
-  };
-  if (navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then((stream) => {
-        const requiredTrack = stream.getAudioTracks()[0];
-        if (waitForEnded) {
-          requiredTrack.addEventListener('ended', () => {
-            navigator.mediaDevices
-              .getUserMedia(constraints)
-              .then((stream2) => {
-                replaceStream(stream2);
-              });
-          });
-        } else {
-          replaceStream(stream);
-        }
-      })
-      .catch(() => {})
-      .then(() => {
-        stopVolumeDataStreaming();
-      })
-      .then(() => {
-        startVolumeDataStreaming(client);
-      })
-      .catch((err) => {
-        Plivo.log.error(err);
-      });
-  } else {
-    Plivo.log.debug('No getUserMedia support');
-  }
+  replaceStream(client, constraints);
 };
 
 /**
@@ -475,7 +584,7 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
 /**
  * Updating the default input & output device
  */
-export const updateWindowDeviceList = function (deviceList) : void {
+export const updateWindowDeviceList = function (deviceList): void {
   const groupIdDeviceId = {};
   deviceList.forEach((device) => {
     if (device.kind === 'audioinput' && device.deviceId === 'default') {
@@ -502,7 +611,7 @@ export const updateWindowDeviceList = function (deviceList) : void {
  * Check the input & output audio device for windows machine such that both belong to same groupid
  */
 export const setAudioDeviceForForWindows = function (devices,
-  lastConnectedMicDevice, lastConnectedSpeakerDevice) : void {
+  lastConnectedMicDevice, lastConnectedSpeakerDevice): void {
   if ((lastConnectedMicDevice === '' || lastConnectedMicDevice === 'default') && (lastConnectedSpeakerDevice === null || lastConnectedSpeakerDevice === 'default' || setByWindows)) {
     availableAudioDevices = devices;
     updateWindowDeviceList(devices);
@@ -514,16 +623,7 @@ export const setAudioDeviceForForWindows = function (devices,
  */
 export const checkAudioDevChange = function (): void {
   const client: Client = this;
-  // eslint-disable-next-line @typescript-eslint/dot-notation
-  const isIE = /* @cc_on!@ */ false || !!document['documentMode'];
-  let isChrome = false;
-  const ua = navigator.userAgent.toLowerCase();
-  if (ua.indexOf('chrome') > -1) {
-    isChrome = true;
-  }
-  const isEdge = !isIE && !!window.StyleMedia;
   const isFirefox = typeof (window as any).InstallTrigger !== 'undefined';
-  const isElectron = isElectronApp();
   const lastActiveSpeakerDevice = clientObject ? clientObject.audio.speakerDevices.get() : '';
   const lastConnectedMicDevice = clientObject ? clientObject.audio.microphoneDevices.get() : '';
   audioDevDictionary()
@@ -541,7 +641,6 @@ export const checkAudioDevChange = function (): void {
             !availableAudioDevices.filter((a) => a.deviceId === device.deviceId)
               .length
           ) {
-            const lastConnectedDevice = clientObject ? clientObject.audio.microphoneDevices.get() : '';
             // If not present
             /*
             Setting USB audio device as default in mac sound settings will create below
@@ -555,19 +654,11 @@ export const checkAudioDevChange = function (): void {
                 device,
               });
               addedDevice = device.label;
-              if (
-                device.kind === 'audioinput'
-                && (lastConnectedDevice === '' || lastConnectedDevice === 'default')
-              ) {
-                if (isEdge || isChrome || isSafari || isElectron) {
-                  replaceAudioTrack(device.deviceId, client, 'added', device.label);
-                }
-              }
 
               if (device.kind === 'audioinput') {
                 Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio input device added:- `, JSON.stringify(device));
                 setTimeout(() => {
-                  if (client && isFirefox && isSafari) {
+                  if (client && (isFirefox || isSafari)) {
                     Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting mic to ${device.deviceId} in firefox/safari`);
                     client.audio.microphoneDevices.set(device.deviceId);
                   } else if (client) {
@@ -604,13 +695,10 @@ export const checkAudioDevChange = function (): void {
               }
 
               if (device.kind === 'audioinput') {
-                if (isEdge || isChrome || isSafari || isElectron) {
-                  replaceAudioTrack(device.deviceId, client, 'removed', device.label, true);
-                }
                 Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio input device removed:- `, JSON.stringify(device));
                 Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting microphone to default`);
                 setTimeout(() => {
-                  if (client && isFirefox && isSafari) {
+                  if (client && (isFirefox || isSafari)) {
                     Plivo.log.debug(`${LOGCAT.CALL_QUALITY} Setting microphone to ${availableAudioDevices[0].deviceId} in firefox/safari`);
                     client.audio.microphoneDevices.set(availableAudioDevices[0].deviceId);
                   } else if (client) {
@@ -684,28 +772,9 @@ export const inputDevices = ((): InputDevices => ({
       Plivo.log.error('Invalid input device id');
       return false;
     }
-    if (
-      typeof Plivo.audioConstraints === 'object'
-      && 'optional' in Plivo.audioConstraints
-    ) {
-      let updated = false;
-      (Plivo.audioConstraints as any).optional.forEach((e: { sourceId: string; }) => {
-        if (e.sourceId) {
-          e.sourceId = deviceId;
-          updated = true;
-        }
-      });
-      if (!updated) {
-        (Plivo.audioConstraints as any).optional.push({ sourceId: deviceId });
-      }
-      updateGroupIdDeviceIdMap(availableAudioDevices);
-    } else if (typeof Plivo.audioConstraints === 'boolean') {
-      Plivo.audioConstraints = { deviceId };
-    } else {
-      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
-    }
 
-    if (clientObject && clientObject.getPeerConnection().pc) {
+    updateGroupIdDeviceIdMap(availableAudioDevices);
+    if (clientObject) {
       if (deviceId === 'default') {
         const groupId = availableAudioDevicesDeviceIdGroupIdMap[deviceId];
         // eslint-disable-next-line no-param-reassign
@@ -719,7 +788,7 @@ export const inputDevices = ((): InputDevices => ({
       getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
         const clientObj = clientObject;
         if (clientObj !== null) {
-          Plivo.log.info(`${LOGCAT.CALL} Audio device toggled to`, JSON.stringify(device));
+          Plivo.log.info(`${LOGCAT.CALL} | Audio device toggled to`, JSON.stringify(device));
           const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
           sendEvents.call(clientObject, obj, clientObj._currentSession);
           clientObj.deviceToggledInCurrentSession = true;
@@ -771,17 +840,17 @@ export const outputDevices = ((): OutputDevices => ({
     speakerElement.forEach((e: any) => {
       if (typeof e.sinkId !== 'undefined') {
         e.setSinkId(deviceId)
-          .then(() => {})
+          .then(() => { })
           .catch((error) => {
             if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
               e.src = '';
               e.setSinkId(deviceId)
-                .then(() => {})
+                .then(() => { })
                 .catch((error2) => {
-                  Plivo.log.error(error2);
+                  Plivo.log.error(error2.message);
                 });
             } else {
-              let errorMessage: string = error;
+              let errorMessage: string = error.message;
               if (error.name === AUDIO_DEVICE_SECURITY_ERROR) {
                 errorMessage = `You need to use HTTPS for selecting audio output device: ${error}`;
               }
@@ -878,10 +947,16 @@ export const ringtoneDevices = ((): RingToneDevices => ({
  * Unmute the local stream.
  */
 export const unmute = function (): void {
+  Plivo.log.debug(`${LOGCAT.CALL} | call is now unmuted`);
+  const client: Client = this;
   if (currentLocalStream) {
     currentLocalStream.getAudioTracks()[0].enabled = true;
   } else {
     this._currentSession.session.unmute();
+  }
+  client._currentSession?.stopSpeechRecognition(client);
+  if (client.noiseSuppresion) {
+    client.noiseSuppresion.unmuteStream();
   }
   currentAudioState = true;
 };

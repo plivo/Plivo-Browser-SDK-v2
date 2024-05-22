@@ -137,6 +137,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
+
     // // #16
     // // eslint-disable-next-line no-undef
     // it("outbound call should ring", (done) => {
@@ -272,6 +273,50 @@ describe("plivoWebSdk", function () {
       }).catch(() => {
         done(new Error('outbound call should send feedback failed'));
       });
+    });
+
+    it("outbound call to space separated string should ring", (done) => {
+      if (bail) {
+        done(new Error("Bailing"));
+        return;
+      }
+
+      Client1.hangup();
+      let s = secondary_user.replace(/\s/g, "");
+      s = s.split('').join(' ');
+      if (Client1.isLoggedIn) {
+        Client1.call(s, {});
+      } else {
+        Client1.on("onLogin", () => {
+          Client1.call(s, {});
+        });
+      }
+      waitUntilOutgoingCall(events.onCalling, done, 500);
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error("Outgoing call failed"));
+      }, TIMEOUT);
+    });
+
+    it("outbound call to number should ring", (done) => {
+      if (bail) {
+        done(new Error("Bailing"));
+        return;
+      }
+
+      Client1.hangup();
+      if (Client1.isLoggedIn) {
+        Client1.call(919728082876, {});
+      } else {
+        Client1.on("onLogin", () => {
+          Client1.call(919728082876, {});
+        });
+      }
+      waitUntilOutgoingCall(events.onCalling, done, 500);
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error("Outgoing call failed"));
+      }, TIMEOUT);
     });
   });
 });

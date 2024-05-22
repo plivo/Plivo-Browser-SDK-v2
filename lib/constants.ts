@@ -33,9 +33,9 @@ export const ICE_RECONNECT_COUNT = 5;
 export const NETWORK_CHANGE_INTERVAL = 10000;
 export const STUN_SERVERS = [
   'stun:stun.plivo.com:3478',
-  'stun:stun.l.google.com:19302',
 ];
-
+export const FALLBACK_STUN_SERVER = 'stun:stun-fb.plivo.com:3478';
+export const GOOG_STUN_SERVER = 'stun:stun.l.google.com:19302';
 export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
 export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
 export const DTMF_TONE_PLAY_RETRY_ATTEMPTS = 4;
@@ -57,6 +57,16 @@ export const SIP_ERROR_CODE = {
   483: 'Too many hops detected for call connection',
   500: 'Internal Server Error',
   502: 'There is an issue with the Carrier Gateway',
+};
+
+export const LOCAL_ERROR_CODES = {
+  'No Answer': 3000,
+  Canceled: 1000,
+  Rejected: 3020,
+  Terminated: 11001,
+  Ignored: 11002,
+  "call answer fail": 11003,
+  "Network switch while ringing": 11004,
 };
 
 // Options
@@ -108,6 +118,22 @@ export const LOGCAT = {
   CALL_QUALITY: 'CALL_QUALITY_FEEDBACK',
   NETWORK_CHANGE: 'NETWORK_CHANGE',
   NIMBUS: 'NIMBUS',
+  WS: 'WS',
+};
+
+export type CandidateListType = {
+  ip: string;
+  port: number;
+  candidateType: string;
+  isLocal: boolean;
+};
+
+export type CandidatePairListType = {
+  iceConnectionState: string,
+  localCandidateId: string;
+  remoteCandidateId: string;
+  state: string;
+  timeStamp: string;
 };
 
 // Media
@@ -156,8 +182,10 @@ export const AUDIO_INTERVAL = 1000;
 export const GETSTATS_HEARTBEATINTERVAL = 100000;
 export const STATSSOCKET_RECONNECT_SEC = 10000;
 export const STATS_ANALYSIS_WAIT_TIME = 5000;
-export const NETWORK_CHANGE_INTERVAL_IDLE_STATE = 10000;
+export const NETWORK_CHANGE_INTERVAL_IDLE_STATE = 5000;
 export const NETWORK_CHANGE_INTERVAL_ON_CALL_STATE = 4000;
-export const MESSAGE_CHECK_TIMEOUT_IDLE_STATE = 5000;
+export const MESSAGE_CHECK_TIMEOUT_IDLE_STATE = 2000;
 export const MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE = 2000;
 export const IP_ADDRESS_FETCH_RETRY_COUNT = 10;
+export const WS_RECONNECT_RETRY_COUNT = 2;
+export const WS_RECONNECT_RETRY_INTERVAL = 15000;

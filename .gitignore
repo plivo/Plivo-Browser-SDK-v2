@@ -8,3 +8,6 @@ build/*
 types/*
 .env
 report
+.npmrc
+.package-lock.json
+.yarn.lock

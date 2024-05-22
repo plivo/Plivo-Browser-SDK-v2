@@ -8,6 +8,8 @@ import {
 } from './constants';
 import Storage from './storage';
 import { getOS, getSDKVersion } from './utils/device';
+// eslint-disable-next-line import/no-cycle
+import { LoggerUtil } from './utils/loggerUtil';
 
 /* eslint-disable no-undef */
 const consoleLogsArr: string[] = [];
@@ -35,6 +37,7 @@ interface Body{
   sdk_v: string,
   sdk_name: string,
   user_agent: string,
+  call_uuid: string,
 }
 
 /**
@@ -44,6 +47,8 @@ class PlivoLogger {
   private options:LoggerOptions;
 
   private logMethod:AvailableLogMethods;
+
+  private loggerUtil:LoggerUtil;
 
   constructor(options:LoggerOptions = {}) {
     this.options = options;
@@ -101,6 +106,10 @@ class PlivoLogger {
     }
   };
 
+  setLoggerUtil(loggerUtil: LoggerUtil) {
+    this.loggerUtil = loggerUtil;
+  }
+
   private _appendToQueue = (premsg, arg1, arg2) => {
     let flag : boolean = false;
 
@@ -112,6 +121,7 @@ class PlivoLogger {
     if (arg1.includes(LOGCAT.CALL_QUALITY)) flag = true;
     if (arg1.includes(LOGCAT.NETWORK_CHANGE)) flag = true;
     if (arg1.includes(LOGCAT.NIMBUS)) flag = true;
+    if (arg1.includes(LOGCAT.WS)) flag = true;
 
     if (flag) Storage.getInstance().setData(premsg, arg1, arg2);
   };
@@ -131,8 +141,13 @@ class PlivoLogger {
       const loggingName = this.options.loggingName || '';
       const date = new Date();
       let msdate = '';
-      if (enableDate) msdate = `[${date.toISOString().substring(0, 10)} ${date.toString().split(' ')[4]}.${date.getMilliseconds()}]`;
-      const premsg = `${msdate} [${ucFilter}] ${loggingName} :: `;
+      if (enableDate) msdate = `[${date.toISOString().substring(0, 10)} ${date.toISOString().split('T')[1].split('.')[0]}.${date.getUTCMilliseconds()}]`;
+      let premsg = "";
+      if (this.loggerUtil) {
+        premsg = `${msdate} ${loggingName} : ${this.loggerUtil?.getUserName()} ${this.loggerUtil?.getSipCallID()} [${ucFilter}] `;
+      } else {
+        premsg = `${msdate} ${loggingName} :[${ucFilter}] `;
+      }
       // Number of logs which sdk store in memory
       if (consoleLogsArr.length >= CONSOLE_LOGS_BUFFER_SIZE) consoleLogsArr.shift();
       consoleLogsArr.push(`${premsg + arg1 + arg2} \n`);
@@ -190,6 +205,8 @@ class PlivoLogger {
     myHeaders,
     logs: Array<Array<string>>,
     index: number,
+    callUUID: string = "",
+    userName: string | null = "",
   ): Promise<string> => new Promise((resolve, reject) => {
     const sdkVersionParse = getSDKVersion();
     const deviceOs = getOS();
@@ -200,7 +217,16 @@ class PlivoLogger {
       sdk_v: sdkVersionParse.version,
       sdk_name: "BrowserSDK",
       user_agent: deviceOs,
+      call_uuid: "",
     };
+
+    if (callUUID && callUUID !== "") {
+      body.call_uuid = callUUID;
+    }
+
+    if (userName && userName !== "") {
+      body.username = userName;
+    }
 
     if (client.isAccessToken) body.jwt = client.accessToken;
 
@@ -211,34 +237,43 @@ class PlivoLogger {
       redirect: 'follow',
     };
     const url = (client.isAccessToken) ? LOG_COLLECTION_JWT : LOG_COLLECTION;
-    fetch(url.trimEnd(), requestOptions)
-      .then((response) => {
-        if (!response.ok) {
-          this.info(`${LOGCAT.NIMBUS} | Error while uploading logs to nimbus`);
-          reject(new Error('failure'));
-        } else {
-          index += 1;
-          if (logs.length > index) {
-            this._sendBatchedLogsToServer(client, myHeaders, logs, index);
+    if (!navigator.onLine) {
+      this.info(`${LOGCAT.NIMBUS} | No internet while pushing logs to nimbus`);
+      resolve('no internet while sending nimbus logs');
+    } else {
+      fetch(url.trimEnd(), requestOptions)
+        .then((response) => {
+          if (!response.ok) {
+            this.info(`${LOGCAT.NIMBUS} | Error while uploading logs to nimbus`);
+            reject(new Error('failure'));
           } else {
-            Storage.getInstance().clear();
+            index += 1;
+            if (logs.length > index) {
+              this._sendBatchedLogsToServer(client, myHeaders, logs, index,
+                body.call_uuid,
+                body.username);
+            } else {
+              Storage.getInstance().clear();
+            }
+            resolve('success');
           }
-          resolve('success');
-        }
 
-        response.text();
-      })
-      .then((result) => console.log(result))
-      .catch((error) => {
-        console.log('error', error);
-        reject(error);
-      });
+          response.text();
+        })
+        .then((result) => console.log(result))
+        .catch((error) => {
+          console.log('error', error);
+          reject(error);
+        });
+    }
   });
 
   /**
  * Send logs to Plivo kibana.
  */
   send = (client: Client): void => {
+    if (!process.env.PLIVO_ENV) return;
+
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
 

@@ -1,5 +1,3 @@
-import { C } from 'plivo-jssip';
-import { Logger } from '../../../lib/logger';
 import validateOptions from '../../../lib/utils/options';
 
 describe('ValidateOptions', () => {
@@ -25,7 +23,9 @@ describe('ValidateOptions', () => {
       allowMultipleIncomingCalls: false,
       closeProtection: false,
       maxAverageBitrate: 48000,
+      enableNoiseReduction: true,
       registrationRefreshTimer: 120,
+      usePlivoStunServer: false,
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
       }
@@ -91,6 +91,18 @@ describe('ValidateOptions', () => {
     expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(false);
     inputOptions.useDefaultAudioDevice = true;
     expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(true);
+  });
+
+  it('should check if usePlivoStunServer is valid', () => {
+    const inputOptions = { ...options };
+    inputOptions.usePlivoStunServer = "true";
+    expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(false);
+    inputOptions.usePlivoStunServer = 12345;
+    expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(false);
+    inputOptions.usePlivoStunServer = 12345.12345;
+    expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(false);
+    inputOptions.usePlivoStunServer = true;
+    expect(validateOptions(inputOptions).usePlivoStunServer).toStrictEqual(true);
   });
 
   it('should validate invalid options', () => {

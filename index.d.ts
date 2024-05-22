@@ -19,6 +19,8 @@ declare module 'plivo-browser-sdk/client' {
     import { CallSession } from 'plivo-browser-sdk/managers/callSession';
     import { StatsSocket } from 'plivo-browser-sdk/stats/ws';
     import { OutputDevices, InputDevices, RingToneDevices } from 'plivo-browser-sdk/media/audioDevice';
+    import { NoiseSuppression } from 'plivo-browser-sdk/rnnoise/NoiseSuppression';
+    import { LoggerUtil } from 'plivo-browser-sdk/utils/loggerUtil';
     export interface PlivoObject {
             log: typeof Logger;
             sendEvents?: (obj: any, session: CallSession) => void;
@@ -45,6 +47,8 @@ declare module 'plivo-browser-sdk/client' {
             maxAverageBitrate?: number;
             useDefaultAudioDevice?: boolean;
             registrationRefreshTimer?: number;
+            enableNoiseReduction?: boolean;
+            usePlivoStunServer?: boolean;
             dtmfOptions?: DtmfOptions;
     }
     export interface BrowserDetails {
@@ -79,6 +83,10 @@ declare module 'plivo-browser-sdk/client' {
                     ice_connection: boolean;
             };
     }
+    export interface ConnectionInfo {
+            reason: string;
+            state: string;
+    }
     /**
         * Initializes the client.
         * @public
@@ -101,6 +109,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             ringToneFlag: boolean;
+            /**
+                * Callback to perform login after previous connection is disconnected successfully
+                * @private
+                */
+            loginCallback: any;
             /**
                 * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
                 * Otherwise do not play audio.
@@ -153,6 +166,24 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             callDirection: null | string;
+            /**
+                * Holds the SpeechRecognition instance which listens for
+                * speech when the user speaks on mute
+                * @private
+                */
+            speechRecognition: SpeechRecognition;
+            /**
+                * Holds the loggerUtil instance which keeps the
+                * value of username and sipCallID to attached to each log
+                * @private
+                */
+            loggerUtil: LoggerUtil;
+            noiseSuppresion: NoiseSuppression;
+            /**
+                * Specifies whether the noise suppression should be enabled or not
+                * @private
+                */
+            enableNoiseReduction: boolean | undefined;
             /**
                 * Contains the identifier for previous incoming or outgoing call
                 * @private
@@ -269,6 +300,12 @@ declare module 'plivo-browser-sdk/client' {
                 */
             isCallMuted: boolean;
             /**
+                * Specifically used for SpeechRecognition
+                * Describes whether the call is in mute state or not
+                * @private
+                */
+            isMuteCalled: boolean;
+            /**
                 * All audio related information
                 * @public
                 */
@@ -353,7 +390,7 @@ declare module 'plivo-browser-sdk/client' {
                 * Holds the connection state of the SDK
                 * @private
                 */
-            connectionState: string;
+            connectionInfo: ConnectionInfo;
             /**
                 * Responsible for playing audio stream of remote user during call
                 * @private
@@ -380,6 +417,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             networkChangeInterval: null | ReturnType<typeof setInterval>;
+            /**
+             * Maintains a setInterval which checks for WS reconnection
+             * @private
+             */
+            connectionRetryInterval: null | ReturnType<typeof setInterval>;
             /**
                 * Calculate time taken for different stats
                 * @private
@@ -521,6 +563,16 @@ declare module 'plivo-browser-sdk/client' {
                 */
             setConnectTone: (val: boolean) => boolean;
             /**
+                * Starts the Noise Reduction.
+                * @param {Boolean} val - true if noise reduction is started, else false
+                */
+            startNoiseReduction: () => Promise<boolean>;
+            /**
+            * stops the Noise Reduction.
+            * @param {Boolean} val - true if noise reduction is stopped, else false
+            */
+            stopNoiseReduction: () => Promise<boolean>;
+            /**
                 * Configure the audio played when sending a DTMF.
                 * @param {String} digit - Specify digit for which audio needs to be configured
                 * @param {String} url - Media url for playing audio
@@ -531,6 +583,21 @@ declare module 'plivo-browser-sdk/client' {
                 * @returns Current CallUUID
                 */
             getCallUUID: () => string | null;
+            /**
+            * Check if the client is in registered state.
+            * @returns Current CallUUID
+            */
+            isRegistered: () => boolean | null;
+            /**
+         * Check if the client is in connecting state.
+         * @returns Current CallUUID
+         */
+            isConnecting: () => boolean | null;
+            /**
+         * Check if the client is in connected state.
+         * @returns Current CallUUID
+         */
+            isConnected: () => boolean | null;
             /**
                 * Get the CallUUID of the latest answered call.
                 */
@@ -568,6 +635,7 @@ declare module 'plivo-browser-sdk/client' {
                 * @param {Boolean} sendConsoleLogs - Send browser logs to Plivo
                 */
             submitCallQualityFeedback: (callUUID: string, starRating: string, issues: string[], note: string, sendConsoleLogs: boolean) => Promise<string>;
+            clearOnLogout(): void;
             /**
                 * @constructor
                 * @param options - (Optional) client configuration parameters
@@ -581,6 +649,7 @@ declare module 'plivo-browser-sdk/client' {
 
 declare module 'plivo-browser-sdk/logger' {
     import { Client } from 'plivo-browser-sdk/client';
+    import { LoggerUtil } from 'plivo-browser-sdk/utils/loggerUtil';
     export type AvailableLogMethods = 'INFO' | 'DEBUG' | 'WARN' | 'ERROR' | 'ALL' | 'OFF' | 'ALL-PLAIN';
     export type AvailableFlagValues = 'ALL' | 'NONE' | 'REMOTEONLY' | 'LOCALONLY';
     export interface DtmfOptions {
@@ -608,6 +677,7 @@ declare module 'plivo-browser-sdk/logger' {
                 * @param {AvailableLogMethods} debugLevel - passed by user while initializing client
                 */
             enableSipLogs: (debugLevel: AvailableLogMethods) => void;
+            setLoggerUtil(loggerUtil: LoggerUtil): void;
             /**
             * Send logs to Plivo kibana.
             */
@@ -619,6 +689,7 @@ declare module 'plivo-browser-sdk/logger' {
 
 declare module 'plivo-browser-sdk/managers/callSession' {
     import { RTCSession, SessionIceCandidateEvent, SessionFailedEvent, SessionEndedEvent } from 'plivo-jssip';
+    import * as C from 'plivo-browser-sdk/constants';
     import { Client, ExtraHeaders } from 'plivo-browser-sdk/client';
     import { GetRTPStats } from 'plivo-browser-sdk/stats/rtpStats';
     export interface CallSessionOptions {
@@ -641,6 +712,10 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             state: string;
             stirShakenState: string;
             extraHeaders: ExtraHeaders;
+            protocol: string;
+            originator: string;
+            reason: string;
+            code: number;
     }
     export interface SignallingInfo {
             call_initiation_time?: number;
@@ -680,6 +755,14 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                     FAILED: string;
                     ENDED: string;
             };
+            SPEECH_STATE: {
+                    STOPPED: string;
+                    STARTING: string;
+                    RUNNING: string;
+                    STOPPING: string;
+                    STOPPED_AFTER_DETECTION: string;
+                    STOPPED_DUE_TO_NETWORK_ERROR: string;
+            };
             /**
                 * Unique identifier generated for a call by server
                 * @private
@@ -716,6 +799,16 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 */
             state: string;
             /**
+                * Holds the status if call is terminated during ringing state
+                * @private
+                */
+            isCallTerminatedDuringRinging: boolean;
+            /**
+                * Holds the current status of speechrecgnition
+                * @private
+                */
+            speech_state: string;
+            /**
                 * Custom headers which are passed in the INVITE. They should start with 'X-PH'
                 * @private
                 */
@@ -741,6 +834,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 */
             stats: GetRTPStats | null;
             /**
+                * Holds the server flags received in 200 OK
+                * @private
+                */
+            serverFeatureFlags: Array<string>;
+            /**
                 * Holds timestamp for each state of call
                 * @private
                 */
@@ -755,6 +853,8 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @private
                 */
             postDialDelayEndTime: number | null;
+            candidateList: Map<string, C.CandidateListType>;
+            candidatePairsList: Map<string, C.CandidatePairListType>;
             /**
                 * Update CallUUID in session.
                 * @param {String} callUUID - active call(Outgoing/Incoming) CallUUID
@@ -765,6 +865,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * @param {String} state - active call(Outgoing/Incoming) state(this.STATE)
                 */
             setState: (state: string) => void;
+            setSpeechState: (state: string) => void;
             /**
                 * Add stage at each state of call.
                 * @param {String} stage - Has state name and time at which state change happens
@@ -797,6 +898,8 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 * Get signalling information.
                 */
             getSignallingInfo: () => SignallingInfo;
+            stopSpeechRecognition: (clientObj: Client) => void;
+            startSpeechRecognition: (clientObj: Client) => void;
             /**
                 * Get media connection information.
                 */
@@ -809,7 +912,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
             /**
                 * Get basic call information.
                 */
-            getCallInfo: () => CallInfo;
+            getCallInfo: (originator: string, protocol?: string, reason?: string, code?: number) => CallInfo;
             /**
                 * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
                 * @param {Client} clientObject - client reference
@@ -976,10 +1079,16 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * If error occurs reject with error.
         */
     export const revealAudioDevices: (arg?: string | undefined) => Promise<MediaStream | string>;
+    export const speechListeners: () => void;
     /**
         * Mute the local stream.
         */
     export const mute: () => void;
+    /**
+        * Mute audio state.
+        * @param {Client} client - client reference
+        */
+    export const resetMuteOnHangup: () => void;
     /**
         * Collect realtime Audio levels for local and remote streams.
         * @param {Client} client - client reference
@@ -989,6 +1098,7 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Stopping the requesting frame. It would stop emitting the real time audio levels.
         */
     export const stopVolumeDataStreaming: () => void;
+    export const replaceStream: (client: Client, constraints: any) => Promise<void>;
     /**
         * Add audio device information whenever device is changed.
         * @param {Boolean} store - pass true to store information in Client object for reference
@@ -1045,6 +1155,191 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Detect if input or output audio device has changed.
         */
     export const detectDeviceChange: () => void;
+}
+
+declare module 'plivo-browser-sdk/rnnoise/NoiseSuppression' {
+    import { Client } from "plivo-browser-sdk/client";
+    export class NoiseSuppression {
+        noiseSupressionRunning: boolean;
+        started: boolean;
+        constructor(client: Client);
+        startNoiseSuppression: (mediaStream?: MediaStream | undefined) => Promise<MediaStream | null>;
+        stopNoiseSuppresion: () => void;
+        setLocalMediaStream: () => Promise<MediaStream | null>;
+        updateProcessingStream: (stream: MediaStream) => Promise<MediaStream | null>;
+        clearNoiseSupression: () => void;
+        muteStream: () => void;
+        unmuteStream: () => void;
+        startNoiseSuppresionManual: () => Promise<void>;
+        stopNoiseSuppressionManual: () => Promise<void>;
+    }
+}
+
+declare module 'plivo-browser-sdk/utils/loggerUtil' {
+    import { Client } from "plivo-browser-sdk/client";
+    export class LoggerUtil {
+        constructor(client: Client);
+        static getInstance(): LoggerUtil | null;
+        getSipCallID(): string;
+        setSipCallID(value: string): void;
+        getUserName(): string;
+        setUserName(value: string): void;
+    }
+}
+
+declare module 'plivo-browser-sdk/constants' {
+    export const DOMAIN = "phone.plivo.com";
+    export const WS_SERVERS: string[];
+    export const DEFAULT_LOG_LEVEL = "INFO";
+    export const DEFAULT_ENABLE_QUALITY_TRACKING = "ALL";
+    export const ENABLE_QUALITY_TRACKING_ALLOWED_VALUES: string[];
+    export const LOCALONLY = "LOCALONLY";
+    export const REMOTEONLY = "REMOTEONLY";
+    export const AUDIO_CONSTRAINTS: {
+        optional: {
+            googAutoGainControl: boolean;
+        }[];
+    };
+    export const DEFAULT_DTMFOPTIONS: {
+        sendDtmfType: string[];
+    };
+    export const NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED = 50;
+    export const REGISTER_EXPIRES_SECONDS = 120;
+    export const SESSION_TIMERS_EXPIRES = 300;
+    export const WS_RECOVERY_MAX_INTERVAL = 20;
+    export const WS_RECOVERY_MIN_INTERVAL = 2;
+    export const DEFAULT_MDNS_CANDIDATE = "192.168.0.1";
+    export const ICE_GATHERING_TIMEOUT = 2000;
+    export const ICE_RECONNECT_INTERVAL = 2000;
+    export const ICE_RECONNECT_COUNT = 5;
+    export const NETWORK_CHANGE_INTERVAL = 10000;
+    export const STUN_SERVERS: string[];
+    export const FALLBACK_STUN_SERVER = "stun:stun-fb.plivo.com:3478";
+    export const GOOG_STUN_SERVER = "stun:stun.l.google.com:19302";
+    export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
+    export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
+    export const DTMF_TONE_PLAY_RETRY_ATTEMPTS = 4;
+    export const SIP_ERROR_CODE: {
+        486: string;
+        408: string;
+        480: string;
+        603: string;
+        484: string;
+        503: string;
+        501: string;
+        487: string;
+        400: string;
+        401: string;
+        403: string;
+        404: string;
+        405: string;
+        483: string;
+        500: string;
+        502: string;
+    };
+    export const LOCAL_ERROR_CODES: {
+        'No Answer': number;
+        Canceled: number;
+        Rejected: number;
+        Terminated: number;
+        Ignored: number;
+        "call answer fail": number;
+        "Network switch while ringing": number;
+    };
+    export const DEFAULT_CODECS: string[];
+    export const DTMF_OPTIONS: string[];
+    export const CONSOLE_LOGS_BUFFER_SIZE = 900;
+    export const MAX_AVERAGE_BITRATE = 48000;
+    export const MIN_AVERAGE_BITRATE = 8000;
+    export const MIN_REGISTRATION_REFRESH_TIMER = 60;
+    export const MAX_REGISTRATION_REFRESH_TIMER: number;
+    export const REGION: string[];
+    export const DEBUG_MODES: string[];
+    export const DEFAULT_COMMENTS: {
+        AUDIO_LAG: string;
+        BROKEN_AUDIO: string;
+        CALL_DROPPED: string;
+        CALLERID_ISSUES: string;
+        DIGITS_NOT_CAPTURED: string;
+        ECHO: string;
+        HIGH_CONNECT_TIME: string;
+        LOW_AUDIO_LEVEL: string;
+        ONE_WAY_AUDIO: string;
+        OTHERS: string;
+        ROBOTIC_AUDIO: string;
+    };
+    export const LOGCAT: {
+        INIT: string;
+        LOGIN: string;
+        CALL: string;
+        LOGOUT: string;
+        CRASH: string;
+        CALL_QUALITY: string;
+        NETWORK_CHANGE: string;
+        NIMBUS: string;
+        WS: string;
+    };
+    export type CandidateListType = {
+        ip: string;
+        port: number;
+        candidateType: string;
+        isLocal: boolean;
+    };
+    export type CandidatePairListType = {
+        iceConnectionState: string;
+        localCandidateId: string;
+        remoteCandidateId: string;
+        state: string;
+        timeStamp: string;
+    };
+    export const RINGTONE_URL = "https://cdn.plivo.com/sdk/browser/audio/us-ring.mp3";
+    export const RINGBACK_URL = "https://cdn.plivo.com/sdk/browser/audio/us-ring.mp3?v=ringback";
+    export const CONNECT_TONE_URL = "https://cdn.plivo.com/sdk/browser/audio/connect-tone.mp3";
+    export const SILENT_TONE_URL = "https://cdn.plivo.com/sdk/browser/audio/silent-audio.mp3";
+    export const SELF_VIEW_ID = "plivo_webrtc_selfview";
+    export const REMOTE_VIEW_ID = "plivo_webrtc_remoteview";
+    export const RINGBACK_ELEMENT_ID = "plivo_ringbacktone";
+    export const RINGTONE_ELEMENT_ID = "plivo_ringtone";
+    export const CONNECT_TONE_ELEMENT_ID = "plivo_connect_tone";
+    export const SILENT_TONE_ELEMENT_ID = "plivo_silent_tone";
+    export const AUDIO_DEVICE_ABORT_ERROR_CODE = 20;
+    export const AUDIO_DEVICE_SECURITY_ERROR = "SecurityError";
+    export const DTMF_TONE_FLAG: {
+        0: boolean;
+        1: boolean;
+        2: boolean;
+        3: boolean;
+        4: boolean;
+        5: boolean;
+        6: boolean;
+        7: boolean;
+        8: boolean;
+        9: boolean;
+        '#': boolean;
+        '*': boolean;
+    };
+    export const S3BUCKET_API_URL = "https://stats.plivo.com/v1/browser/bucketurl/";
+    export const STATSSOCKET_URL = "wss://insights.plivo.com/ws";
+    export const STATS_API_URL = "https://stats.plivo.com/v1/browser/validate/";
+    export const SDKVERSION_API_URL = "https://stats.plivo.com/v1/browser/websdkversion/";
+    export const STATS_API_URL_ACCESS_TOKEN = "https://stats.plivo.com/v1/browser/validate/jwt/";
+    export const S3BUCKET_API_URL_JWT = "https://stats.plivo.com/v1/browser/bucketurl/jwt/";
+    export const LOG_COLLECTION = "https://nimbus.plivo.com/collect/logs/";
+    export const LOG_COLLECTION_JWT = "https://nimbus.plivo.com/collect/logs/jwt/";
+    export const STATS_SOURCE = "BrowserSDK";
+    export const STATS_VERSION = "v1";
+    export const GETSTATS_INTERVAL = 5000;
+    export const AUDIO_INTERVAL = 1000;
+    export const GETSTATS_HEARTBEATINTERVAL = 100000;
+    export const STATSSOCKET_RECONNECT_SEC = 10000;
+    export const STATS_ANALYSIS_WAIT_TIME = 5000;
+    export const NETWORK_CHANGE_INTERVAL_IDLE_STATE = 5000;
+    export const NETWORK_CHANGE_INTERVAL_ON_CALL_STATE = 4000;
+    export const MESSAGE_CHECK_TIMEOUT_IDLE_STATE = 2000;
+    export const MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE = 2000;
+    export const IP_ADDRESS_FETCH_RETRY_COUNT = 10;
+    export const WS_RECONNECT_RETRY_COUNT = 2;
+    export const WS_RECONNECT_RETRY_INTERVAL = 15000;
 }
 
 declare module 'plivo-browser-sdk/stats/rtpStats' {
@@ -1270,6 +1565,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             deviceOs: string;
             setupOptions: ConfiguationOptions;
             audioDeviceInfo?: DeviceAudioInfo;
+            noiseReduction: NoiseReduction;
     }
     export interface DeviceAudioInfo {
             noOfAudioInput: number;
@@ -1303,6 +1599,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
             jsFramework: string[];
+            noiseReduction: NoiseReduction;
     }
     export interface SummaryEvent {
             msg: string;
@@ -1324,6 +1621,11 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
             jsFramework: string[];
+            noiseReduction: NoiseReduction;
+    }
+    export interface NoiseReduction {
+            enabled: boolean;
+            noiseSuprressionStarted: boolean;
     }
     /**
         * Add call related information to call answered/summary stat.

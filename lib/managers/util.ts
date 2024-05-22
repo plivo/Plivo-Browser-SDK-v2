@@ -19,13 +19,13 @@ import {
 import { emitMetrics as _emitMetrics } from '../stats/mediaMetrics';
 import { GetRTPStats } from '../stats/rtpStats';
 import {
-  getAudioDevicesInfo, isElectronApp,
+  getAudioDevicesInfo, isElectronApp, resetMuteOnHangup, updateAudioDeviceFlags,
 } from '../media/audioDevice';
 import { Logger } from '../logger';
 import { Client } from '../client';
 import { CallSession } from './callSession';
 import {
-  STATS_ANALYSIS_WAIT_TIME, DEFAULT_MDNS_CANDIDATE, LOGCAT,
+  STATS_ANALYSIS_WAIT_TIME, DEFAULT_MDNS_CANDIDATE, LOGCAT, LOCAL_ERROR_CODES,
 } from '../constants';
 import getBrowserDetails from '../utils/browserDetection';
 
@@ -67,6 +67,10 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
+    noiseReduction: {
+      enabled: client.enableNoiseReduction ?? false,
+      noiseSuprressionStarted: client.noiseSuppresion.started,
+    },
     isAudioDeviceToggled: client.deviceToggledInCurrentSession,
     isNetworkChanged: client.networkChangeInCurrentSession,
     jsFramework: client.jsFramework,
@@ -288,18 +292,52 @@ export const setEncodingParameters = function (): void {
   }
 };
 
+export const getUTCTImeString = function (): string {
+  const date = new Date();
+  return `${date.toISOString().substring(0, 10)} ${date.toISOString().split('T')[1].split('.')[0]}.${date.getUTCMilliseconds()}`;
+};
+
+async function fetchCandidatePairs(connection: RTCPeerConnection, callSession: CallSession) {
+  const stats = await connection.getStats();
+  stats.forEach((report) => {
+    switch (report.type) {
+      case 'candidate-pair':
+        callSession.candidatePairsList.set(report.id, {
+          iceConnectionState: connection.iceConnectionState,
+          localCandidateId: report.localCandidateId,
+          remoteCandidateId: report.remoteCandidateId,
+          state: report.state,
+          timeStamp: getUTCTImeString(),
+        });
+        break;
+      case 'local-candidate':
+      case 'remote-candidate':
+        callSession.candidateList.set(report.id, {
+          ip: report.ip,
+          port: report.port,
+          candidateType: report.candidateType,
+          isLocal: report.type === 'local-candidate',
+        });
+        break;
+      default:
+        break;
+    }
+  });
+}
+
 /**
  * Handle ice connection change.
  * @param {RTCPeerConnection} connection - media connection
  * @param {CallSession} callSession - call session information
  */
-export const onIceConnectionChange = function (
+export const onIceConnectionChange = async function (
   connection: RTCPeerConnection,
   callSession: CallSession,
-): void {
+): Promise<void> {
   const client: Client = this;
   const iceState = connection.iceConnectionState;
-  Plivo.log.debug(`oniceconnectionstatechange:: ${iceState}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | oniceconnectionstatechange is ${iceState}`);
+  fetchCandidatePairs(connection, callSession);
   callSession.addConnectionStage(
     `iceConnectionState-${iceState}@${getCurrentTime()}`,
   );
@@ -318,9 +356,42 @@ export const onIceConnectionChange = function (
       }
     }
     if (iceState === 'connected') {
-      client.emit('onMediaConnected', callSession.getCallInfo());
+      client.emit('onMediaConnected', callSession.getCallInfo("local"));
     }
   }
+};
+
+/**
+ * Extract reason from SIP messages.
+ * @param {string | object} reasonMessage - SIP message
+ */
+export const extractReasonInfo = (reasonMessage) => {
+  if (reasonMessage == null || typeof reasonMessage !== 'object') {
+    Plivo.log.debug(`${LOGCAT.CALL} | evt.message could be null or not an object: ${reasonMessage ? typeof reasonMessage : "null"}`);
+    return { protocol: 'none', cause: -1, text: 'none' };
+  }
+  const reasonHeader = reasonMessage.getHeader("Reason");
+  if (reasonHeader == null) {
+    Plivo.log.debug(`${LOGCAT.CALL} | No reason header present}`);
+    return { protocol: 'none', cause: -1, text: 'none' };
+  }
+
+  const matchCause = reasonHeader.match(/cause=(\d+)/);
+  const matchProtocol = reasonHeader.match(/^([^;]+)/);
+  const matchText = reasonHeader.match(/text="([^"]+)"/);
+
+  const protocol = matchProtocol ? matchProtocol[1] : 'none';
+  const cause = matchCause ? parseInt(matchCause[1], 10) : -1;
+  const text = matchText ? matchText[1] : 'none';
+
+  return { protocol, cause, text };
+};
+
+export const extractReason = (evt:SessionFailedEvent) => {
+  if (evt.originator === 'local') {
+    return { protocol: 'none', cause: LOCAL_ERROR_CODES[evt.cause], text: evt.cause };
+  }
+  return extractReasonInfo(evt.message);
 };
 
 /**
@@ -392,7 +463,9 @@ const clearSessionInfo = function (session: CallSession): void {
   const client: Client = this;
   if (session === client._currentSession) {
     // audio element clearence
-    client.remoteView.pause();
+    if (client.remoteView) {
+      client.remoteView.pause();
+    }
     client._lastCallSession = session;
     client.lastCallUUID = session.callUUID;
     client._currentSession = null;
@@ -443,7 +516,7 @@ const removeCloseProtectionListeners = function (): void {
  */
 const stopLocalStream = function (): void {
   if ((window as any).localStream) {
-    if (getBrowserDetails().browser === 'chrome' || this.permOnClick || isElectronApp()) {
+    if (getBrowserDetails().browser === 'firefox' || getBrowserDetails().browser === 'chrome' || this.permOnClick || isElectronApp()) {
       try {
         (window as any).localStream.getTracks().forEach((track: MediaStreamTrack) => {
           track.stop();
@@ -458,7 +531,6 @@ const stopLocalStream = function (): void {
     // firefox uses the same mediastream across calls
     if (
       getBrowserDetails().browser === 'safari'
-      || getBrowserDetails().browser === 'firefox'
     ) {
       try {
         (window as any).localStream.getTracks().forEach((track: MediaStreamTrack) => {
@@ -479,39 +551,46 @@ const stopLocalStream = function (): void {
  * @param {CallSession} session - call session information
  */
 export const hangupClearance = function (session: CallSession) {
-  const client: Client = this;
-  Plivo.AppError.call(client, calcConnStage(session.connectionStages), 'log');
-  session.clearCallStats();
-  clearSessionInfo.call(client, session);
-  const signallingInfo = session.getSignallingInfo();
-  const mediaConnectionInfo = session.getMediaConnectionInfo();
-  if (client.callstatskey) {
-    getAudioDevicesInfo
-      .call(client)
-      .then((deviceInfo) => {
-        sendCallSummaryEvent.call(
-          client,
-          deviceInfo,
-          signallingInfo,
-          mediaConnectionInfo,
-          session,
-        );
-      })
-      .catch(() => {
-        sendCallSummaryEvent.call(
-          client,
-          null,
-          signallingInfo,
-          mediaConnectionInfo,
-          session,
-        );
-      });
+  try {
+    const client: Client = this;
+    Plivo.AppError.call(client, calcConnStage(session.connectionStages), 'log');
+    session.clearCallStats();
+    clearSessionInfo.call(client, session);
+    const signallingInfo = session.getSignallingInfo();
+    const mediaConnectionInfo = session.getMediaConnectionInfo();
+    if (client.callstatskey) {
+      getAudioDevicesInfo
+        .call(client)
+        .then((deviceInfo) => {
+          sendCallSummaryEvent.call(
+            client,
+            deviceInfo,
+            signallingInfo,
+            mediaConnectionInfo,
+            session,
+          );
+        })
+        .catch(() => {
+          sendCallSummaryEvent.call(
+            client,
+            null,
+            signallingInfo,
+            mediaConnectionInfo,
+            session,
+          );
+        });
+    }
+    removeCloseProtectionListeners.call(client);
+    client.isCallMuted = false;
+    if (client._currentSession) return;
+    if (client.storage) client.storage = null;
+    stopLocalStream.call(client);
+    updateAudioDeviceFlags();
+    resetMuteOnHangup();
+    client.noiseSuppresion.stopNoiseSuppresion();
+  } catch (err) {
+    Plivo.log.info(`${LOGCAT.CALL} | error while hangup clearance : ${err.message}`);
   }
-  removeCloseProtectionListeners.call(client);
-  client.isCallMuted = false;
-  if (client._currentSession) return;
-  if (client.storage) client.storage = null;
-  stopLocalStream.call(client);
 };
 
 /**
@@ -573,6 +652,7 @@ export const handleMediaError = function (
 ): void {
   const client: Client = this;
   if (client.callStats && callSession.callUUID && !evt.cause.match('edia')) {
+    Plivo.log.debug(`${LOGCAT.CALL} | Sending error to stats when media error occurs`);
     if (callSession.session.connection) {
       client.callStats.reportError(
         callSession.session.connection,
@@ -631,4 +711,30 @@ export const mobileBrowserCheck = function (): boolean {
   // eslint-disable-next-line func-names
   (function (a) { if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4))) check = true; }(navigator.userAgent || navigator.vendor || (window as any).opera));
   return check;
+};
+
+/**
+ * set the state and reason for onConnectionChange event
+ * @param {Client} client - client instance
+ * @param {string} state - state of the connection
+ * @param {string} reason - reason for disconnection/connection
+*/
+export const setConectionInfo = function (client: Client, state: string, reason: string): void {
+  client.connectionInfo.state = state;
+  client.connectionInfo.reason = reason;
+};
+
+export const logCandidatePairs = function (callSession: CallSession | null) {
+  if (callSession) {
+    const { candidateList } = callSession;
+    callSession.candidatePairsList.forEach((value, key) => {
+      Plivo.log.debug(`${LOGCAT.CALL}| iceConnectionState-${value.iceConnectionState}, CandidatePair(${key}): state-${value.state} at [${value.timeStamp}] has local-candidate(${value.localCandidateId}):[${JSON.stringify(candidateList.get(value.localCandidateId)).slice(1, -1)}] and remote-candidate(${value.remoteCandidateId}):[${JSON.stringify(candidateList.get(value.remoteCandidateId)).slice(1, -1)}]`);
+    });
+  } else {
+    Plivo.log.debug(`${LOGCAT.CALL} |can't logCandidatePairs, callSession is null`);
+  }
+};
+
+export const removeSpaces = function (inputString: string): string {
+  return inputString.replace(/\s/g, '');
 };

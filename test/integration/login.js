@@ -99,7 +99,6 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    // #10
     // eslint-disable-next-line no-undef
     it("login should work", (done) => {
       if (bail) {
@@ -110,6 +109,36 @@ describe("plivoWebSdk", function () {
       bailTimer = setTimeout(() => {
         bail = true;
         throw new Error("login failed");
+      }, TIMEOUT);
+    });
+
+    // eslint-disable-next-line no-undef
+    it("Login again when previous login was successfull", (done) => {
+      setTimeout(() => {
+        Client1.isAccessToken = true;
+        Client1.login(primary_user, primary_pass);
+        waitUntilLogin(events.onLogin, done, 500);
+        Client1.on("onLogin", () => {
+          done();
+        });
+      }, 2000);
+      bailTimer = setTimeout(() => {
+        done(new Error("login should have failed"));
+      }, TIMEOUT);
+    });
+
+    // eslint-disable-next-line no-undef
+    it("Login again when previous login was unsuccessfull", (done) => {
+      Client1.login(primary_user, 'wrong_password');
+      setTimeout(() => {
+        Client1.login(primary_user, primary_pass);
+        waitUntilLogin(events.onLogin, done, 500);
+        Client1.on("onLogin", () => {
+          done();
+        });
+      }, 3000);
+      bailTimer = setTimeout(() => {
+        done(new Error("login should have failed"));
       }, TIMEOUT);
     });
 

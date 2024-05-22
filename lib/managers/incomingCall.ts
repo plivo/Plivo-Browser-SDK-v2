@@ -8,6 +8,7 @@ import {
   SessionEndedEvent,
   SessionNewDtmfEvent,
   C as JSSIP_C,
+  SessionNewInfoEvent,
 } from 'plivo-jssip';
 import {
   RINGTONE_ELEMENT_ID,
@@ -19,6 +20,7 @@ import {
   MESSAGE_CHECK_TIMEOUT_IDLE_STATE,
   NETWORK_CHANGE_INTERVAL_IDLE_STATE,
   LOGCAT,
+  LOCAL_ERROR_CODES,
 } from '../constants';
 import { CallSession } from './callSession';
 import { receiveExtraHeader } from '../utils/headers';
@@ -35,6 +37,7 @@ import {
   addCallstatsIOFabric,
   hangupClearance,
   mobileBrowserCheck,
+  extractReason,
 } from './util';
 import { Client } from '../client';
 import { resetPingPong } from '../utils/networkManager';
@@ -51,11 +54,13 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     isBrowserInBackground = false;
     if (isIncomingCallRinging && mobileBrowserCheck()) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Move to foreground. playing audio`);
       playAudio(RINGTONE_ELEMENT_ID);
     }
   } else {
     isBrowserInBackground = true;
     if (isIncomingCallRinging && mobileBrowserCheck()) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Move to background. stopping audio`);
       stopAudio(RINGTONE_ELEMENT_ID);
     }
   }
@@ -90,40 +95,46 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
 const onProgress = (incomingCall: CallSession) => (): void => {
   // allow incomming call only if permission granted
   incomingCall.onRinging(cs);
-  Plivo.log.debug(`${LOGCAT.CALL} | Incoming call registeration initiated`);
+  Plivo.log.debug(`${LOGCAT.CALL} | Incoming call ringing`);
   incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
   incomingCall.updateSignallingInfo({
     call_progress_time: getCurrentTime(),
   });
   incomingCall.setState(incomingCall.STATE.RINGING);
   incomingCall.setPostDialDelayEndTime(getCurrentTime());
-  Plivo.log.debug('call ringing with 180 code, incoming call in progress');
+  Plivo.log.debug(`${LOGCAT.CALL} | call ringing with 180 code, incoming call in progress`);
   const callerUri = incomingCall.session.remote_identity.uri.toString();
   // Fetch the caller name
   const callerName = incomingCall.session.remote_identity.display_name;
   // if already on an incomingCall then do not play the ringtone
+  Plivo.log.debug(`${LOGCAT.CALL} | ringtone enabled : ${cs.ringToneFlag}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | no session is active currently: ${!cs._currentSession}`);
   if (cs.ringToneFlag !== false && !cs._currentSession) {
-    Plivo.log.debug('ringtone enabled : ', cs.ringToneFlag);
     if (!mobileBrowserCheck()) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Not a mobile browser. Playing ring tone`);
       playAudio(RINGTONE_ELEMENT_ID);
     } else if (!isBrowserInBackground) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Not in background. Playing ring tone`);
       playAudio(RINGTONE_ELEMENT_ID);
     }
+    Plivo.log.debug(`${LOGCAT.CALL} | incoming call ringtone started`);
     isIncomingCallRinging = true;
   }
   const callerId = `${callerUri.substring(
     4,
     callerUri.indexOf('@'),
   )}@${DOMAIN}`;
+  Plivo.log.debug(`${LOGCAT.CALL} | Emitting onIncomingCall`);
   cs.emit(
     'onIncomingCall',
     callerId,
     incomingCall.extraHeaders,
-    incomingCall.getCallInfo(),
+    incomingCall.getCallInfo("local"),
     callerName,
   );
+  cs.noiseSuppresion.setLocalMediaStream();
   addCloseProtectionListeners.call(cs);
-  Plivo.log.debug('Incoming Call Extra Headers : ', incomingCall.extraHeaders);
+  Plivo.log.debug(`${LOGCAT.CALL} | Incoming Call Extra Headers : ${JSON.stringify(incomingCall.extraHeaders)}`);
 };
 
 /**
@@ -131,6 +142,7 @@ const onProgress = (incomingCall: CallSession) => (): void => {
  * @param {SessionSdpEvent} evt - rtcsession sdp information
  */
 const onSDP = (evt: SessionSdpEvent): void => {
+  Plivo.log.debug(`${LOGCAT.CALL} | incoming ${evt.originator} sdp prepared`);
   isIncomingCallRinging = false;
   // eslint-disable-next-line no-param-reassign
   try {
@@ -177,6 +189,7 @@ const onAccepted = (incomingCall: CallSession) => (): void => {
       cs, inboundConnection, incomingCall,
     );
     inboundConnection.onconnectionstatechange = () => {
+      Plivo.log.debug(`${LOGCAT.CALL} | onconnectionstatechange is ${inboundConnection.connectionState}`);
       if (inboundConnection.connectionState === "connected") {
         cs.timeTakenForStats.mediaSetup.end = new Date().getTime();
       }
@@ -211,16 +224,25 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
  */
 const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession): void => {
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause}`);
+  let reasonInfo = { protocol: 'none', cause: -1, text: 'none' };
+  if (evt.originator === 'local' && incomingCall.isCallTerminatedDuringRinging) {
+    reasonInfo = { protocol: 'none', cause: LOCAL_ERROR_CODES['Network switch while ringing'], text: 'Network switch while ringing' };
+    incomingCall.isCallTerminatedDuringRinging = false;
+  } else {
+    reasonInfo = extractReason(evt);
+  }
   if (evt.cause === JSSIP_C.causes.CANCELED) {
     incomingCall.setState(incomingCall.STATE.CANCELED);
-    cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo());
+    Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}}`);
+    cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
   } else {
+    Plivo.log.info(`${LOGCAT.CALL} | Incoming call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
     if (evt.cause === 'Rejected') {
       incomingCall.setState(incomingCall.STATE.REJECTED);
     } else {
       incomingCall.setState(incomingCall.STATE.FAILED);
     }
-    cs.emit('onCallFailed', evt.cause, incomingCall.getCallInfo());
+    cs.emit('onCallFailed', evt.cause, incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
   }
 };
 
@@ -281,6 +303,20 @@ const newDTMF = (evt: SessionNewDtmfEvent): void => {
 };
 
 /**
+ * Triggered when INFO is received/sent.
+ * @param {SessionNewDtmfEvent} evt - rtcsession DTMF information
+ */
+const newInfo = (evt: SessionNewInfoEvent): void => {
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming Call | ${evt.originator} INFO packet with body : ${evt.info.body}`);
+  if (evt.info.body === 'no-remote-audio') {
+    cs.emit('remoteAudioStatus', false);
+  }
+  if (evt.info.body === 'remote-audio') {
+    cs.emit('remoteAudioStatus', true);
+  }
+};
+
+/**
  * Creates incoming call event listeners.
  */
 export const createIncomingCallListeners = (incomingCall: CallSession): void => {
@@ -293,6 +329,7 @@ export const createIncomingCallListeners = (incomingCall: CallSession): void => 
   incomingCall.session.on('ended', onEnded(incomingCall));
   incomingCall.session.on('noCall' as any, onEnded(incomingCall));
   incomingCall.session.on('newDTMF', newDTMF);
+  incomingCall.session.on('newInfo', newInfo);
   incomingCall.session.on('icecandidate', (event) => incomingCall.onIceCandidate(cs, event));
   incomingCall.session.on('getusermediafailed', (err) => incomingCall.onGetUserMediaFailed(cs, err as Error));
   incomingCall.session.on('peerconnection:createofferfailed', (err) => incomingCall.handlePeerConnectionFailures(
@@ -337,6 +374,7 @@ export const createIncomingSession = (
   const callerHeader = evt.request.getHeader('From');
   const callerRegex = callerHeader.match(/:(.*)@/i);
   const caller = callerRegex !== null ? callerRegex[1] : '';
+  cs.loggerUtil.setSipCallID(sipCallID);
   const extraHeaders = receiveExtraHeader(
     evt.request,
     (evt.request as any).headers,
@@ -346,10 +384,9 @@ export const createIncomingSession = (
     call_uuid: callUUID,
     sip_call_id: sipCallID,
   };
-  Plivo.log.info(`${LOGCAT.CALL} | Incoming call initiated for ${cs.userName} with header:- `, JSON.stringify(headers));
+  Plivo.log.info(`${LOGCAT.CALL} | Incoming call initiated for ${cs.userName} from ${caller} with header:- `, JSON.stringify(headers));
   const callInitiationTime = cs.incomingCallsInitiationTime.get(callUUID);
   if (callInitiationTime) cs.incomingCallsInitiationTime.delete(callUUID);
-
   const incomingCall = new CallSession({
     callUUID,
     sipCallID,
@@ -362,6 +399,19 @@ export const createIncomingSession = (
     client: cs,
     stirShakenState: stirVerificationValue,
   });
+  if (evt.request.getHeader('X-FeatureFlags')) {
+    incomingCall.serverFeatureFlags = evt.request.getHeader('X-FeatureFlags').split(',');
+    incomingCall.serverFeatureFlags.forEach((value) => value.trim());
+    if (cs.phone) {
+      if (incomingCall.serverFeatureFlags.indexOf('ft_info') !== -1) {
+        cs.phone.sendReInviteOnTransportConnect = false;
+      } else {
+        cs.phone.sendReInviteOnTransportConnect = true;
+      }
+    }
+  } else if (cs.phone) {
+    cs.phone.sendReInviteOnTransportConnect = true;
+  }
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);
 };
@@ -406,7 +456,7 @@ export const checkIncomingCallAction = (
         actionOnOtherIncomingCalls.toLowerCase(),
       ) === -1)
   ) {
-    Plivo.log.error('Invalid actionOnOtherIncomingCalls value');
+    Plivo.log.error(`${LOGCAT.CALL} | Invalid actionOnOtherIncomingCalls value`);
     return false;
   }
   return true;
@@ -422,6 +472,7 @@ const handleOtherInvites = (
   actionOnOtherIncomingCalls: string,
 ): void => {
   if (cs._currentSession) {
+    Plivo.log.debug(`${LOGCAT.CALL} | hanging up current session before answer`);
     cs.hangup();
   }
   cs.incomingInvites.forEach((invite) => {
@@ -454,22 +505,28 @@ const handleOtherInvites = (
  * Get answer options for answering the call.
  * @returns Incoming call answer options
  */
-const getAnswerOptions = (): SessionAnswerOptions => {
-  const opts: SessionAnswerOptions = {};
-  opts.pcConfig = {
-    iceServers: [{ urls: STUN_SERVERS }],
-  };
-  if (cs.permOnClick) {
-    const audioConstraints = cs.options.audioConstraints || true;
-    opts.mediaConstraints = {
-      audio: audioConstraints,
-      video: false,
+const getAnswerOptions = function (): Promise<SessionAnswerOptions> {
+  return new Promise((resolve) => {
+    const opts: SessionAnswerOptions = {};
+    opts.pcConfig = {
+      iceServers: [{ urls: STUN_SERVERS }],
     };
-  } else if (!(window as any).localStream) Plivo.log.warn('no local stream attached for this call');
-  opts.mediaStream = (window as any).localStream || null;
-  // opts.rtcConstraints =  null;
-  opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
-  return opts;
+    if (cs.permOnClick) {
+      const audioConstraints = cs.options.audioConstraints || true;
+      opts.mediaConstraints = {
+        audio: audioConstraints,
+        video: false,
+      };
+    }
+    cs.noiseSuppresion.startNoiseSuppression((window as any).localStream ?? null)
+      .then((mediaStream) => {
+        opts.mediaStream = mediaStream != null ? mediaStream : (window as any).localStream;
+        // opts.mediaStream = (window as any).localStream || null;
+        // opts.rtcConstraints =  null;
+        opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
+        resolve(opts);
+      });
+  });
 };
 
 /**
@@ -477,33 +534,40 @@ const getAnswerOptions = (): SessionAnswerOptions => {
  * @param {CallSession} curIncomingCall - current incoming call
  * @param {String} actionOnOtherIncomingCalls - list of incoming call actions
  */
-export const answerIncomingCall = (
+export const answerIncomingCall = function (
   curIncomingCall: CallSession,
   actionOnOtherIncomingCalls: string,
-): void => {
-  handleOtherInvites(curIncomingCall, actionOnOtherIncomingCalls);
-  cs.owaLastDetect.isOneWay = false;
-  try {
-    curIncomingCall.session.answer(getAnswerOptions());
-    cs._currentSession = curIncomingCall;
-    cs.incomingInvites.delete(curIncomingCall.callUUID as string);
-    if (curIncomingCall === cs.lastIncomingCall) {
-      cs.lastIncomingCall = null;
-      if (cs.incomingInvites.size) {
-        cs.lastIncomingCall = cs.incomingInvites.values().next().value;
-      }
+): Promise<void> {
+  return new Promise(() => {
+    handleOtherInvites(curIncomingCall, actionOnOtherIncomingCalls);
+    cs.owaLastDetect.isOneWay = false;
+    try {
+      getAnswerOptions().then((options) => {
+        curIncomingCall.session.answer(options);
+        cs._currentSession = curIncomingCall;
+        cs.incomingInvites.delete(curIncomingCall.callUUID as string);
+        if (curIncomingCall === cs.lastIncomingCall) {
+          cs.lastIncomingCall = null;
+          if (cs.incomingInvites.size) {
+            cs.lastIncomingCall = cs.incomingInvites.values().next().value;
+          }
+        }
+        cs.loggerUtil.setSipCallID(cs._currentSession.sipCallID ?? "");
+        cs.callSession = cs._currentSession.session;
+        cs.callUUID = cs._currentSession.callUUID;
+        Plivo.log.debug(`${LOGCAT.CALL} | CallUUID is ${cs.callUUID}`);
+        cs.callDirection = cs._currentSession.direction;
+      });
+    } catch (err) {
+      Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
+      curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
+      Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${err.message}`);
+      cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo("local", "none", "call answer fail", LOCAL_ERROR_CODES['call answer fail']));
     }
-    cs.callSession = cs._currentSession.session;
-    cs.callUUID = cs._currentSession.callUUID;
-    cs.callDirection = cs._currentSession.direction;
-  } catch (err) {
-    Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
-    curIncomingCall.setState(curIncomingCall.STATE.CANCELED);
-    cs.emit('onIncomingCallCanceled', curIncomingCall.getCallInfo());
-  }
-  if (cs.ringToneView && !cs.ringToneView.paused) {
-    stopAudio(RINGTONE_ELEMENT_ID);
-  }
+    if (cs.ringToneView && !cs.ringToneView.paused) {
+      stopAudio(RINGTONE_ELEMENT_ID);
+    }
+  });
 };
 
 /**

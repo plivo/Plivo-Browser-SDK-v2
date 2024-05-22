@@ -17,6 +17,7 @@ import {
 import { emitMetrics } from '../stats/mediaMetrics';
 import {
   getAudioDevicesInfo,
+  speechListeners,
   startVolumeDataStreaming,
   stopVolumeDataStreaming,
 } from '../media/audioDevice';
@@ -30,11 +31,14 @@ import {
   handleMediaError,
   hangupClearance,
   setEncodingParameters,
+  logCandidatePairs,
+  extractReason,
 } from './util';
 import { Logger } from '../logger';
 import { Client, ExtraHeaders } from '../client';
 import { stopAudio } from '../media/document';
 import { GetRTPStats } from '../stats/rtpStats';
+import { LOGCAT } from '../constants';
 
 export interface CallSessionOptions {
   callUUID?: string;
@@ -57,6 +61,10 @@ export interface CallInfo {
   state: string;
   stirShakenState: string;
   extraHeaders: ExtraHeaders;
+  protocol: string;
+  originator: string;
+  reason: string;
+  code: number;
 }
 
 export interface SignallingInfo {
@@ -103,6 +111,15 @@ export class CallSession {
     ENDED: string;
   };
 
+  SPEECH_STATE: {
+    STOPPED: string;
+    STARTING: string;
+    RUNNING: string;
+    STOPPING: string;
+    STOPPED_AFTER_DETECTION: string;
+    STOPPED_DUE_TO_NETWORK_ERROR: string;
+  };
+
   /**
    * Unique identifier generated for a call by server
    * @private
@@ -146,6 +163,18 @@ export class CallSession {
   state: string;
 
   /**
+   * Holds the status if call is terminated during ringing state
+   * @private
+   */
+  isCallTerminatedDuringRinging: boolean;
+
+  /**
+   * Holds the current status of speechrecgnition
+   * @private
+   */
+  speech_state: string;
+
+  /**
    * Custom headers which are passed in the INVITE. They should start with 'X-PH'
    * @private
    */
@@ -176,6 +205,12 @@ export class CallSession {
   stats: GetRTPStats | null;
 
   /**
+   * Holds the server flags received in 200 OK
+   * @private
+   */
+  serverFeatureFlags: Array<string>;
+
+  /**
    * Holds timestamp for each state of call
    * @private
    */
@@ -193,6 +228,10 @@ export class CallSession {
    */
   postDialDelayEndTime: number | null;
 
+  candidateList: Map<string, C.CandidateListType> = new Map();
+
+  candidatePairsList: Map<string, C.CandidatePairListType> = new Map();
+
   /**
    * Update CallUUID in session.
    * @param {String} callUUID - active call(Outgoing/Incoming) CallUUID
@@ -207,6 +246,10 @@ export class CallSession {
    */
   public setState = (state: string): void => {
     this.state = state;
+  };
+
+  public setSpeechState = (state: string): void => {
+    this.speech_state = state;
   };
 
   /**
@@ -263,6 +306,34 @@ export class CallSession {
     },
   });
 
+  public stopSpeechRecognition = (clientObj : Client) => {
+    if (clientObj.speechRecognition) {
+      if (clientObj._currentSession?.speech_state
+        === clientObj._currentSession?.SPEECH_STATE.RUNNING) {
+        clientObj
+          ._currentSession?.setSpeechState(clientObj._currentSession.SPEECH_STATE.STOPPING);
+        clientObj.speechRecognition.stop();
+      }
+    }
+  };
+
+  public startSpeechRecognition = (clientObj : Client) => {
+    if ("webkitSpeechRecognition" in window) {
+      if (clientObj._currentSession?.state === clientObj._currentSession?.STATE.ANSWERED
+        && clientObj._currentSession?.speech_state
+          === clientObj._currentSession?.SPEECH_STATE.STOPPED) {
+        try {
+          Plivo.log.info(`${LOGCAT.CALL} | Recognizing speech Starting`);
+          speechListeners.call(clientObj);
+        } catch (err) {
+          Plivo.log.error(`${LOGCAT.CALL} | Error in starting recognizing speech, will be restarted :: ${err.message}`);
+        }
+      }
+    } else {
+      Plivo.log.error(`${LOGCAT.CALL} | Speech Recognition not available in browser`);
+    }
+  };
+
   /**
    * Get media connection information.
    */
@@ -281,7 +352,7 @@ export class CallSession {
   /**
    * Get basic call information.
    */
-  public getCallInfo = (): CallInfo => ({
+  public getCallInfo = (originator: string, protocol: string = "none", reason: string = "none", code: number = -1) : CallInfo => ({
     callUUID: this.callUUID as string,
     direction: this.direction,
     src: this.src,
@@ -289,6 +360,10 @@ export class CallSession {
     state: this.state,
     extraHeaders: this.extraHeaders,
     stirShakenState: this.stirShakenState,
+    originator,
+    protocol,
+    reason,
+    code,
   });
 
   /**
@@ -381,17 +456,29 @@ export class CallSession {
       ENDED: 'ended',
     };
 
+    this.SPEECH_STATE = {
+      STOPPED: 'stopped',
+      STARTING: 'starting',
+      RUNNING: 'running',
+      STOPPING: 'stopping',
+      STOPPED_AFTER_DETECTION: 'stopped_after_detecting',
+      STOPPED_DUE_TO_NETWORK_ERROR: "stopped_due_to_network_error",
+    };
+
     this.callUUID = options.callUUID ? options.callUUID : null;
     this.sipCallID = options.sipCallID;
     this.stirShakenState = options.stirShakenState;
     this.direction = options.direction;
     this.src = options.src;
     this.dest = options.dest;
+    this.serverFeatureFlags = [];
     this.state = this.STATE.INITIALIZED;
+    this.speech_state = this.SPEECH_STATE.STOPPED;
     this.extraHeaders = options.extraHeaders;
     this.session = options.session;
     this.connectionStages = [];
     this.gotInitalIce = false;
+    this.isCallTerminatedDuringRinging = false;
     this.stats = null;
     this.signallingInfo = {};
     this.mediaConnectionInfo = {};
@@ -404,6 +491,7 @@ export class CallSession {
 
   private _clearCallStats = (): void => {
     if (!this.stats) return;
+    Plivo.log.debug(`${C.LOGCAT.CALL} | clearing out stats`);
     clearInterval(this.stats.statsTimer);
     clearInterval(this.stats.audioTimer);
     this.stats.stop();
@@ -463,7 +551,8 @@ export class CallSession {
     if (clientObject.ringBackToneView && !clientObject.ringBackToneView.paused) {
       stopAudio(C.RINGBACK_ELEMENT_ID);
     }
-    clientObject.emit('onCallAnswered', this.getCallInfo());
+
+    clientObject.emit('onCallAnswered', this.getCallInfo("local"));
     Plivo.log.debug('Post-Answer detecting OWA');
     setTimeout(() => {
       owaNotification.bind(clientObject);
@@ -471,6 +560,11 @@ export class CallSession {
     3000,
     this.session.connection,
     clientObject);
+    // when on user is on mute before answering the call,
+    // webkitSpeechRecognition to start after answering the call
+    if (clientObject.isCallMuted) {
+      this.startSpeechRecognition(clientObject);
+    }
   };
 
   private _onIceCandidate = (
@@ -522,7 +616,7 @@ export class CallSession {
   };
 
   private _onFailed = (clientObject: Client, evt: SessionFailedEvent): void => {
-    Plivo.log.send(clientObject);
+    logCandidatePairs(clientObject._currentSession);
     this.addConnectionStage(`failed@${getCurrentTime()}`);
     this.updateSignallingInfo({
       hangup_time: getCurrentTime(),
@@ -532,10 +626,12 @@ export class CallSession {
     handleMediaError(evt, this);
     hangupClearance.call(clientObject, this);
     stopVolumeDataStreaming();
+    Plivo.log.send(clientObject);
+    clientObject.loggerUtil.setSipCallID("");
   };
 
   private _onEnded = (clientObject: Client, evt: SessionEndedEvent): void => {
-    Plivo.log.send(clientObject);
+    logCandidatePairs(clientObject._currentSession);
     this.addConnectionStage(`ended@${getCurrentTime()}`);
     this.setState(this.STATE.ENDED);
     this.updateSignallingInfo({
@@ -551,21 +647,27 @@ export class CallSession {
       );
     }
     if (clientObject._currentSession) {
+      const reasonInfo = extractReason(evt);
+      Plivo.log.info(`${C.LOGCAT.CALL} | onCallTerminated - ${evt.cause}`);
       clientObject.emit(
         'onCallTerminated',
         { originator: evt.originator, reason: evt.cause },
-        clientObject._currentSession.getCallInfo(),
+        clientObject._currentSession
+          .getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause),
       );
       hangupClearance.call(clientObject, clientObject._currentSession);
       stopVolumeDataStreaming();
+      this.stopSpeechRecognition(clientObject);
     }
+    Plivo.log.send(clientObject);
+    clientObject.loggerUtil.setSipCallID("");
   };
 
   private _onGetUserMediaFailed = (
     clientObject: Client,
     err: Error,
   ): void => {
-    Plivo.log.error(`${C.LOGCAT.CALL} | getusermediafailed: ${err.message}`);
+    Plivo.log.error(`${C.LOGCAT.CALL} | UserMedia:failed ${err.message}`);
     if (clientObject.userName && clientObject.callStats) {
       // eslint-disable-next-line no-param-reassign
       (err as Error).message = 'getusermediafailed';
@@ -576,6 +678,10 @@ export class CallSession {
         err,
       );
     }
+    clientObject.emit('onMediaPermission', {
+      status: 'failure',
+      error: err.message,
+    });
     onMediaFailure.call(clientObject, this, err as Error);
   };
 

@@ -4,6 +4,7 @@ import { getSDKVersion } from '../../../lib/utils/device';
 import WebSocket from '../../mock/WebSocket';
 import pkg from '../../../package.json';
 import nonRTPStatsResponse from '../../payloads/nonRTPStatsEvent';
+import { NoiseSuppression } from '../../../lib/rnnoise/NoiseSuppression';
 
 describe('NonRTPStats', () => {
   let context;
@@ -23,6 +24,7 @@ describe('NonRTPStats', () => {
       options: {
         debug: 'ALL',
       },
+      enableNoiseReduction: false,
       callstatskey: null,
       statsSocket: null,
       callStats: null,
@@ -69,6 +71,8 @@ describe('NonRTPStats', () => {
     (window as any).WebSocket = WebSocket;
     delete (window as any).HTMLElement;
     const sdkVersionParse = getSDKVersion();
+    let noiseSuppresion = new NoiseSuppression(context)
+    context.noiseSuppresion = noiseSuppresion;
     updateSDKVersions(sdkVersionParse);
   });
 
