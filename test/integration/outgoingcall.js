@@ -137,7 +137,6 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-
     // // #16
     // // eslint-disable-next-line no-undef
     // it("outbound call should ring", (done) => {
@@ -282,16 +281,18 @@ describe("plivoWebSdk", function () {
       }
 
       Client1.hangup();
-      let s = secondary_user.replace(/\s/g, "");
-      s = s.split('').join(' ');
-      if (Client1.isLoggedIn) {
-        Client1.call(s, {});
-      } else {
-        Client1.on("onLogin", () => {
+      waitUntilOutgoingCall(events.onCallTerminated, () => {
+        let s = secondary_user.replace(/\s/g, "");
+        s = s.split('').join(' ');
+        if (Client1.isLoggedIn) {
           Client1.call(s, {});
-        });
-      }
-      waitUntilOutgoingCall(events.onCalling, done, 500);
+        } else {
+          Client1.on("onLogin", () => {
+            Client1.call(s, {});
+          });
+        }
+        waitUntilOutgoingCall(events.onCalling, done, 1000);
+      }, 1000);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error("Outgoing call failed"));
@@ -305,14 +306,88 @@ describe("plivoWebSdk", function () {
       }
 
       Client1.hangup();
-      if (Client1.isLoggedIn) {
-        Client1.call(919728082876, {});
-      } else {
-        Client1.on("onLogin", () => {
+      waitUntilOutgoingCall(events.onCallTerminated, () => {
+        if (Client1.isLoggedIn) {
           Client1.call(919728082876, {});
-        });
+        } else {
+          Client1.on("onLogin", () => {
+            Client1.call(919728082876, {});
+          });
+        }
+        waitUntilOutgoingCall(events.onCalling, done, 1000);
+      }, 1000);
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error("Outgoing call failed"));
+      }, TIMEOUT);
+    });
+
+    // // eslint-disable-next-line no-undef
+    it("multiple outbound calls to the same user should ring", (done) => {
+      console.log('calling call method multiple times should only allow first call to go through');
+      if (bail) {
+        done(new Error("Bailing"));
+        return;
       }
-      waitUntilOutgoingCall(events.onCalling, done, 500);
+
+      Client1.hangup();
+      Client1.call(secondary_user, {
+        'X-PH-plivoHeaders': '1',
+      });
+      Client1.call(secondary_user, {
+        'X-PH-plivoHeaders': '2',
+      });
+      Client1.call(secondary_user, {
+        'X-PH-plivoHeaders': '3',
+      });
+      Client1.call(secondary_user, {
+        'X-PH-plivoHeaders': '4',
+      });
+      Client1.call(secondary_user, {
+        'X-PH-plivoHeaders': '5',
+      });
+      waitUntilOutgoingCall(events.onCalling, () => {
+        if (Client1._currentSession.extraHeaders && Client1._currentSession.extraHeaders['X-PH-plivoHeaders'] === '1' && Client1._currentSession.dest === secondary_user) {
+          done();
+        }
+      }, 1000);
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error("Outgoing call failed"));
+      }, TIMEOUT);
+    });
+
+    it("multiple outbound calls to the different user should ring", (done) => {
+      console.log('calling call method multiple times should only allow first call');
+      if (bail) {
+        done(new Error("Bailing"));
+        return;
+      }
+
+      Client1.hangup();
+      waitUntilOutgoingCall(events.onCallTerminated, () => {
+        Client1.call('user1', {
+          'X-PH-plivoHeaders': '1',
+        });
+        Client1.call('user2', {
+          'X-PH-plivoHeaders': '2',
+        });
+        Client1.call('user3', {
+          'X-PH-plivoHeaders': '3',
+        });
+        Client1.call('user4', {
+          'X-PH-plivoHeaders': '4',
+        });
+        Client1.call('user5', {
+          'X-PH-plivoHeaders': '5',
+        });
+        waitUntilOutgoingCall(events.onCalling, () => {
+          console.log('extraheaders are ', JSON.stringify(Client1._currentSession.extraHeaders));
+          if (Client1._currentSession.extraHeaders && Client1._currentSession.extraHeaders['X-PH-plivoHeaders'] === '1' && Client1._currentSession.dest === 'user1') {
+            done();
+          }
+        }, 200);
+      }, 1000);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error("Outgoing call failed"));
