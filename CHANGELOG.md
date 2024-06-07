@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## v2.2.11 (released@ 07-06-2024)
 
 **Bug Fixes**
-* Enhanced call handling functionality to support multiple executions of the call() method.
+* Enhanced call handling functionality to support multiple executions of the `call()` method.
 
 
 ## v2.2.10 (released@ 22-05-2024)

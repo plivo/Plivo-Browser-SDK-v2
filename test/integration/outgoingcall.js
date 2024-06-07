@@ -382,7 +382,6 @@ describe("plivoWebSdk", function () {
           'X-PH-plivoHeaders': '5',
         });
         waitUntilOutgoingCall(events.onCalling, () => {
-          console.log('extraheaders are ', JSON.stringify(Client1._currentSession.extraHeaders));
           if (Client1._currentSession.extraHeaders && Client1._currentSession.extraHeaders['X-PH-plivoHeaders'] === '1' && Client1._currentSession.dest === 'user1') {
             done();
           }
