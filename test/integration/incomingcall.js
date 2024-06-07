@@ -164,6 +164,33 @@ describe('plivoWebSdk', function () {
 
     // #8
     // eslint-disable-next-line no-undef
+    it('incoming call answered multiple times should be answered', (done) => {
+      if (bail) {
+        done(new Error('bailing'));
+      }
+      Client2.call(primary_user, {
+        'X-Ph-Random': true,
+      });
+      const answerCall = () => {
+        const response1 = Client1.answer();
+        const response2 = Client1.answer();
+        const response3 = Client1.answer();
+        const response4 = Client1.answer();
+        waitUntilIncoming(events.onCallAnswered, () => {
+          if (response1 && !response2 && !response3 && !response4) {
+            done();
+          }
+        }, 1000);
+      };
+      waitUntilIncoming(events.onIncomingCall, answerCall, 500);
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error('incoming call hangup failed'));
+      }, TIMEOUT);
+    });
+
+    // #9
+    // eslint-disable-next-line no-undef
     it('inbound call should be ended without answer', (done) => {
       // terminate any ongoing calls
       Client2.hangup();

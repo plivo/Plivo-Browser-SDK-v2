@@ -124,15 +124,21 @@ const onProgress = (incomingCall: CallSession) => (): void => {
     4,
     callerUri.indexOf('@'),
   )}@${DOMAIN}`;
-  Plivo.log.debug(`${LOGCAT.CALL} | Emitting onIncomingCall`);
-  cs.emit(
-    'onIncomingCall',
-    callerId,
-    incomingCall.extraHeaders,
-    incomingCall.getCallInfo("local"),
-    callerName,
-  );
-  cs.noiseSuppresion.setLocalMediaStream();
+  const emitIncomingCall = () => {
+    Plivo.log.debug(`${LOGCAT.CALL} | Emitting onIncomingCall`);
+    cs.emit(
+      'onIncomingCall',
+      callerId,
+      incomingCall.extraHeaders,
+      incomingCall.getCallInfo("local"),
+      callerName,
+    );
+  };
+  cs.noiseSuppresion.setLocalMediaStream().then(() => {
+    emitIncomingCall();
+  }).catch(() => {
+    emitIncomingCall();
+  });
   addCloseProtectionListeners.call(cs);
   Plivo.log.debug(`${LOGCAT.CALL} | Incoming Call Extra Headers : ${JSON.stringify(incomingCall.extraHeaders)}`);
 };
@@ -542,21 +548,21 @@ export const answerIncomingCall = function (
     handleOtherInvites(curIncomingCall, actionOnOtherIncomingCalls);
     cs.owaLastDetect.isOneWay = false;
     try {
+      cs._currentSession = curIncomingCall;
+      cs.incomingInvites.delete(curIncomingCall.callUUID as string);
+      if (curIncomingCall === cs.lastIncomingCall) {
+        cs.lastIncomingCall = null;
+        if (cs.incomingInvites.size) {
+          cs.lastIncomingCall = cs.incomingInvites.values().next().value;
+        }
+      }
+      cs.loggerUtil.setSipCallID(cs._currentSession.sipCallID ?? "");
+      cs.callSession = cs._currentSession.session;
+      cs.callUUID = cs._currentSession.callUUID;
+      Plivo.log.debug(`${LOGCAT.CALL} | CallUUID is ${cs.callUUID}`);
+      cs.callDirection = cs._currentSession.direction;
       getAnswerOptions().then((options) => {
         curIncomingCall.session.answer(options);
-        cs._currentSession = curIncomingCall;
-        cs.incomingInvites.delete(curIncomingCall.callUUID as string);
-        if (curIncomingCall === cs.lastIncomingCall) {
-          cs.lastIncomingCall = null;
-          if (cs.incomingInvites.size) {
-            cs.lastIncomingCall = cs.incomingInvites.values().next().value;
-          }
-        }
-        cs.loggerUtil.setSipCallID(cs._currentSession.sipCallID ?? "");
-        cs.callSession = cs._currentSession.session;
-        cs.callUUID = cs._currentSession.callUUID;
-        Plivo.log.debug(`${LOGCAT.CALL} | CallUUID is ${cs.callUUID}`);
-        cs.callDirection = cs._currentSession.direction;
       });
     } catch (err) {
       Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);

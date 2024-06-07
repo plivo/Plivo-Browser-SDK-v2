@@ -5,6 +5,12 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.11 (released@ 07-06-2024)
+
+**Bug Fixes**
+* Enhanced call handling functionality to support multiple executions of the call() method.
+
+
 ## v2.2.10 (released@ 22-05-2024)
 
 **Bug Fixes**

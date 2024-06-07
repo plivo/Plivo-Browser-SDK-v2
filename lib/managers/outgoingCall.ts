@@ -463,71 +463,67 @@ const getCleanedHeaders = (extraHeaders: ExtraHeaders = {}): string[] => {
  * They should start with 'X-PH'
  * @returns Outgoing call answer options
  */
-const getOptions = function (extraHeaders: ExtraHeaders): Promise<SessionAnswerOptions> {
-  return new Promise((resolve) => {
-    const opts: SessionAnswerOptions = {};
-    opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
-    opts.pcConfig = {
-      iceServers: [{ urls: STUN_SERVERS }],
-    };
-    opts.mediaConstraints = {
-      audio: cs.options.audioConstraints || true,
-      video: false,
-    };
-    // opts.rtcConstraints = null;
-    opts.extraHeaders = getCleanedHeaders(extraHeaders);
-    cs.noiseSuppresion.startNoiseSuppression().then((mediaStream) => {
-      opts.mediaStream = mediaStream != null ? mediaStream : (window as any).localStream;
-      // eslint-disable-next-line @typescript-eslint/dot-notation
-      opts['eventHandlers'] = {
-        sending: onSending,
-        sdp: onSDP,
-        progress: OnProgress,
-        accepted: onAccepted,
-        confirmed: onConfirmed,
-        noCall: onEnded,
-        newDTMF,
-        newInfo,
-        icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
-        && cs._currentSession.onIceCandidate(cs, event),
-        icetimeout: (sec: number) => cs._currentSession
-        && cs._currentSession.onIceTimeout(cs, sec),
-        failed: onFailed,
-        ended: onEnded,
-        getusermediafailed: (err) => cs._currentSession
-        && cs._currentSession.onGetUserMediaFailed(cs, err),
-        'peerconnection:createofferfailed': (err) => cs._currentSession
-        && cs._currentSession.handlePeerConnectionFailures(
-          cs,
-          'createofferfailed',
-          cs.callStats ? cs.callStats.webRTCFunctions.createOffer : null,
-          err,
-        ),
-        'peerconnection:createanswerfailed': (err) => cs._currentSession
-        && cs._currentSession.handlePeerConnectionFailures(
-          cs,
-          'createanswerfailed',
-          cs.callStats ? cs.callStats.webRTCFunctions.createAnswer : null,
-          err,
-        ),
-        'peerconnection:setlocaldescriptionfailed': (err) => cs._currentSession
-        && cs._currentSession.handlePeerConnectionFailures(
-          cs,
-          'setlocaldescriptionfailed',
-          cs.callStats ? cs.callStats.webRTCFunctions.setLocalDescription : null,
-          err,
-        ),
-        'peerconnection:setremotedescriptionfailed': (err) => cs._currentSession
-        && cs._currentSession.handlePeerConnectionFailures(
-          cs,
-          'setremotedescriptionfailed',
-          cs.callStats ? cs.callStats.webRTCFunctions.setRemoteDescription : null,
-          err,
-        ),
-      };
-      resolve(opts);
-    });
-  });
+const getOptions = function (extraHeaders: ExtraHeaders, mediaStream: MediaStream | null): any {
+  const opts: SessionAnswerOptions = {};
+  opts.sessionTimersExpires = SESSION_TIMERS_EXPIRES;
+  opts.pcConfig = {
+    iceServers: [{ urls: STUN_SERVERS }],
+  };
+  opts.mediaConstraints = {
+    audio: cs.options.audioConstraints || true,
+    video: false,
+  };
+  // opts.rtcConstraints = null;
+  opts.extraHeaders = getCleanedHeaders(extraHeaders);
+  opts.mediaStream = mediaStream != null ? mediaStream : (window as any).localStream;
+  // eslint-disable-next-line @typescript-eslint/dot-notation
+  opts['eventHandlers'] = {
+    sending: onSending,
+    sdp: onSDP,
+    progress: OnProgress,
+    accepted: onAccepted,
+    confirmed: onConfirmed,
+    noCall: onEnded,
+    newDTMF,
+    newInfo,
+    icecandidate: (event: SessionIceCandidateEvent) => cs._currentSession
+      && cs._currentSession.onIceCandidate(cs, event),
+    icetimeout: (sec: number) => cs._currentSession
+      && cs._currentSession.onIceTimeout(cs, sec),
+    failed: onFailed,
+    ended: onEnded,
+    getusermediafailed: (err) => cs._currentSession
+      && cs._currentSession.onGetUserMediaFailed(cs, err),
+    'peerconnection:createofferfailed': (err) => cs._currentSession
+      && cs._currentSession.handlePeerConnectionFailures(
+        cs,
+        'createofferfailed',
+        cs.callStats ? cs.callStats.webRTCFunctions.createOffer : null,
+        err,
+      ),
+    'peerconnection:createanswerfailed': (err) => cs._currentSession
+      && cs._currentSession.handlePeerConnectionFailures(
+        cs,
+        'createanswerfailed',
+        cs.callStats ? cs.callStats.webRTCFunctions.createAnswer : null,
+        err,
+      ),
+    'peerconnection:setlocaldescriptionfailed': (err) => cs._currentSession
+      && cs._currentSession.handlePeerConnectionFailures(
+        cs,
+        'setlocaldescriptionfailed',
+        cs.callStats ? cs.callStats.webRTCFunctions.setLocalDescription : null,
+        err,
+      ),
+    'peerconnection:setremotedescriptionfailed': (err) => cs._currentSession
+      && cs._currentSession.handlePeerConnectionFailures(
+        cs,
+        'setremotedescriptionfailed',
+        cs.callStats ? cs.callStats.webRTCFunctions.setRemoteDescription : null,
+        err,
+      ),
+  };
+  return opts;
 };
 
 const makingCall = (opts: SessionAnswerOptions, destinationUri: string): void => {
@@ -581,17 +577,15 @@ export const makeCall = (
   if (phoneNumber) {
     phoneNumberStr = removeSpaces(String(phoneNumber));
   }
-  if (!validateSession(phoneNumberStr)) return false;
-  const destinationUri = getValidPhoneNumber(phoneNumberStr);
-  (() => {
-    getOptions(extraHeaders)
-      .then((data) => {
-        makingCall(data, destinationUri);
-      })
-      .catch((error) => {
-        Plivo.log.error("Error:", error);
-      });
-  })();
+  // eslint-disable-next-line consistent-return
+  cs.noiseSuppresion.startNoiseSuppression().then((mediaStream) => {
+    const options = getOptions(extraHeaders, mediaStream);
+    if (!validateSession(phoneNumberStr)) {
+      return false;
+    }
+    const destinationUri = getValidPhoneNumber(phoneNumberStr);
+    makingCall(options, destinationUri);
+  });
   return true;
 };
 
