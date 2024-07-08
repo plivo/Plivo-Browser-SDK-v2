@@ -330,14 +330,14 @@ describe('plivoWebSdk', function () {
         events['client2-onUnmute'] = {
           status: spyOnSocket.calledWith(sinon.match.has("msg", "TOGGLE_MUTE")),
         };
-        waitUntilExecuted([events['client2-onUnmute']], true, done, 50);
+        waitUntilExecuted([events['client2-onUnmute']], true, done, 5);
       }
 
       Client2.mute();
       events['client2-onMute'] = {
         status: spyOnSocket.calledWith(sinon.match.has("msg", "TOGGLE_MUTE")),
       };
-      waitUntilExecuted([events['client2-onMute']], true, unmute, 50);
+      waitUntilExecuted([events['client2-onMute']], true, unmute, 5);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('incoming call failed'));
