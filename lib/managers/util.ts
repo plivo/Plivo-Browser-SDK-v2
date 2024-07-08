@@ -31,8 +31,6 @@ import getBrowserDetails from '../utils/browserDetection';
 
 const Plivo = {
   log: Logger,
-  sendEvents,
-  AppError,
   emitMetrics: _emitMetrics,
 };
 
@@ -90,9 +88,19 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
  * Prepare summary event when browser tab is about to close
  * @returns Summary event
  */
-export const setErrorCollector = () => {
-  window.onerror = (message) => {
-    Plivo.log.error(`${LOGCAT.CRASH} | ${message} |`, new Error().stack);
+export const setErrorCollector = (client: Client) => {
+  window.onerror = (message, source, _c, _d, error) => {
+    if (!client.options.captureSDKCrashOnly) {
+      Plivo.log.error(`${LOGCAT.CRASH} | Error ${message} at ${error?.stack}`);
+    } else {
+      if (typeof message === 'string' && message.includes('Script error')) {
+        Plivo.log.error(`${LOGCAT.CRASH} | Error ${message} at ${error?.stack}`);
+        return;
+      }
+      if (source?.toLowerCase().includes('plivo')) {
+        Plivo.log.error(`${LOGCAT.CRASH} | Error ${message} at ${error?.stack}`);
+      }
+    }
   };
 };
 
@@ -105,25 +113,25 @@ export const addCloseProtectionListeners = function (): void {
   getSummaryEvent(client).then((summaryEvent) => {
     if (client.options.closeProtection) {
       window.onbeforeunload = (event: BeforeUnloadEvent) => {
-        Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
         event.preventDefault();
-        // eslint-disable-next-line no-param-reassign
-        event.returnValue = '';
+        sendEvents.call(client, summaryEvent, client._currentSession);
+        Plivo.log.send(client);
+        return 'Are you sure you want to reload';
       };
     } else {
       window.onbeforeunload = () => {
-        Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
+        sendEvents.call(client, summaryEvent, client._currentSession);
         if (client._currentSession) {
           client._currentSession.session.terminate();
         }
+        Plivo.log.send(client);
       };
     }
     window.onunload = () => {
       if (client._currentSession) {
         client._currentSession.session.terminate();
       }
-      Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
-      Plivo.log.send(client);
+      sendEvents.call(client, summaryEvent, client._currentSession);
     };
   });
 };
@@ -169,7 +177,7 @@ export const replaceMdnsIceCandidates = (sdp: string): string => {
 /**
  * Get current time
  */
-export const getCurrentTime = (): number => Date.now();
+export const getCurrentTime = (client: Client): number => Date.now() + client.timeDiff;
 
 /**
  * Add stats settings to storage.
@@ -339,10 +347,10 @@ export const onIceConnectionChange = async function (
   Plivo.log.debug(`${LOGCAT.CALL} | oniceconnectionstatechange is ${iceState}`);
   fetchCandidatePairs(connection, callSession);
   callSession.addConnectionStage(
-    `iceConnectionState-${iceState}@${getCurrentTime()}`,
+    `iceConnectionState-${iceState}@${getCurrentTime(client)}`,
   );
   callSession.updateMediaConnectionInfo({
-    [`ice_connection_state_${iceState}`]: getCurrentTime(),
+    [`ice_connection_state_${iceState}`]: getCurrentTime(client),
   });
   iceConnectionCheck.call(client, iceState);
   if (callSession.callUUID && connection) {
@@ -372,7 +380,7 @@ export const extractReasonInfo = (reasonMessage) => {
   }
   const reasonHeader = reasonMessage.getHeader("Reason");
   if (reasonHeader == null) {
-    Plivo.log.debug(`${LOGCAT.CALL} | No reason header present}`);
+    Plivo.log.debug(`${LOGCAT.CALL} | No reason header present`);
     return { protocol: 'none', cause: -1, text: 'none' };
   }
 
@@ -459,7 +467,7 @@ const calcConnStage = function (obj: string[]): string {
  * Reset and delete session information.
  * @param {CallSession} session - call session information
  */
-const clearSessionInfo = function (session: CallSession): void {
+export const clearSessionInfo = function (session: CallSession): void {
   const client: Client = this;
   if (session === client._currentSession) {
     // audio element clearence
@@ -549,16 +557,19 @@ const stopLocalStream = function (): void {
 /**
  * Clear all flags and session information.
  * @param {CallSession} session - call session information
+ * @param {boolean} isCallRedirected - redirected call
  */
-export const hangupClearance = function (session: CallSession) {
+export const hangupClearance = function (session: CallSession, isCallRedirected: boolean = false) {
   try {
+    Plivo.log.debug(`${LOGCAT.CALL} | isCallRedirected in hangupClearance: ${isCallRedirected}`);
     const client: Client = this;
-    Plivo.AppError.call(client, calcConnStage(session.connectionStages), 'log');
+    AppError.call(client, calcConnStage(session.connectionStages), 'log');
     session.clearCallStats();
+    client.loggerUtil.setSipCallID('');
     clearSessionInfo.call(client, session);
     const signallingInfo = session.getSignallingInfo();
     const mediaConnectionInfo = session.getMediaConnectionInfo();
-    if (client.callstatskey) {
+    if (client.callstatskey && !isCallRedirected) {
       getAudioDevicesInfo
         .call(client)
         .then((deviceInfo) => {
@@ -682,7 +693,7 @@ export const handleMediaError = function (
     }
     callSession.updateSignallingInfo({
       signalling_errors: {
-        timestamp: getCurrentTime(),
+        timestamp: getCurrentTime(client),
         error_code: errMsg,
         error_description: errName,
       },
@@ -724,6 +735,10 @@ export const setConectionInfo = function (client: Client, state: string, reason:
   client.connectionInfo.reason = reason;
 };
 
+/**
+ * Log local and remote candidate pair.
+ * @param {CallSession} callSession - call session instance
+*/
 export const logCandidatePairs = function (callSession: CallSession | null) {
   if (callSession) {
     const { candidateList } = callSession;
@@ -735,6 +750,55 @@ export const logCandidatePairs = function (callSession: CallSession | null) {
   }
 };
 
+/**
+ * Remove spaces from the string passed.
+ * @param {string} inputString - String for which the space is to be removed.
+*/
 export const removeSpaces = function (inputString: string): string {
   return inputString.replace(/\s/g, '');
+};
+
+export const checkTimeDiff = (time: number): number => {
+  let timeDiff = 0;
+  let localTimeAhead: boolean = false;
+  if (Date.now() > time) {
+    timeDiff = Date.now() - time;
+    localTimeAhead = true;
+  } else {
+    timeDiff = time - Date.now();
+  }
+  if (timeDiff > 2000) {
+    Plivo.log.info('diff in time');
+    if (localTimeAhead) {
+      return -timeDiff;
+    }
+    return timeDiff;
+  }
+  Plivo.log.info('time in sync');
+  return 0;
+};
+/**
+ * Clears the network check options message interval.
+ * @param {client} Client - client instance.
+*/
+export const clearOptionsInterval = function (client: Client): void {
+  if (client.networkChangeInterval) {
+    Plivo.log.debug(`${LOGCAT.NIMBUS} | network check interval running on the main thread. Clearing it`);
+    clearInterval(client.networkChangeInterval);
+    client.networkChangeInterval = null;
+  } else if (client.workerManager && client.workerManager.workerInstance) {
+    Plivo.log.debug(`${LOGCAT.NIMBUS} | network check interval running on the worker thread. Clearing it`);
+    client.workerManager.stopNetworkChecktimer();
+  }
+};
+
+/**
+ * Generate a ramdom uuid.
+*/
+export const uuidGenerator = function (): string {
+  const S4 = function () {
+    // eslint-disable-next-line no-bitwise
+    return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+  };
+  return (`${S4()}${S4()}-${S4()}-${S4()}-${S4()}-${S4()}${S4()}${S4()}`);
 };

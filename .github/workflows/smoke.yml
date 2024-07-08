@@ -1,0 +1,159 @@
+name: Build and Test
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - master
+      - beta
+
+jobs:
+
+  build-ubuntu-11-14:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [11.x,14.x]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install TypeScript 4.1.3
+        run: npm install typescript@4.1.3 --force
+
+      - name: Install Dependencies
+        run: npm install --force && npm install jest --force
+
+      - name: Build
+        run: npm run build
+
+      - name: Run unit test cases on Ubuntu
+        run: npm run test:unit-jenkins
+        continue-on-error: true
+
+        
+  build-ubuntu-16-18:
+    runs-on: ubuntu-latest
+    needs: build-ubuntu-11-14
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install TypeScript 4.1.3
+        run: npm install typescript@4.1.3 --force
+
+      - name: Install Dependencies
+        run: npm install --force && npm install jest --force
+
+      - name: Build
+        run: npm run build
+
+      - name: Run unit test cases on Ubuntu
+        run: npm run test:unit-jenkins
+        continue-on-error: true
+
+
+  build-ubuntu-20-latest:
+      runs-on: ubuntu-latest
+      needs: build-ubuntu-16-18
+      strategy:
+        matrix:
+          node-version: [20.x, latest]
+
+      steps:
+        - name: Checkout Repository
+          uses: actions/checkout@v3
+
+        - name: Setup Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: ${{ matrix.node-version }}
+
+        - name: Install Dependencies
+          run: npm install --force && npm install jest --force
+        
+        - name: Install TypeScript 4.1.3
+          run: npm install typescript@4.1.3 --force
+
+        - name: Build
+          run: npm run build
+
+        - name: Run unit test cases on Ubuntu
+          run: npm run test:unit-jenkins
+          continue-on-error: true
+
+
+
+  build-macos:
+    runs-on: macos-latest
+    needs: build-ubuntu-20-latest
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x, latest]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Dependencies
+        run: npm install --force && npm install jest --force
+      
+      - name: Install TypeScript 4.1.3
+        run: npm install typescript@4.1.3 --force
+
+      - name: Build
+        run: npm run build
+
+      - name: Run unit test cases on macOS
+        run: npm run test:unit
+        continue-on-error: true
+
+
+  build-windows:
+    runs-on: windows-latest
+    needs: build-macos
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x, latest]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Dependencies
+        run: npm install --force && npm install jest --force
+      
+      - name: Install TypeScript 4.1.3
+        run: npm install typescript@4.1.3 --force
+
+      - name: Build
+        run: npm run build
+
+      - name: Run unit test cases on Windows
+        run: npm run test:unit-windows

@@ -20,6 +20,7 @@ declare module 'plivo-browser-sdk/client' {
     import { StatsSocket } from 'plivo-browser-sdk/stats/ws';
     import { OutputDevices, InputDevices, RingToneDevices } from 'plivo-browser-sdk/media/audioDevice';
     import { NoiseSuppression } from 'plivo-browser-sdk/rnnoise/NoiseSuppression';
+    import { WorkerManager } from 'plivo-browser-sdk/managers/workerManager';
     import { LoggerUtil } from 'plivo-browser-sdk/utils/loggerUtil';
     export interface PlivoObject {
             log: typeof Logger;
@@ -49,7 +50,9 @@ declare module 'plivo-browser-sdk/client' {
             registrationRefreshTimer?: number;
             enableNoiseReduction?: boolean;
             usePlivoStunServer?: boolean;
+            stopAutoRegisterOnConnect: boolean;
             dtmfOptions?: DtmfOptions;
+            captureSDKCrashOnly: boolean;
     }
     export interface BrowserDetails {
             browser: string;
@@ -132,16 +135,6 @@ declare module 'plivo-browser-sdk/client' {
                 */
             isLoggedIn: boolean;
             /**
-                * Timer for reconnecting to the media connection if any network issue happen
-                * @private
-                */
-            reconnectInterval: null | ReturnType<typeof setInterval>;
-            /**
-                * Controls the number of times media reconnection happens
-                * @private
-                */
-            reconnectTryCount: number;
-            /**
                 * Holds the JSSIP user agent for the logged in user
                 * @private
                 */
@@ -151,6 +144,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             _currentSession: null | CallSession;
+            /**
+                * Difference in time(ms) between local machine and universal epoch time
+                * @private
+                */
+            timeDiff: number;
             /**
                 * Holds the incoming or outgoing JSSIP RTCSession(WebRTC media session)
                 * @private
@@ -229,6 +227,17 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             accessToken: null | string;
+            /**
+                * contactUri object which holds the connection details
+                * @private
+                */
+            contactUri: {
+                    name: string | null;
+                    ip: string;
+                    port: string;
+                    protocol: string;
+                    registrarIP: string;
+            };
             /**
                 * Access Token object given when logging in
                 * @private
@@ -466,10 +475,31 @@ declare module 'plivo-browser-sdk/client' {
                 */
             networkChangeInCurrentSession: boolean;
             /**
+             * Holds the status of the websocket connection
+             * @private
+             */
+            connectionStatus: string;
+            /**
+             * Holds a string value tp uniquely identify each tab
+             * @private
+             */
+            identifier: string;
+            /**
+             * Holds the instance of WorkerManager class
+             * @private
+             */
+            workerManager: WorkerManager;
+            /**
                 * Holds a boolean to get initial network info
                 * @private
                 */
             didFetchInitialNetworkInfo: boolean;
+            /**
+            * Flag which when set stops auto registration post websocket connection
+            * Defaults value is true
+            * @private
+            */
+            stopAutoRegisterOnConnect: boolean;
             /**
                 * Determines which js framework sdk is running with
                 * @private
@@ -505,6 +535,19 @@ declare module 'plivo-browser-sdk/client' {
                 */
             logout: () => boolean;
             /**
+                * Unregister the user.
+                */
+            unregister: () => boolean;
+            /**
+                * disconnect the websocket and stop the network check timer.
+                */
+            disconnect: () => boolean;
+            /**
+                * Register the user.
+                *  @param {Array<string>} extraHeaders - (Optional) Extra headers to be sent along with register.
+                */
+            register: (extraHeaders: Array<string>) => boolean;
+            /**
                 * Start an outbound call.
                 * @param {String} phoneNumber - It can be a sip endpoint/number
                 * @param {Object} extraHeaders - (Optional) Custom headers which are passed in the INVITE.
@@ -524,6 +567,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             hangup: () => boolean;
             /**
+             * Redirect the call.
+             * @param {String} contactUri - details of the contact towards which the call should be redirected
+             */
+            redirect: (contactUri: string) => boolean;
+            /**
                 * Reject the Incoming call.
                 * @param {String} callUUID - (Optional) Provide latest CallUUID to reject the call
                 */
@@ -533,6 +581,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @param {String} callUUID - (Optional) Provide latest CallUUID to ignore the call
                 */
             ignore: (callUUID: string) => boolean;
+            /**
+            * Set the unique identifier.
+            * @param {String} identifier - Identifier to be set.
+            */
+            setIdentifier: (identifier: string) => boolean;
             /**
                 * Send DTMF for call(Outgoing/Incoming).
                 * @param {String} digit - Send the digits as dtmf 'digit'
@@ -584,20 +637,25 @@ declare module 'plivo-browser-sdk/client' {
                 */
             getCallUUID: () => string | null;
             /**
-            * Check if the client is in registered state.
-            * @returns Current CallUUID
-            */
+                * Check if the client is in registered state.
+                */
             isRegistered: () => boolean | null;
             /**
-         * Check if the client is in connecting state.
-         * @returns Current CallUUID
-         */
+             * Check if the client is in connecting state.
+             */
             isConnecting: () => boolean | null;
             /**
-         * Check if the client is in connected state.
-         * @returns Current CallUUID
-         */
+             * Get the details of the contact.
+             */
+            getContactUri: () => string | null;
+            /**
+             * Check if the client is in connected state.
+             */
             isConnected: () => boolean | null;
+            /**
+             * Get the details of the current active call session.
+             */
+            getCurrentSession: () => CallSession | null;
             /**
                 * Get the CallUUID of the latest answered call.
                 */
@@ -635,7 +693,6 @@ declare module 'plivo-browser-sdk/client' {
                 * @param {Boolean} sendConsoleLogs - Send browser logs to Plivo
                 */
             submitCallQualityFeedback: (callUUID: string, starRating: string, issues: string[], note: string, sendConsoleLogs: boolean) => Promise<string>;
-            clearOnLogout(): void;
             /**
                 * @constructor
                 * @param options - (Optional) client configuration parameters
@@ -644,6 +701,7 @@ declare module 'plivo-browser-sdk/client' {
             constructor(options: ConfiguationOptions);
             setExpiryTimeInEpoch: (timeInEpoch: number) => void;
             getTokenExpiryTimeInEpoch: () => number | null;
+            clearOnLogout(): void;
     }
 }
 
@@ -754,6 +812,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                     CANCELED: string;
                     FAILED: string;
                     ENDED: string;
+                    REDIRECTED: string;
             };
             SPEECH_STATE: {
                     STOPPED: string;
@@ -762,6 +821,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                     STOPPING: string;
                     STOPPED_AFTER_DETECTION: string;
                     STOPPED_DUE_TO_NETWORK_ERROR: string;
+                    STOPPED_DUE_TO_ABORT: string;
             };
             /**
                 * Unique identifier generated for a call by server
@@ -1175,6 +1235,37 @@ declare module 'plivo-browser-sdk/rnnoise/NoiseSuppression' {
     }
 }
 
+declare module 'plivo-browser-sdk/managers/workerManager' {
+    export class WorkerManager {
+        workerInstance: Worker | null;
+        networkCheckRunning: boolean;
+        onTimerCallback: any;
+        responseCallback: any;
+        timerStartedOnMain: any;
+        constructor();
+        /**
+         * Callback triggered when error is received while starting worker thread.
+         * @param {ErrorEvent} msg - error message received
+         */
+        onErrorReceived: (msg: ErrorEvent) => void;
+        /**
+         * Callback triggered when message is received from the worker thread.
+         * @param {any} msg - message received
+         */
+        onMessageReceived: (msg: any) => void;
+        /**
+         * Start the network check timer.
+         * @param {number} networkCheckInterval - time interval at which the timer is to be executed.
+         * @param {any} callback - callback to be trigerred when the timer executes.
+         */
+        startNetworkCheckTimer: (networkCheckInterval: number, callback: any, responseCallback: any) => void;
+        /**
+         * Stop the network check timer.
+         */
+        stopNetworkChecktimer: () => void;
+    }
+}
+
 declare module 'plivo-browser-sdk/utils/loggerUtil' {
     import { Client } from "plivo-browser-sdk/client";
     export class LoggerUtil {
@@ -1184,6 +1275,8 @@ declare module 'plivo-browser-sdk/utils/loggerUtil' {
         setSipCallID(value: string): void;
         getUserName(): string;
         setUserName(value: string): void;
+        setIdentifier(identifier: string): void;
+        getIdentifier(): string;
     }
 }
 
@@ -1245,6 +1338,9 @@ declare module 'plivo-browser-sdk/constants' {
         Ignored: number;
         "call answer fail": number;
         "Network switch while ringing": number;
+        "invalid-destination-address": number;
+        "call-already-in-progress": number;
+        "incoming-invite-exist": number;
     };
     export const DEFAULT_CODECS: string[];
     export const DTMF_OPTIONS: string[];
@@ -1345,6 +1441,108 @@ declare module 'plivo-browser-sdk/constants' {
 declare module 'plivo-browser-sdk/stats/rtpStats' {
     import { Client, Storage } from 'plivo-browser-sdk/client';
     import { AudioLevel } from 'plivo-browser-sdk/media/audioLevel';
+    export interface LocalCandidate {
+            id?: string;
+            address?: string;
+            port?: string;
+            relatedAddress?: string;
+            relatedPort?: string;
+            candidateType?: string;
+            usernameFragment?: string;
+    }
+    type LocalCandidateMap = {
+            [timestamp: string]: LocalCandidate;
+    };
+    export interface RemoteCandidate {
+            id?: string;
+            address?: string;
+            port?: string;
+            candidateType?: string;
+            usernameFragment?: string;
+    }
+    export interface CandidatePair {
+            availableOutgoingBitrate?: string;
+            consentRequestsSent?: number;
+            id?: string;
+            lastPacketReceivedTimestamp?: string;
+            lastPacketSentTimestamp?: string;
+            localCandidateId?: string;
+            nominated?: string;
+            packetsDiscardedOnSend?: string;
+            packetsReceived?: string;
+            packetsSent?: string;
+            remoteCandidateId?: string;
+            requestsReceived?: number;
+            requestsSent?: number;
+            responsesReceived?: number;
+            responsesSent?: number;
+            state?: string;
+            transportId?: string;
+            writable?: boolean;
+    }
+    export interface Transport {
+            id?: string;
+            dtlsRole?: string;
+            dtlsState?: string;
+            iceRole?: string;
+            iceState?: string;
+            packetsReceived?: string;
+            packetsSent?: string;
+            selectedCandidatePairChanges?: number;
+            selectedCandidatePairId?: string;
+    }
+    export interface OutboundRTP {
+            bytesSent?: number;
+            packetsSent?: number;
+            retransmittedBytesSent?: number;
+            retransmittedPacketsSent?: number;
+            transportId?: string;
+    }
+    export interface RemoteInboundRTP {
+            fractionLost?: number;
+            packetsLost?: number;
+            roundTripTime?: string;
+            roundTripTimeMeasurements?: number;
+            totalRoundTripTime?: string;
+            transportId?: string;
+    }
+    export interface InboundRTP {
+            bytesReceived?: number;
+            jitterBufferDelay?: string;
+            jitterBufferEmittedCount?: number;
+            jitterBufferMinimumDelay?: string;
+            jitterBufferTargetDelay?: string;
+            packetsDiscarded?: number;
+            packetsLost?: number;
+            packetsReceived?: number;
+            totalSamplesDuration?: string;
+            totalSamplesReceived?: string;
+            transportId?: string;
+    }
+    export interface RemoteOutboundRTP {
+            bytesSent?: number;
+            packetsSent?: number;
+            reportsSent?: number;
+            totalRoundTripTime?: string;
+            transportId?: string;
+    }
+    export interface StatsDump {
+            msg: string;
+            callUUID: string;
+            xcallUUID: string;
+            source: string;
+            timeStamp: number;
+            version: string;
+            changedCandidatedInfo: LocalCandidateMap;
+            localCandidate: LocalCandidate;
+            remoteCandidate: RemoteCandidate;
+            transport: Transport;
+            candidatePair: CandidatePair;
+            outboundRTP: OutboundRTP;
+            remoteInboundRTP: RemoteInboundRTP;
+            inboundRTP: InboundRTP;
+            remoteOutboundRTP: RemoteOutboundRTP;
+    }
     export interface StatsLocalStream {
             ssrc?: number;
             packetsLost?: number;
@@ -1426,6 +1624,9 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
                 * @private
                 */
             pc: RTCPeerConnection;
+            rtpsender: RTCStatsReport;
+            rtpreceiver: RTCStatsReport;
+            localCandidateInfo: LocalCandidateMap;
             /**
                 * Unique identifier generated for a call by server
                 * @private
@@ -1537,10 +1738,11 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
                 * @private
                 */
             constructor(client: Client);
+            sendCallStatsDump: (stream: StatsDump) => Promise<void>;
             /**
                 * Stop analysing audio levels for local and remote streams.
                 */
-            stop: () => void;
+            stop: () => Promise<void>;
     }
     export {};
 }
@@ -1635,7 +1837,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
         * @param {String} userName
         * @returns Stat message with call information
         */
-    export const addCallInfo: (callSession: CallSession, statMsg: any, callstatskey: string, userName: string) => object;
+    export const addCallInfo: (callSession: CallSession, statMsg: any, callstatskey: string, userName: string, timeStamp: number) => object;
     /**
         * Send events to plivo stats.
         * @param {Any} statMsg - call stats (Answered/RTP/Summary/Feedback/Failure Events)

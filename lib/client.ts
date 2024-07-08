@@ -32,9 +32,17 @@ import {
 import getBrowserDetails from './utils/browserDetection';
 import detectFramework from './utils/frameworkDetection';
 import AccessTokenInterface from './utils/token';
-import { setErrorCollector, setConectionInfo } from './managers/util';
+import {
+  setErrorCollector,
+  setConectionInfo,
+  hangupClearance,
+  clearOptionsInterval,
+  uuidGenerator,
+  getCurrentTime,
+} from './managers/util';
 import { NoiseSuppression } from './rnnoise/NoiseSuppression';
 import { ConnectionState } from './utils/networkManager';
+import { WorkerManager } from './managers/workerManager';
 import { LOCAL_ERROR_CODES, LOGCAT } from './constants';
 import { LoggerUtil } from './utils/loggerUtil';
 
@@ -75,7 +83,9 @@ export interface ConfiguationOptions {
   registrationRefreshTimer?: number;
   enableNoiseReduction?: boolean;
   usePlivoStunServer?: boolean
+  stopAutoRegisterOnConnect: boolean,
   dtmfOptions?: DtmfOptions;
+  captureSDKCrashOnly: boolean;
 }
 
 export interface BrowserDetails {
@@ -170,18 +180,6 @@ export class Client extends EventEmitter {
   isLoggedIn: boolean;
 
   /**
-   * Timer for reconnecting to the media connection if any network issue happen
-   * @private
-   */
-  reconnectInterval: null | ReturnType<typeof setInterval>;
-
-  /**
-   * Controls the number of times media reconnection happens
-   * @private
-   */
-  reconnectTryCount: number;
-
-  /**
    * Holds the JSSIP user agent for the logged in user
    * @private
    */
@@ -192,6 +190,12 @@ export class Client extends EventEmitter {
    * @private
    */
   _currentSession: null | CallSession;
+
+  /**
+   * Difference in time(ms) between local machine and universal epoch time
+   * @private
+   */
+  timeDiff: number;
 
   /**
    * Holds the incoming or outgoing JSSIP RTCSession(WebRTC media session)
@@ -290,6 +294,18 @@ export class Client extends EventEmitter {
    * @private
    */
   accessToken: null | string;
+
+  /**
+   * contactUri object which holds the connection details
+   * @private
+   */
+  contactUri: {
+    name: string | null;
+    ip: string;
+    port: string;
+    protocol: string;
+    registrarIP: string;
+  };
 
   /**
    * Access Token object given when logging in
@@ -567,10 +583,35 @@ export class Client extends EventEmitter {
   networkChangeInCurrentSession: boolean;
 
   /**
+  * Holds the status of the websocket connection
+  * @private
+  */
+  connectionStatus: string;
+
+  /**
+  * Holds a string value tp uniquely identify each tab
+  * @private
+  */
+  identifier: string;
+
+  /**
+  * Holds the instance of WorkerManager class
+  * @private
+  */
+  workerManager: WorkerManager;
+
+  /**
    * Holds a boolean to get initial network info
    * @private
    */
   didFetchInitialNetworkInfo: boolean;
+
+  /**
+ * Flag which when set stops auto registration post websocket connection
+ * Defaults value is true
+ * @private
+ */
+  stopAutoRegisterOnConnect: boolean;
 
   /**
    * Determines which js framework sdk is running with
@@ -617,6 +658,22 @@ export class Client extends EventEmitter {
   public logout = (): boolean => this._logout();
 
   /**
+   * Unregister the user.
+   */
+  public unregister = (): boolean => this._unregister();
+
+  /**
+   * disconnect the websocket and stop the network check timer.
+   */
+  public disconnect = (): boolean => this._disconnect();
+
+  /**
+   * Register the user.
+   *  @param {Array<string>} extraHeaders - (Optional) Extra headers to be sent along with register.
+   */
+  public register = (extraHeaders: Array<string>): boolean => this._register(extraHeaders);
+
+  /**
    * Start an outbound call.
    * @param {String} phoneNumber - It can be a sip endpoint/number
    * @param {Object} extraHeaders - (Optional) Custom headers which are passed in the INVITE.
@@ -645,6 +702,14 @@ export class Client extends EventEmitter {
   public hangup = (): boolean => this._hangup();
 
   /**
+  * Redirect the call.
+  * @param {String} contactUri - details of the contact towards which the call should be redirected
+  */
+  public redirect = (
+    contactUri: string,
+  ): boolean => this._redirect(contactUri);
+
+  /**
    * Reject the Incoming call.
    * @param {String} callUUID - (Optional) Provide latest CallUUID to reject the call
    */
@@ -655,6 +720,12 @@ export class Client extends EventEmitter {
    * @param {String} callUUID - (Optional) Provide latest CallUUID to ignore the call
    */
   public ignore = (callUUID: string): boolean => this._ignore(callUUID);
+
+  /**
+ * Set the unique identifier.
+ * @param {String} identifier - Identifier to be set.
+ */
+  public setIdentifier = (identifier: string): boolean => this._setIdentifier(identifier);
 
   /**
    * Send DTMF for call(Outgoing/Incoming).
@@ -719,22 +790,29 @@ export class Client extends EventEmitter {
   public getCallUUID = (): string | null => this._getCallUUID();
 
   /**
- * Check if the client is in registered state.
- * @returns Current CallUUID
- */
+   * Check if the client is in registered state.
+   */
   public isRegistered = (): boolean | null => this._isRegistered();
 
   /**
-* Check if the client is in connecting state.
-* @returns Current CallUUID
-*/
+  * Check if the client is in connecting state.
+  */
   public isConnecting = (): boolean | null => this._isConnecting();
 
   /**
-* Check if the client is in connected state.
-* @returns Current CallUUID
-*/
+  * Get the details of the contact.
+  */
+  public getContactUri = (): string | null => this._getContactUri();
+
+  /**
+  * Check if the client is in connected state.
+  */
   public isConnected = (): boolean | null => this._isConnected();
+
+  /**
+  * Get the details of the current active call session.
+  */
+  public getCurrentSession = (): CallSession | null => this._getCurrentSession();
 
   /**
    * Get the CallUUID of the latest answered call.
@@ -789,36 +867,6 @@ export class Client extends EventEmitter {
     sendConsoleLogs,
   );
 
-  clearOnLogout(): void {
-    // Store.getInstance().clear();
-    // if logout is called explicitly, make all the related flags to default
-    if (this.isAccessToken) {
-      this.isAccessToken = false;
-      this.isOutgoingGrant = false;
-      this.isIncomingGrant = false;
-      this.accessToken = null;
-    }
-    if (this._currentSession) {
-      this._currentSession.addConnectionStage(
-        `logout()@${new Date().getTime()}`,
-      );
-      Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Terminating an active call, before logging out`);
-      this._currentSession.session.terminate();
-    }
-    this.isLogoutCalled = true;
-    this.noiseSuppresion.clearNoiseSupression();
-    setConectionInfo(this, ConnectionState.DISCONNECTED, "Logout");
-    if (this.phone && this.phone.isRegistered()) {
-      this.phone.stop();
-      this.phone = null;
-    }
-    if (this.statsSocket) {
-      this.statsSocket.disconnect();
-      this.statsSocket = null;
-    }
-    Plivo.log.send(this);
-  }
-
   /**
    * @constructor
    * @param options - (Optional) client configuration parameters
@@ -827,8 +875,6 @@ export class Client extends EventEmitter {
   constructor(options: ConfiguationOptions) {
     super();
 
-    setErrorCollector();
-
     device.checkMediaDevices();
 
     this.version = 'PLIVO_LIB_VERSION';
@@ -836,6 +882,11 @@ export class Client extends EventEmitter {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const _options = validateOptions(options);
     Plivo.log.enableSipLogs(_options.debug as AvailableLogMethods);
+    this.loggerUtil = new LoggerUtil(this);
+    Plivo.log.setLoggerUtil(this.loggerUtil);
+    this.identifier = uuidGenerator();
+    Plivo.log.debug(`${C.LOGCAT.INIT} | unique identifier generated: ${this.identifier}`);
+    this.loggerUtil.setIdentifier(this.identifier);
 
     const data = {
       codecs: _options.codecs,
@@ -856,6 +907,9 @@ export class Client extends EventEmitter {
       enableNoiseReduction: _options.enableNoiseReduction,
       usePlivoStunServer: _options.usePlivoStunServer,
       dtmfOptions: _options.dtmfOptions,
+      captureSDKCrashOnly: _options.captureSDKCrashOnly,
+      permOnClick: _options.permOnClick,
+      stopAutoRegisterOnConnect: _options.stopAutoRegisterOnConnect,
     };
     Plivo.log.info(`${C.LOGCAT.INIT} | Plivo SDK initialized successfully with options:- `, JSON.stringify(data), `in ${Plivo.log.level()} mode`);
     // instantiates event emitter
@@ -872,8 +926,6 @@ export class Client extends EventEmitter {
     this.ringToneBackFlag = true;
     this.connectToneFlag = true;
     this.isLoggedIn = false;
-    this.reconnectInterval = null;
-    this.reconnectTryCount = 0;
     this.phone = null;
     this._currentSession = null;
     this.callSession = null;
@@ -887,6 +939,7 @@ export class Client extends EventEmitter {
     this.callStats = null;
     this.userName = null;
     this.password = null;
+    this.connectionStatus = '';
     this.options = _options;
     this.callstatskey = null;
     this.rtp_enabled = false;
@@ -900,12 +953,11 @@ export class Client extends EventEmitter {
     this.isOutgoingGrant = false;
     this.isIncomingGrant = false;
     this.useDefaultAudioDevice = false;
+    this.stopAutoRegisterOnConnect = _options.stopAutoRegisterOnConnect;
     if (getBrowserDetails().browser !== 'firefox') {
       // eslint-disable-next-line new-cap, no-undef
       this.speechRecognition = new webkitSpeechRecognition();
     }
-    this.loggerUtil = new LoggerUtil(this);
-    Plivo.log.setLoggerUtil(this.loggerUtil);
     if (this.options.usePlivoStunServer === true
       && C.STUN_SERVERS.indexOf(C.FALLBACK_STUN_SERVER) === -1) {
       C.STUN_SERVERS.push(C.FALLBACK_STUN_SERVER);
@@ -949,6 +1001,12 @@ export class Client extends EventEmitter {
       `${C.LOGCAT.INIT} | PlivoWebSdk initialized in ${Plivo.log.level()} mode, version: PLIVO_LIB_VERSION , browser: ${this.browserDetails.browser}-${this.browserDetails.version}`,
     );
     this.jsFramework = detectFramework();
+    setErrorCollector(this);
+    if (process.env.PLIVO_ENV) {
+      Plivo.log.debug(`${C.LOGCAT.INIT} | Starting the worker thread`);
+
+      this.workerManager = new WorkerManager();
+    }
   }
 
   private getUsernameFromToken = (parsedToken: string | any): string => {
@@ -1121,7 +1179,7 @@ export class Client extends EventEmitter {
   private _loginWithAccessToken = (accessToken: string): boolean => {
     try {
       if (this._initJWTParams(accessToken) && this.userName) {
-        Plivo.log.info(C.LOGCAT.LOGIN, ' | Login initiated with AccessToken : ', accessToken);
+        Plivo.log.info(C.LOGCAT.LOGIN, ` | Login initiated with AccessToken : ${accessToken}`);
         return this.tokenLogin(this.userName, accessToken);
       }
       Plivo.log.info(C.LOGCAT.LOGIN, 'Login failed : Invalid AccessToken');
@@ -1194,20 +1252,132 @@ export class Client extends EventEmitter {
     return true;
   };
 
+  clearOnLogout(): void {
+    // Store.getInstance().clear();
+    // if logout is called explicitly, make all the related flags to default
+    if (this.isAccessToken) {
+      this.isAccessToken = false;
+      this.isOutgoingGrant = false;
+      this.isIncomingGrant = false;
+      this.accessToken = null;
+    }
+
+    // check if the any call session is active
+    if (this.getCurrentSession() !== null) {
+      // if the call session is established, terminate the session
+      // else clear the variables holding the session details
+      if (this.getCurrentSession()?.session.isEstablished()) {
+        this.getCurrentSession()?.addConnectionStage(
+          `logout()@${getCurrentTime(this)}`,
+        );
+        Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Terminating an active call, before logging out`);
+        this.getCurrentSession()?.session.terminate();
+      } else {
+        Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Call Session exists, clearing the the session variables`);
+        this._currentSession = null;
+        this.lastIncomingCall = null;
+      }
+    }
+    this.isLogoutCalled = true;
+    this.noiseSuppresion.clearNoiseSupression();
+    if (this.ringToneView && !this.ringToneView.paused) {
+      documentUtil.stopAudio(C.RINGTONE_ELEMENT_ID);
+    }
+    if (this.ringBackToneView && !this.ringBackToneView.paused) {
+      documentUtil.stopAudio(C.RINGBACK_ELEMENT_ID);
+    }
+
+    setConectionInfo(this, ConnectionState.DISCONNECTED, "Logout");
+    this.connectionStatus = '';
+    this.didFetchInitialNetworkInfo = false;
+    if (this.phone && (this.phone.isRegistered() || this.isConnected())) {
+      if (this.isConnected() && !this.isRegistered() && this.stopAutoRegisterOnConnect) {
+        Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Emitting onLogout when phone instance is connected but not registered`);
+        this.userName = null;
+        this.password = null;
+        this.emit('onLogout');
+      }
+      Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Stopping the UA and clearing the phone instance`);
+      this.phone.stop();
+      this.phone = null;
+    }
+    clearOptionsInterval(this);
+
+    if (this.statsSocket) {
+      this.statsSocket.disconnect();
+      this.statsSocket = null;
+    }
+    Plivo.log.send(this);
+  }
+
   private _logout = (): boolean => {
-    if (!this.isLoggedIn) {
-      Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Cannot execute logout: no active login session.', this.userName);
-      return false;
+    if (!this.isLoggedIn && !this.isRegistered()) {
+      if (this.isConnected()) {
+        Plivo.log.debug(C.LOGCAT.LOGOUT, ' | SDK is not registered but connected. Disconnecting it.');
+      } else {
+        Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Cannot execute logout: no active login session.', this.userName);
+        return false;
+      }
     }
     Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Logout initiated!', this.userName);
     this.clearOnLogout();
     return true;
   };
 
+  private _unregister = (): boolean => {
+    if (this.phone && this.isRegistered()) {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | unregistering`);
+      this.isLoggedIn = false;
+      this.connectionStatus = 'unregistered';
+      (this.phone as any)._registrator.close();
+      return true;
+    }
+    Plivo.log.warn(`${C.LOGCAT.LOGIN} | cannot unregister. phone instance: ${this.phone !== null}, isRegistered: ${this.isRegistered()}`);
+    return false;
+  };
+
+  private _disconnect = (): boolean => {
+    if (this.phone && this.isConnected()) {
+      Plivo.log.debug(`${C.LOGCAT.WS} | disconnecting`);
+      (this.phone as any)._transport.disconnect(true);
+      clearOptionsInterval(this);
+      return true;
+    }
+    Plivo.log.warn(`${C.LOGCAT.WS} | cannot disconnect WS. phone instance: ${this.phone !== null}, isConnected: ${this.isConnected()}`);
+    return false;
+  };
+
+  private _register = (extraHeaders?: Array<string>): boolean => {
+    if (this.phone && (this.phone as any).registrator && this.isConnected()) {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | registering`);
+      if (!this.isRegistered()
+        || (this.isRegistered()
+          && extraHeaders
+          && extraHeaders?.length > 0)) {
+        this.isLoginCalled = true;
+        if (extraHeaders && extraHeaders instanceof Array && extraHeaders.length > 0) {
+          Plivo.log.info(`${C.LOGCAT.LOGIN} | setting extraheaders before register ${JSON.stringify(extraHeaders)}`);
+          (this.phone as any)._registrator.setExtraHeaders(extraHeaders);
+        }
+        (this.phone as any)._registrator.register();
+        return true;
+      }
+      Plivo.log.warn(`${C.LOGCAT.LOGIN} | Already registed, cannot register again`);
+      return false;
+    }
+    Plivo.log.warn(`${C.LOGCAT.LOGIN} | Not connected, cannot register`);
+    return false;
+  };
+
   private _call = (phoneNumber: string, extraHeaders: ExtraHeaders): boolean => {
     this.timeTakenForStats.pdd = {
       init: new Date().getTime(),
     };
+
+    if (this.getCurrentSession() !== null || this.callSession) {
+      Plivo.log.warn(`${C.LOGCAT.LOGIN} | Already on a call, cannot make another call`);
+      return false;
+    }
 
     if (!this.isLoggedIn && (this.phone === null
       || (this.phone
@@ -1226,38 +1396,13 @@ export class Client extends EventEmitter {
       Plivo.log.warn(`${C.LOGCAT.LOGIN} | Outgoing call permission not granted`);
       return false;
     }
-
-    // const onCallFailed = (reason: string) => {
-    //   Plivo.log.error(`${C.LOGCAT.CALL} | On call failed`, reason);
-    //   this.emit('onCallFailed', reason);
-    // };
     const readyForCall = () => {
       if (this.isAccessToken) extraHeaders['X-Plivo-Jwt'] = `${this.accessToken}`;
 
       this.owaLastDetect.isOneWay = false;
       return OutgoingCall.makeCall(this, extraHeaders, phoneNumber);
     };
-    // Handle One Way Audio issues in chrome. check for every 1 hr
-    // if (
-    //   this.options.preDetectOwa
-    //   && this.browserDetails.browser === 'chrome'
-    //   && (new Date().getTime() - (this.owaLastDetect.time as any) > this.owaDetectTime
-    //     || this.owaLastDetect.isOneWay)
-    // ) {
-
-    //   oneWayAudio.detectOWA((res, err) => {
-    //     oneWayAudio.owaCallback.call(
-    //       this,
-    //       res,
-    //       err,
-    //       onCallFailed,
-    //       readyForCall,
-    //     );
-    //   });
-    // } else {
-    // Browsers other than chrome go to call ready mode
     readyForCall();
-    // }
     return true;
   };
 
@@ -1269,40 +1414,10 @@ export class Client extends EventEmitter {
     if (incomingCall && isValid) {
       Plivo.log.debug(`answer - ${incomingCall.callUUID}`);
       incomingCall.addConnectionStage(`answer()@${new Date().getTime()}`);
-      // const mediaError = (reason: string) => {
-      //   Plivo.log.debug(`${C.LOGCAT.CALL} | rejecting call, Reason : ${reason}`);
-      //   this.reject(incomingCall.callUUID as string);
-      //   return true;
-      // };
-      // const readyForCall = () => {
-      //   IncomingCall.answerIncomingCall(
-      //     incomingCall,
-      //     actionOnOtherIncomingCalls,
-      //   );
-      // };
-      // Handle One Way Audio issues in chrome. check for every 1 hr
-      // if (
-      //   this.options.preDetectOwa
-      //   && this.browserDetails.browser === 'chrome'
-      //   && (new Date().getTime() - (this.owaLastDetect.time as any) > this.owaDetectTime
-      //     || this.owaLastDetect.isOneWay)
-      // ) {
-      //   oneWayAudio.detectOWA((res, err) => {
-      //     oneWayAudio.owaCallback.call(
-      //       this,
-      //       res,
-      //       err,
-      //       mediaError,
-      //       readyForCall,
-      //     );
-      //   });
-      // } else {
-      // Browsers other than chrome go to call ready mode
       IncomingCall.answerIncomingCall(
         incomingCall,
         actionOnOtherIncomingCalls,
       );
-      // }
     } else {
       Plivo.log.error(`${C.LOGCAT.LOGIN} | Incoming call answer() failed : no incoming call`);
       return false;
@@ -1362,6 +1477,40 @@ export class Client extends EventEmitter {
       }
     } else {
       Plivo.log.warn(`${LOGCAT.CALL} | No call session exists to hangup`);
+      return false;
+    }
+    return true;
+  };
+
+  private _redirect = (
+    contactUri: string | null,
+  ): boolean => {
+    if (contactUri && this.lastIncomingCall) {
+      Plivo.log.debug(`${LOGCAT.CALL} | redirecting to contactUri ${contactUri}`);
+
+      const contactData = contactUri.split('&');
+      const uri = contactData[0];
+      const registrarIP = contactData[1];
+      this.lastIncomingCall.setState(this.lastIncomingCall.STATE.REDIRECTED);
+      Plivo.log.debug(`${LOGCAT.CALL} | removing all the listeners on the current session before redirecting`);
+      (this.lastIncomingCall.session as any).removeAllListeners();
+      this.lastIncomingCall.session.refer(uri, {
+        extraHeaders: [
+          `X-PlivoUpdatedRegContact: ${uri}`,
+          `X-PlivoRegistrarIP: ${registrarIP}`,
+          `Contact: ${uri}`,
+        ],
+      });
+      if (this.statsSocket) {
+        this.statsSocket.disconnect();
+        this.statsSocket = null;
+      }
+      audioUtil.stopVolumeDataStreaming();
+      IncomingCall.stopRingtone();
+      Plivo.log.debug(`${LOGCAT.CALL} | clearing required session info on call redirect`);
+      hangupClearance.call(this, this.lastIncomingCall, true);
+    } else {
+      Plivo.log.warn(`${LOGCAT.CALL} | Cannot redirect. Either no call session exists to redirect or contact uri is null`);
       return false;
     }
     return true;
@@ -1445,6 +1594,17 @@ export class Client extends EventEmitter {
     }
     Plivo.log.warn('No incoming calls to ignore');
     this.shouldMuteCall = false;
+    return false;
+  };
+
+  private _setIdentifier = (identifier: string): boolean => {
+    if (identifier && typeof identifier === 'string' && identifier !== '') {
+      Plivo.log.info(`${C.LOGCAT.INIT} | changing identifier from ${this.identifier} to ${identifier}`);
+      this.identifier = identifier;
+      this.loggerUtil.setIdentifier(identifier);
+      return true;
+    }
+    Plivo.log.warn(`${C.LOGCAT.INIT} | Identifier should be a non empty string`);
     return false;
   };
 
@@ -1657,6 +1817,25 @@ export class Client extends EventEmitter {
   && (this.phone as any)._transport.isConnecting();
 
   private _isConnected = (): boolean | null => this.phone && this.phone.isConnected();
+
+  private _getContactUri = (): string | null => {
+    if (this.contactUri
+      && (typeof this.contactUri.name === 'string' && this.contactUri.name !== '')
+      && (typeof this.contactUri.ip === 'string' && this.contactUri.ip !== '')
+      && (typeof this.contactUri.port === 'number' && this.contactUri.port !== '')
+      && (typeof this.contactUri.registrarIP === 'string' && this.contactUri.registrarIP !== '')
+      && (typeof this.contactUri.protocol === 'string' && this.contactUri.protocol !== '')) {
+      const contactUriString = `sip:${this.contactUri.name}@${this.contactUri.ip}:${this.contactUri.port};${this.contactUri.protocol}&${this.contactUri.registrarIP}`;
+      Plivo.log.debug(`${C.LOGCAT.CALL} | generated contact URI string: ${contactUriString}`);
+      return contactUriString;
+    }
+    Plivo.log.info(`${C.LOGCAT.CALL} | Contact URI string could not be generated ${JSON.stringify(this.contactUri)}`);
+    return null;
+  };
+
+  private _getCurrentSession = (
+  ): CallSession | null => this._currentSession
+  || this.lastIncomingCall;
 
   private _startNoiseReduction = (): Promise<boolean> => new Promise((resolve) => {
     if (!this.enableNoiseReduction) {

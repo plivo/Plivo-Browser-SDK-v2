@@ -100,6 +100,8 @@ describe('plivoWebSdk', function () {
 
     // eslint-disable-next-line no-undef
     after(() => {
+      Client1.logout();
+      Client2.logout();
       spy.restore();
       resetListners();
     });

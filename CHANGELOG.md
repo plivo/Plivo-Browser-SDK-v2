@@ -5,6 +5,23 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.11-beta.0 (released@ 08-07-2024)
+
+**Features**
+* Added support for connecting and registering the SDK independently: If the `stopAutoRegisterOnConnect` flag is set to true, the `login()` method will only connect the SDK to Plivo servers. Default is set to `false`. 
+* Introduced a new `register()` method, which registers the SDK when called.
+* Introduced the `captureSDKCrashOnly` flag, which, when set to true, captures and syncs only SDK-related crash logs. Default is `false`. 
+* Introduced the `redirect(uri)` method, which redirects the call to other SDK clients when invoked.
+* Added helper methods such as 
+    * `disconnect()`: Disconnect the SDK.
+    * `unregister()`: Unregister the SDK
+    * `getCurrentSession()`: Returns current active session, If any. 
+* Added support to send more call-related information and statistics to the call-insights service.
+
+**Bug fixes**
+- Fixed the issue causing a mismatch between local machine time and actual time.
+- Fixed issues where the speech recognition engine would enter an endless loop when mute is performed on two tabs using the same engine
+
 ## v2.2.11 (released@ 07-06-2024)
 
 **Bug Fixes**

@@ -107,10 +107,10 @@ const onTrack = (evt: RTCTrackEvent): void => {
   Plivo.log.debug('Outgoing remote Audio stream received');
   if (!cs._currentSession) return;
   cs._currentSession.addConnectionStage(
-    `addStream-success@${getCurrentTime()}`,
+    `addStream-success@${getCurrentTime(cs)}`,
   );
   cs._currentSession.updateMediaConnectionInfo({
-    stream_success: getCurrentTime(),
+    stream_success: getCurrentTime(cs),
   });
   if (evt.streams[0]) {
     // on direct 200 OK with out 18x, we get The play() request was interrupted by a new load
@@ -138,10 +138,10 @@ const onTrack = (evt: RTCTrackEvent): void => {
   } else {
     Plivo.log.error(`${LOGCAT.CALL} | Outgoing call add stream failure`);
     cs._currentSession.addConnectionStage(
-      `addStream-failure@${getCurrentTime()}`,
+      `addStream-failure@${getCurrentTime(cs)}`,
     );
     cs._currentSession.updateMediaConnectionInfo({
-      stream_failure: getCurrentTime(),
+      stream_failure: getCurrentTime(cs),
     });
   }
 };
@@ -152,9 +152,9 @@ const onTrack = (evt: RTCTrackEvent): void => {
 const onSending = (): void => {
   Plivo.log.debug(`${LOGCAT.CALL} | Outgoing call sending`);
   if (cs._currentSession) {
-    cs._currentSession.addConnectionStage(`O-invite@${getCurrentTime()}`);
+    cs._currentSession.addConnectionStage(`O-invite@${getCurrentTime(cs)}`);
     cs._currentSession.updateSignallingInfo({
-      call_initiation_time: getCurrentTime(),
+      call_initiation_time: getCurrentTime(cs),
     });
   }
   Plivo.log.debug('call initiation time, sending invite');
@@ -217,7 +217,7 @@ const handleProgressTone = (evt: SessionProgressEvent): void => {
   if (evt.response && evt.response.status_code === 183 && evt.response.body) {
     if (cs._currentSession) {
       Plivo.log.debug(`callSession - ${cs._currentSession.callUUID}`);
-      cs._currentSession.setPostDialDelayEndTime(getCurrentTime());
+      cs._currentSession.setPostDialDelayEndTime(getCurrentTime(cs));
       if (!cs.ringToneBackFlag) {
         if (cs.ringBackToneView && !cs.ringBackToneView.paused) {
           stopAudio(RINGBACK_ELEMENT_ID);
@@ -237,6 +237,7 @@ const OnProgress = (evt: SessionProgressEvent): void => {
     cs._currentSession.onRinging(cs);
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
+    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing`);
     cs._currentSession.setState(cs._currentSession.STATE.RINGING);
     cs.callUUID = callUUID;
     Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing, CallUUID: ${cs.callUUID}`);
@@ -250,13 +251,13 @@ const OnProgress = (evt: SessionProgressEvent): void => {
       cs._currentSession.callUUID,
     );
     cs._currentSession.addConnectionStage(
-      `progress-${evt.response.status_code}@${getCurrentTime()}`,
+      `progress-${evt.response.status_code}@${getCurrentTime(cs)}`,
     );
-    Plivo.log.debug(`progress-${evt.response.status_code}@${getCurrentTime()}`);
+    Plivo.log.debug(`progress-${evt.response.status_code}@${getCurrentTime(cs)}`);
     cs._currentSession.updateSignallingInfo({
-      ring_start_time: getCurrentTime(),
+      ring_start_time: getCurrentTime(cs),
     });
-    cs._currentSession.setPostDialDelayEndTime(getCurrentTime());
+    cs._currentSession.setPostDialDelayEndTime(getCurrentTime(cs));
     Plivo.log.debug('Outgoing call progress', evt.response.status_code);
     handleProgressTone(evt);
     // Will be true if user triggers mute before session is created
@@ -291,7 +292,7 @@ const onAccepted = (evt: SessionAcceptedEvent): void => {
       cs.phone.sendReInviteOnTransportConnect = true;
     }
     cs._currentSession.onAccepted(cs);
-    cs._currentSession.setPostDialDelayEndTime(getCurrentTime());
+    cs._currentSession.setPostDialDelayEndTime(getCurrentTime(cs));
     addCallstatsIOFabric.call(
       cs,
       cs._currentSession,
@@ -572,7 +573,7 @@ export const makeCall = (
   Plivo.log.debug(`${LOGCAT.CALL} | Outgoing call initiating to ${phoneNumber} with headers ${JSON.stringify(extraHeaders)}`);
   cs = clientObject;
   outBoundConnectionStages = [];
-  outBoundConnectionStages.push(`call()@${getCurrentTime()}`);
+  outBoundConnectionStages.push(`call()@${getCurrentTime(cs)}`);
   let phoneNumberStr = '';
   if (phoneNumber) {
     phoneNumberStr = removeSpaces(String(phoneNumber));

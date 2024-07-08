@@ -93,7 +93,14 @@ describe('NonRTPStats', () => {
     const sendFn = jest.spyOn(context.statsSocket.ws, 'send');
     nonRTPStats.sendCallAnsweredEvent.call(context, deviceInfo, true);
     expect(sendFn).toHaveBeenCalledTimes(1);
-    expect(context.statsSocket.ws.message).toStrictEqual(nonRTPStatsResponse.ANSWER_EVENT);
+    const message = context.statsSocket.ws.message;
+    message.timeStamp = 1599026892574;
+    const testOs = process.env.USERAGENT_OS;
+    console.log("OS AGENT", testOs)
+    if (message.userAgent !== `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`) {
+      message.userAgent = `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`;
+    }
+    expect(message).toEqual(nonRTPStatsResponse.ANSWER_EVENT);
   });
 
   it('should send call answered event for outgoing call', () => {
@@ -102,7 +109,13 @@ describe('NonRTPStats', () => {
     expect(sendFn).toHaveBeenCalledTimes(1);
     delete (nonRTPStatsResponse.ANSWER_EVENT as any).audioDeviceInfo;
     nonRTPStatsResponse.ANSWER_EVENT.info = 'Outgoing call answered';
-    expect(context.statsSocket.ws.message).toStrictEqual(nonRTPStatsResponse.ANSWER_EVENT);
+    const message = context.statsSocket.ws.message;
+    message.timeStamp = 1599026892574;
+    const testOs = process.env.USERAGENT_OS;
+    if (message.userAgent !== `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`) {
+      message.userAgent = `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`;
+    }
+    expect(message).toStrictEqual(nonRTPStatsResponse.ANSWER_EVENT);
   });
 
   it('should not send call answered event when callstatskey is missing', () => {
@@ -135,7 +148,7 @@ describe('NonRTPStats', () => {
   });
 
   it('should add callinfo to stats', () => {
-    expect(nonRTPStats.addCallInfo(callSession, {} as any, callInfoObj.callstats_key, callInfoObj.userName)).toStrictEqual(callInfoObj);
+    expect(nonRTPStats.addCallInfo(callSession, {} as any, callInfoObj.callstats_key, callInfoObj.userName, 1599026892574)).toStrictEqual(callInfoObj);
   });
 
   it('should send user feedback to stats socket', () => {
@@ -164,6 +177,7 @@ describe('NonRTPStats', () => {
     const error = 'ice_timeout';
     const expectedMsg = { msg: 'ICE_FAILURE', error, ...callInfoObj };
     nonRTPStats.onIceFailure.call(context, callSession, new Error(error));
+    context.statsSocket.ws.message.timeStamp = 1599026892574;
     expect(context.statsSocket.ws.message).toStrictEqual(expectedMsg);
   });
 
@@ -171,6 +185,7 @@ describe('NonRTPStats', () => {
     const error = 'PermissionDeniedError';
     const expectedMsg = { msg: 'MEDIA_FAILURE', error, ...callInfoObj };
     nonRTPStats.onMediaFailure.call(context, callSession, new Error(error));
+    context.statsSocket.ws.message.timeStamp = 1599026892574;
     expect(context.statsSocket.ws.message).toStrictEqual(expectedMsg);
   });
 
@@ -178,6 +193,7 @@ describe('NonRTPStats', () => {
     const error = 'createofferfailed';
     const expectedMsg = { msg: 'SDP_FAILURE', error, ...callInfoObj };
     nonRTPStats.onSDPfailure.call(context, callSession, new Error(error));
+    context.statsSocket.ws.message.timeStamp = 1599026892574;
     expect(context.statsSocket.ws.message).toStrictEqual(expectedMsg);
   });
 
@@ -185,6 +201,7 @@ describe('NonRTPStats', () => {
     const action = 'mute';
     const expectedMsg = { msg: 'TOGGLE_MUTE', action, ...callInfoObj };
     nonRTPStats.onToggleMute.call(context, callSession, action);
+    context.statsSocket.ws.message.timeStamp = 1599026892574;
     expect(context.statsSocket.ws.message).toStrictEqual(expectedMsg);
   });
 

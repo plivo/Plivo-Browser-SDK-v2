@@ -109,6 +109,7 @@ export class CallSession {
     CANCELED: string;
     FAILED: string;
     ENDED: string;
+    REDIRECTED: string;
   };
 
   SPEECH_STATE: {
@@ -118,6 +119,7 @@ export class CallSession {
     STOPPING: string;
     STOPPED_AFTER_DETECTION: string;
     STOPPED_DUE_TO_NETWORK_ERROR: string;
+    STOPPED_DUE_TO_ABORT: string;
   };
 
   /**
@@ -323,10 +325,10 @@ export class CallSession {
         && clientObj._currentSession?.speech_state
           === clientObj._currentSession?.SPEECH_STATE.STOPPED) {
         try {
-          Plivo.log.info(`${LOGCAT.CALL} | Recognizing speech Starting`);
+          Plivo.log.info(`${LOGCAT.CALL} | Starting speech recognition`);
           speechListeners.call(clientObj);
         } catch (err) {
-          Plivo.log.error(`${LOGCAT.CALL} | Error in starting recognizing speech, will be restarted :: ${err.message}`);
+          Plivo.log.error(`${LOGCAT.CALL} | Error starting speech recognition, will be restarted :: ${err.message}`);
         }
       }
     } else {
@@ -454,6 +456,7 @@ export class CallSession {
       CANCELED: 'canceled',
       FAILED: 'failed',
       ENDED: 'ended',
+      REDIRECTED: 'redirected',
     };
 
     this.SPEECH_STATE = {
@@ -463,6 +466,7 @@ export class CallSession {
       STOPPING: 'stopping',
       STOPPED_AFTER_DETECTION: 'stopped_after_detecting',
       STOPPED_DUE_TO_NETWORK_ERROR: "stopped_due_to_network_error",
+      STOPPED_DUE_TO_ABORT: "stopped_due_to_aborted",
     };
 
     this.callUUID = options.callUUID ? options.callUUID : null;
@@ -509,7 +513,7 @@ export class CallSession {
         sendCallAnsweredEvent.call(clientObject, null, true);
       });
     this.updateSignallingInfo({
-      answer_time: getCurrentTime(),
+      answer_time: getCurrentTime(clientObject),
     });
     callStart.call(clientObject);
     startVolumeDataStreaming(clientObject);
@@ -533,10 +537,10 @@ export class CallSession {
   };
 
   private _onConfirmed = (clientObject: Client): void => {
-    this.addConnectionStage(`confirmed@${getCurrentTime()}`);
+    this.addConnectionStage(`confirmed@${getCurrentTime(clientObject)}`);
     this.setState(this.STATE.ANSWERED);
     this.updateSignallingInfo({
-      call_confirmed_time: getCurrentTime(),
+      call_confirmed_time: getCurrentTime(clientObject),
     });
     // enable expedited forwarding for dscp
     setEncodingParameters.call(clientObject);
@@ -617,9 +621,9 @@ export class CallSession {
 
   private _onFailed = (clientObject: Client, evt: SessionFailedEvent): void => {
     logCandidatePairs(clientObject._currentSession);
-    this.addConnectionStage(`failed@${getCurrentTime()}`);
+    this.addConnectionStage(`failed@${getCurrentTime(clientObject)}`);
     this.updateSignallingInfo({
-      hangup_time: getCurrentTime(),
+      hangup_time: getCurrentTime(clientObject),
       hangup_party: evt.originator,
       hangup_reason: evt.cause,
     });
@@ -632,10 +636,10 @@ export class CallSession {
 
   private _onEnded = (clientObject: Client, evt: SessionEndedEvent): void => {
     logCandidatePairs(clientObject._currentSession);
-    this.addConnectionStage(`ended@${getCurrentTime()}`);
+    this.addConnectionStage(`ended@${getCurrentTime(clientObject)}`);
     this.setState(this.STATE.ENDED);
     this.updateSignallingInfo({
-      hangup_time: getCurrentTime(),
+      hangup_time: getCurrentTime(clientObject),
       hangup_party: evt.originator,
       hangup_reason: evt.cause,
     });

@@ -102,8 +102,8 @@ describe("plivoWebSdk", function () {
 
     // eslint-disable-next-line no-undef
     after(() => {
-      // Client1.logout();
-      // Client2.logout();
+      Client1.logout();
+      Client2.logout();
       spyOnSocket.restore();
     });
 
@@ -308,10 +308,10 @@ describe("plivoWebSdk", function () {
       Client1.hangup();
       waitUntilOutgoingCall(events.onCallTerminated, () => {
         if (Client1.isLoggedIn) {
-          Client1.call(919728082876, {});
+          Client1.call('+12088340983', {});
         } else {
           Client1.on("onLogin", () => {
-            Client1.call(919728082876, {});
+            Client1.call('+12088340983', {});
           });
         }
         waitUntilOutgoingCall(events.onCalling, done, 1000);

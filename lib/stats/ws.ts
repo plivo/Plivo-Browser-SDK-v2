@@ -199,6 +199,9 @@ export class StatsSocket {
       }
       return true;
     }
+    if (message.msg === 'CALL_STATS_DUMP') {
+      Plivo.log.debug('retrying to send call stats dump event');
+    }
     if (message.msg === 'CALL_SUMMARY') {
       Plivo.log.debug('retrying to send call summary event');
       if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {

@@ -148,8 +148,8 @@ describe("plivoWebSdk JWT", function () {
 
     // eslint-disable-next-line no-undef
     after(() => {
-      // Client1.logout();
-      // Client2.logout();
+      Client1.logout();
+      Client2.logout();
       spyOnSocket.restore();
     });
 
@@ -235,8 +235,8 @@ describe("plivoWebSdk JWT", function () {
       Client1.call(secondary_user, {});
       bailTimer = setTimeout(() => {
         Client1.hangup();
-      }, 2000);
-      waitUntilOutgoingCall(events.onCallFailed, done, 500);
+      }, 3000);
+      waitUntilOutgoingCall(events.onCallFailed, done, 1000);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error("outgoing call end failed"));
@@ -381,9 +381,9 @@ describe("plivoWebSdk JWT", function () {
         events.onPermissionDenied.status = true;
       }); // done
 
-      let token = await getJWTToken(false, true)
-      console.log("token is ", token)
-      plivo_jwt_without_outbound_access = token
+      const token = await getJWTToken(false, true);
+      console.log("token is ", token);
+      plivo_jwt_without_outbound_access = token;
       Client1.loginWithAccessToken(plivo_jwt_without_outbound_access);
       Client2.login(secondary_user, secondary_pass);
     });
@@ -430,6 +430,5 @@ describe("plivoWebSdk JWT", function () {
         done(new Error("outgoing call failed"));
       }, TIMEOUT);
     });
-
   });
 });

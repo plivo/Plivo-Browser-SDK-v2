@@ -15,6 +15,7 @@ describe('RTPStats', () => {
                 browserDetails: {
                     browser: ''
                 },
+		timeDiff: 0,
                 timeTakenForStats: {
                   mediaSetup:{
                     init: 0,

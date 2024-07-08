@@ -2,7 +2,7 @@
 /* eslint-disable no-var */
 /* eslint-disable import/no-mutable-exports */
 
-// Signalling
+// // Signalling
 export const DOMAIN = 'phone.plivo.com';
 export const WS_SERVERS = ['wss://client.plivo.com/signalling', 'wss://client-fb.plivo.com/signalling'];
 
@@ -67,6 +67,9 @@ export const LOCAL_ERROR_CODES = {
   Ignored: 11002,
   "call answer fail": 11003,
   "Network switch while ringing": 11004,
+  "invalid-destination-address": 11005,
+  "call-already-in-progress": 11006,
+  "incoming-invite-exist": 11007,
 };
 
 // Options

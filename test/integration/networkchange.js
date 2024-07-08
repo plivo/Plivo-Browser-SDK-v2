@@ -11,6 +11,7 @@ const options = {
   dscp: true,
   enableTracking: true,
   dialType: "conference",
+  stopAutoRegisterOnConnect: false,
 };
 
 const Client1 = new Client(options);

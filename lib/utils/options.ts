@@ -34,7 +34,9 @@ const _options: ConfiguationOptions = {
   dtmfOptions: C.DEFAULT_DTMFOPTIONS,
   enableNoiseReduction: false,
   usePlivoStunServer: false,
+  stopAutoRegisterOnConnect: false,
   registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
+  captureSDKCrashOnly: false,
 };
 
 /**
@@ -202,6 +204,13 @@ const validateOptions = function (
           }
           break;
 
+        case 'stopAutoRegisterOnConnect':
+          if (isBoolean(key, options[key])) {
+            this.stopAutoRegisterOnConnect = options[key];
+            _options.stopAutoRegisterOnConnect = options[key];
+          }
+          break;
+
         case 'audioConstraints':
           if (options[key] && typeof options[key] === 'object') {
             _options.audioConstraints = options[key];
@@ -242,6 +251,12 @@ const validateOptions = function (
 
         case 'appSecret':
           _options.appSecret = options[key];
+          break;
+
+        case 'captureSDKCrashOnly':
+          if (isBoolean(key, options[key])) {
+            _options.captureSDKCrashOnly = options[key];
+          }
           break;
 
         case 'appId':

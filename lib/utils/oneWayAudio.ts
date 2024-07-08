@@ -221,7 +221,7 @@ export const owaCallback = function (
     onError(`media - ${err.name}`);
     return false;
   }
-  Plivo.log.debug(`${LOGCAT.LOGIN} getUserMedia precheck `, res);
+  Plivo.log.debug(`${LOGCAT.LOGIN} | getUserMedia precheck `, res);
   if (Number(res.bytesSent) === 0 && Number(res.audioInputLevel) === 0) {
     Plivo.log.error(`${LOGCAT.CALL} | chrome lost access to microphone - restart browser`, err.message);
     emitMetrics.call(

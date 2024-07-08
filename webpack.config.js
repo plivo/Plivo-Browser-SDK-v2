@@ -94,6 +94,14 @@ module.exports = env => {
           test: path.resolve(__dirname, 'node_modules/webpack-dev-server/client'),
           loader: 'null-loader'
         },
+        {
+          test: /\.worker\.ts$/,
+          loader: "worker-loader",
+          options: {
+            esModule: false,
+            inline: "fallback" 
+          }
+        },
         // All files with a '.ts' or '.tsx' extension will be handled by 'awesome-typescript-loader'.
         { test: /\.ts?$/, loader: "awesome-typescript-loader" },
         // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.

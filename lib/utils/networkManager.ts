@@ -7,7 +7,7 @@ import { LOGCAT, WS_RECONNECT_RETRY_COUNT, WS_RECONNECT_RETRY_INTERVAL } from '.
 import { Logger } from '../logger';
 import { sendEvents } from '../stats/nonRTPStats';
 import { createStatsSocket } from '../stats/setup';
-import { setConectionInfo } from '../managers/util';
+import { clearOptionsInterval, getCurrentTime, setConectionInfo } from '../managers/util';
 
 interface PingPong {
   client: Client
@@ -43,7 +43,7 @@ export const socketReconnectionRetry = (client) => {
     Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Starting the connection interval`);
     client.connectionRetryInterval = setInterval(() => {
       Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Checking WS connection status with count ${socketReconnectCount}`);
-      if ((client.phone as any)._transport.socket._ws
+      if (client.phone && (client.phone as any)._transport.socket._ws
         && (client.phone as any)._transport.socket._ws.readyState === 0) {
         Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | WS is not ready state`);
         if (socketReconnectCount >= WS_RECONNECT_RETRY_COUNT) {
@@ -59,7 +59,7 @@ export const socketReconnectionRetry = (client) => {
           socketReconnectCount += 1;
         }
       } else {
-        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | WS is in ready state or WS instance is available: ${!!((client.phone as any)._transport.socket._ws)}. Clearing the connection check interval`);
+        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | WS is in ready state or WS instance is available: ${!!(client.phone && (client.phone as any)._transport.socket._ws)}. Clearing the connection check interval`);
         clearInterval(client.connectionRetryInterval as any);
         client.connectionRetryInterval = null;
       }
@@ -153,95 +153,132 @@ export const reconnectSocket = (client: Client) => {
   }
 };
 
+const sendOptions = (client: Client, messageCheckTimeout: number) => {
+  if (!isConnected) {
+    Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} |  Checking for network availablity`);
+  }
+  if ((client.phone && (!client.phone.isConnected() || (client.connectionStatus === 'registered' && !client.phone.isRegistered())))) {
+    Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Websocket state is connecting: ${(client.phone as any)._transport.isConnecting()}, registering: ${(client.phone as any).isRegistering()}, connected: ${client.phone.isConnected()} or registered: ${client.phone.isRegistered()}. Is Internet available ${navigator.onLine}`);
+  } else if (!client.phone) {
+    Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Websocket instance is not available. Is Internet available ${navigator.onLine}`);
+  }
+  if (
+    navigator.onLine
+    && client.phone
+    && !(client.phone as any)._transport.isConnecting()
+    && !(client.phone as any).isRegistering()
+  ) {
+    let isFailedMessageTriggered = false;
+    let isReconnectionStarted = false;
+    let message: null | SipLib.Message = null;
+    client.networkDisconnectedTimestamp = getCurrentTime(client);
+    if (!isConnected) {
+      isConnected = true;
+      isReconnectionStarted = true;
+      if (client._currentSession && client._currentSession.serverFeatureFlags.indexOf('ft_info') === -1) {
+        const negotiationStarted = client._currentSession.session.renegotiate({
+          rtcOfferConstraints: { iceRestart: true },
+        });
+        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Restarting Connection and Renegotiate Ice :: ${negotiationStarted}`);
+      } else {
+        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Restarting Connection`);
+        (client.phone as any)._transport.connect();
+        socketReconnectionRetry(client);
+      }
+    }
+    // timeout to check whether we receive failed event in 5 seconds
+    const eventCheckTimeout = setTimeout(() => {
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Ping request timed out in ${messageCheckTimeout}. Restarting the connection if options response not received: ${!isFailedMessageTriggered}`);
+      if (!isFailedMessageTriggered) {
+        isReconnectionStarted = true;
+        setConectionInfo(client, ConnectionState.DISCONNECTED, "Ping Timed Out");
+        reconnectSocket(client);
+        message = null;
+      }
+      clearTimeout(eventCheckTimeout);
+    }, messageCheckTimeout);
+
+    message = new SipLib.Message(client.phone);
+    message.on('failed', (err) => {
+      isFailedMessageTriggered = true;
+      if (eventCheckTimeout) clearTimeout(eventCheckTimeout);
+      // reconnect if ping OPTIONS packet fails OR UA is not connected/registered
+      if (!isReconnectionStarted
+        && (err.cause !== 'Not Found'
+        || !client.phone?.isConnected()
+        || (client.connectionStatus === 'registered' && !client.phone?.isRegistered()))) {
+        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Ping request failed with err: ${err.cause}, Client is connected: ${client.phone?.isConnected()} and client is registered: ${client.phone?.isRegistered()}. Restarting the connection`);
+        setConectionInfo(client, ConnectionState.DISCONNECTED, `Ping failed with err ${err.cause}`);
+        reconnectSocket(client);
+        message = null;
+      }
+      isReconnectionStarted = false;
+      client.emit('onOptionsMessage', err.cause);
+    });
+
+    message.send('admin', 'pong', 'OPTIONS', {
+      identifier: client.identifier,
+    });
+  }
+
+  if (!navigator.onLine && client.phone
+    && !(client.phone as any)._transport.isConnecting()
+    && !(client.phone as any).isRegistering()
+    && isConnected) {
+    const activeSession = client.lastIncomingCall ?? client._currentSession;
+    if (activeSession && activeSession.state === activeSession.STATE.RINGING) {
+      activeSession.isCallTerminatedDuringRinging = true;
+      if (activeSession.direction === 'incoming') {
+        activeSession.session.terminate();
+      }
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Terminating ${activeSession.direction} call with calluuid ${activeSession.callUUID} due to network change in ringing state`);
+    }
+    Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Websocket disconnected since internet is not available`);
+    setConectionInfo(client, ConnectionState.DISCONNECTED, `No Internet`);
+    (client.phone as any)._transport.disconnect(true);
+    isConnected = false;
+  }
+};
+
 export const startPingPong = ({
   client,
   networkChangeInterval,
   messageCheckTimeout,
 }: PingPong) => {
-  if (client.networkChangeInterval == null) {
+  const startTimerOnMain = () => {
     client.networkChangeInterval = setInterval(() => {
-      // send message only when there is active network connect
-      if (!isConnected) {
-        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} |  Checking for network availablity`);
+      if (client.workerManager) {
+        client.workerManager.workerInstance = null;
       }
-      if ((client.phone && (!client.phone.isConnected() || !client.phone.isRegistered()))) {
-        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Websocket state is connecting: ${(client.phone as any)._transport.isConnecting()}, registering: ${(client.phone as any).isRegistering()}, connected: ${client.phone.isConnected()} or registered: ${client.phone.isRegistered()}. Is Internet available ${navigator.onLine}`);
-      } else if (!client.phone) {
-        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Websocket instance is not available. Is Internet available ${navigator.onLine}`);
-      }
-      if (
-        navigator.onLine
-        && client.phone
-        && !(client.phone as any)._transport.isConnecting()
-        && !(client.phone as any).isRegistering()
-      ) {
-        let isFailedMessageTriggered = false;
-        let isReconnectionStarted = false;
-        let message: null | SipLib.Message = null;
-        client.networkDisconnectedTimestamp = new Date().getTime();
-        if (!isConnected) {
-          isConnected = true;
-          isReconnectionStarted = true;
-          if (client._currentSession && client._currentSession.serverFeatureFlags.indexOf('ft_info') === -1) {
-            const negotiationStarted = client._currentSession.session.renegotiate({
-              rtcOfferConstraints: { iceRestart: true },
-            });
-            Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Restarting Connection and Renegotiate Ice :: ${negotiationStarted}`);
-          } else {
-            Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Restarting Connection`);
-            (client.phone as any)._transport.connect();
-            socketReconnectionRetry(client);
-          }
-        }
-        // timeout to check whether we receive failed event in 5 seconds
-        const eventCheckTimeout = setTimeout(() => {
-          Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Ping request timed out in ${messageCheckTimeout}. Restarting the connection if options response not received: ${!isFailedMessageTriggered}`);
-          if (!isFailedMessageTriggered) {
-            isReconnectionStarted = true;
-            setConectionInfo(client, ConnectionState.DISCONNECTED, "Ping Timed Out");
-            reconnectSocket(client);
-            message = null;
-          }
-          clearTimeout(eventCheckTimeout);
-        }, messageCheckTimeout);
-
-        message = new SipLib.Message(client.phone);
-        message.on('failed', (err) => {
-          isFailedMessageTriggered = true;
-          if (eventCheckTimeout) clearTimeout(eventCheckTimeout);
-          // reconnect if ping OPTIONS packet fails OR UA is not connected/registered
-          if (!isReconnectionStarted
-            && (err.cause !== 'Not Found'
-            || !client.phone?.isConnected()
-            || !client.phone?.isRegistered())) {
-            Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Ping request failed with err: ${err.cause}, Client is connected: ${client.phone?.isConnected()} and client is registered: ${client.phone?.isRegistered()}. Restarting the connection`);
-            setConectionInfo(client, ConnectionState.DISCONNECTED, `Ping failed with err ${err.cause}`);
-            reconnectSocket(client);
-            message = null;
-          }
-          isReconnectionStarted = false;
-          client.emit('onOptionsMessage', err.cause);
-        });
-        message.send('admin', 'pong', 'OPTIONS');
-      }
-      if (!navigator.onLine && client.phone
-        && !(client.phone as any)._transport.isConnecting()
-        && !(client.phone as any).isRegistering()
-        && isConnected) {
-        const activeSession = client.lastIncomingCall ?? client._currentSession;
-        if (activeSession && activeSession.state === activeSession.STATE.RINGING) {
-          activeSession.isCallTerminatedDuringRinging = true;
-          if (activeSession.direction === 'incoming') {
-            activeSession.session.terminate();
-          }
-          Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Terminating ${activeSession.direction} call with calluuid ${activeSession.callUUID} due to network change in ringing state`);
-        }
-        Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Websocket disconnected since internet is not available`);
-        setConectionInfo(client, ConnectionState.DISCONNECTED, `No Internet`);
-        (client.phone as any)._transport.disconnect(true);
-        isConnected = false;
-      }
+      sendOptions(client, messageCheckTimeout);
     }, networkChangeInterval);
+  };
+
+  const responseCallback = (response) => {
+    if (!response) {
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | network check timer cannot be started on the worker thread. Starting it on the main thread`);
+      client.workerManager.networkCheckRunning = false;
+      client.workerManager.timerStartedOnMain = true;
+      startTimerOnMain();
+    }
+  };
+
+  if (client.workerManager
+    && client.workerManager.workerInstance) {
+    if (!client.workerManager.networkCheckRunning) {
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | starting the network check timer from the worker thread`);
+      const timerCallback = sendOptions.bind(null, client, messageCheckTimeout);
+      client.workerManager.startNetworkCheckTimer(
+        networkChangeInterval,
+        timerCallback,
+        responseCallback,
+      );
+    } else {
+      Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | network check timer already running in the worker thread`);
+    }
+  } else if (client.networkChangeInterval === null) {
+    Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | starting the network check timer from the main thread`);
+    startTimerOnMain();
   }
 };
 
@@ -250,9 +287,8 @@ export const resetPingPong = ({
   networkChangeInterval,
   messageCheckTimeout,
 }: PingPong) => {
-  clearInterval(client.networkChangeInterval as any);
-  client.networkChangeInterval = null;
   Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Re-Starting the ping-pong with interval: ${networkChangeInterval} and timeout: ${messageCheckTimeout}`);
+  clearOptionsInterval(client);
   startPingPong({
     client,
     messageCheckTimeout,
