@@ -182,7 +182,6 @@ describe('plivoWebSdk', function () {
         done(new Error('bailing'));
       }
       waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
-        console.log('dafsfdgf');
         waitUntilExecuted([events['client2-onIncomingCall'], events['client3-onIncomingCall']], false, done, 1000);
       }, 500);
 
@@ -199,6 +198,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // eslint-disable-next-line no-undef
     it('incoming call should be rejected from the registered tab', (done) => {
       console.log('incoming call should be rejected from the registered tab');
       if (bail) {
@@ -212,6 +212,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // eslint-disable-next-line no-undef
     it('incoming call should be ignored from the registered tab', (done) => {
       console.log('incoming call should be ignored from the registered tab');
       if (bail) {
@@ -228,6 +229,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // eslint-disable-next-line no-undef
     it('incoming call should be muted and unmuted from the registered tab', (done) => {
       console.log('incoming call should be ignored from the registered tab');
       if (bail) {
@@ -237,7 +239,6 @@ describe('plivoWebSdk', function () {
       function unmute() {
         spyOnSocket.resetHistory();
         Client1.unmute();
-        console.log('value of unmute called is ', spyOnSocket.calledWith(sinon.match.has("msg", "TOGGLE_MUTE")));
         events['client1-onUnmute'] = {
           status: spyOnSocket.calledWith(sinon.match.has("msg", "TOGGLE_MUTE")),
         };
@@ -279,7 +280,6 @@ describe('plivoWebSdk', function () {
         });
       }, 1000);
       waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
-        console.log('redirecting the call');
         if (!Client2.reject() && !Client2.ignore()) {
           Client1.redirect(Client2.getContactUri());
         }
@@ -316,6 +316,7 @@ describe('plivoWebSdk', function () {
       }, TIMEOUT);
     });
 
+    // eslint-disable-next-line no-undef
     it('incoming call should be muted/unmuted from the unregistered tab', (done) => {
       console.log('incoming call should be muted/unmuted from the unregistered tab');
       if (bail) {
@@ -326,18 +327,17 @@ describe('plivoWebSdk', function () {
       function unmute() {
         spyOnSocket.resetHistory();
         Client2.unmute();
-        console.log('value of unmute called is ', spyOnSocket.calledWith(sinon.match.has("msg", "TOGGLE_MUTE")));
         events['client2-onUnmute'] = {
           status: spyOnSocket.calledWith(sinon.match.has("msg", "TOGGLE_MUTE")),
         };
-        waitUntilExecuted([events['client2-onUnmute']], true, done, 50);
+        waitUntilExecuted([events['client2-onUnmute']], true, done, 5);
       }
 
       Client2.mute();
       events['client2-onMute'] = {
         status: spyOnSocket.calledWith(sinon.match.has("msg", "TOGGLE_MUTE")),
       };
-      waitUntilExecuted([events['client2-onMute']], true, unmute, 50);
+      waitUntilExecuted([events['client2-onMute']], true, unmute, 5);
       bailTimer = setTimeout(() => {
         bail = true;
         done(new Error('incoming call failed'));
@@ -385,8 +385,10 @@ describe('plivoWebSdk', function () {
         }, 10);
       };
 
+      spyOnSocket.resetHistory();
       events['client1-onCallAnswered'].status = false;
       Client4.call(primary_user);
+
       waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
         spyOnSocket = sinon.spy(Client1.statsSocket, "send");
         listenCallInsightsEvent('CALL_RINGING', () => {
@@ -400,7 +402,7 @@ describe('plivoWebSdk', function () {
             });
           });
         });
-      }, 500);
+      }, 50);
     });
 
     // eslint-disable-next-line no-undef
