@@ -23,8 +23,10 @@ describe('ValidateOptions', () => {
       allowMultipleIncomingCalls: false,
       closeProtection: false,
       maxAverageBitrate: 48000,
+      captureSDKCrashOnly: false,
       enableNoiseReduction: true,
       registrationRefreshTimer: 120,
+      stopAutoRegisterOnConnect: false,
       usePlivoStunServer: false,
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
@@ -91,6 +93,18 @@ describe('ValidateOptions', () => {
     expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(false);
     inputOptions.useDefaultAudioDevice = true;
     expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(true);
+  });
+
+  it('should check if stopAutoRegisterOnConnect is valid', () => {
+    const inputOptions = { ...options };
+    inputOptions.stopAutoRegisterOnConnect = "test";
+    expect(validateOptions(inputOptions).stopAutoRegisterOnConnect).toStrictEqual(false);
+    inputOptions.stopAutoRegisterOnConnect = 12345;
+    expect(validateOptions(inputOptions).stopAutoRegisterOnConnect).toStrictEqual(false);
+    inputOptions.stopAutoRegisterOnConnect = 12345.12345;
+    expect(validateOptions(inputOptions).stopAutoRegisterOnConnect).toStrictEqual(false);
+    inputOptions.stopAutoRegisterOnConnect = true;
+    expect(validateOptions(inputOptions).stopAutoRegisterOnConnect).toStrictEqual(true);
   });
 
   it('should check if usePlivoStunServer is valid', () => {

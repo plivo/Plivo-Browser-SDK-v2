@@ -8,6 +8,8 @@ import { Logger } from '../logger';
 import { Client, PlivoObject } from '../client';
 // eslint-disable-next-line import/no-cycle
 import { FeedbackObject } from '../utils/feedback';
+/* eslint-disable import/no-cycle */
+import { checkTimeDiff } from '../managers/util';
 
 export interface CallStatsValidationResponse {
   data: string;
@@ -207,6 +209,25 @@ export const fetchIPAddress = (
   const message = new SipLib.Message(client.phone as SipLib.UA);
   message.on('succeeded', (data) => {
     if (data.response && data.response.body) {
+      let timestamp = data.response.getHeader('X-Timestamp');
+      if (timestamp) {
+        timestamp = timestamp.slice(0, -3);
+        timestamp = timestamp.replace(".", "");
+        const time = parseInt(timestamp, 10);
+        client.timeDiff = checkTimeDiff(time);
+      } else {
+        client.timeDiff = 0;
+      }
+      const receivedIP = (data.response.parseHeader('via') as any).received;
+      const receivedPort = (data.response.parseHeader('via') as any).rport;
+      const registrarIP = data.response.getHeaders('X-PlivoRegistrarIP')[0] ?? '';
+      client.contactUri = {
+        name: client.userName,
+        ip: receivedIP,
+        port: receivedPort,
+        protocol: 'transport=ws',
+        registrarIP,
+      };
       resolve(data.response.body);
     } else {
       resolve(new Error("couldn't retrieve ipaddress"));
@@ -215,5 +236,8 @@ export const fetchIPAddress = (
   message.on('failed', () => {
     resolve(new Error("couldn't retrieve ipaddress"));
   });
-  message.send('admin', 'ipAddress', 'MESSAGE');
+
+  message.send('admin', 'ipAddress', 'MESSAGE', {
+    extraHeaders: [`X-PlivoEndpoint: ${client.userName}`],
+  });
 });

@@ -9,6 +9,119 @@ import { AudioLevel } from '../media/audioLevel';
 import { processStreams } from './mediaMetrics';
 import { Logger } from '../logger';
 import { CallSession } from '../managers/callSession';
+import { getCurrentTime } from '../managers/util';
+
+export interface LocalCandidate {
+  id?: string;
+  address?: string;
+  port?: string;
+  relatedAddress?: string;
+  relatedPort?: string;
+  candidateType?: string;
+  usernameFragment?: string;
+}
+
+type LocalCandidateMap = {
+  [timestamp: string]: LocalCandidate;
+};
+
+export interface RemoteCandidate {
+  id?: string;
+  address?: string;
+  port?: string;
+  candidateType?: string;
+  usernameFragment?: string;
+}
+
+export interface CandidatePair {
+  availableOutgoingBitrate?: string;
+  consentRequestsSent?: number;
+  id?: string;
+  lastPacketReceivedTimestamp?: string;
+  lastPacketSentTimestamp?: string;
+  localCandidateId?: string;
+  nominated?: string;
+  packetsDiscardedOnSend?: string;
+  packetsReceived?: string;
+  packetsSent?: string;
+  remoteCandidateId?: string;
+  requestsReceived?: number;
+  requestsSent?: number;
+  responsesReceived?: number;
+  responsesSent?: number;
+  state?: string;
+  transportId?: string;
+  writable?: boolean;
+}
+
+export interface Transport{
+  id?: string;
+  dtlsRole?: string;
+  dtlsState?: string;
+  iceRole?: string;
+  iceState?: string;
+  packetsReceived?: string;
+  packetsSent?: string;
+  selectedCandidatePairChanges?: number;
+  selectedCandidatePairId?: string;
+}
+
+export interface OutboundRTP {
+  bytesSent?: number;
+  packetsSent?: number;
+  retransmittedBytesSent?: number;
+  retransmittedPacketsSent?: number;
+  transportId?: string;
+}
+
+export interface RemoteInboundRTP {
+  fractionLost?: number;
+  packetsLost?: number;
+  roundTripTime?: string;
+  roundTripTimeMeasurements?: number;
+  totalRoundTripTime?: string;
+  transportId?: string;
+}
+
+export interface InboundRTP {
+  bytesReceived?: number;
+  jitterBufferDelay?: string;
+  jitterBufferEmittedCount?: number;
+  jitterBufferMinimumDelay?: string;
+  jitterBufferTargetDelay?: string;
+  packetsDiscarded?: number;
+  packetsLost?: number;
+  packetsReceived?: number;
+  totalSamplesDuration?: string;
+  totalSamplesReceived?: string;
+  transportId?: string
+}
+
+export interface RemoteOutboundRTP {
+  bytesSent?: number;
+  packetsSent?: number;
+  reportsSent?: number;
+  totalRoundTripTime?: string;
+  transportId?: string;
+}
+
+export interface StatsDump {
+  msg: string;
+  callUUID: string;
+  xcallUUID: string;
+  source: string;
+  timeStamp: number,
+  version: string,
+  changedCandidatedInfo: LocalCandidateMap,
+  localCandidate: LocalCandidate;
+  remoteCandidate: RemoteCandidate;
+  transport: Transport;
+  candidatePair: CandidatePair;
+  outboundRTP: OutboundRTP;
+  remoteInboundRTP: RemoteInboundRTP;
+  inboundRTP: InboundRTP;
+  remoteOutboundRTP: RemoteOutboundRTP;
+}
 
 export interface StatsLocalStream {
   ssrc?: number;
@@ -419,6 +532,18 @@ const sendStats = function (statMsg: StatsObject): void {
   }
 };
 
+const sendStatsDump = function (stream: StatsDump): void {
+  const client: Client = this;
+  if (
+    client.statsSocket
+    && client.callstatskey
+    && client.rtp_enabled
+  ) {
+    Plivo.log.debug(`${C.LOGCAT.CALL} | Sending CALL_STATS_DUMP Event`);
+    client.statsSocket.send(stream, client);
+  }
+};
+
 /**
  * calculate media setup time
  * @param {Client} client
@@ -444,7 +569,7 @@ const processStats = function (stream: RtpStatsStream): void {
     callUUID: getStatsRef.callUUID,
     corelationId: getStatsRef.corelationId,
     userName: getStatsRef.userName,
-    timeStamp: Date.now(),
+    timeStamp: getCurrentTime(getStatsRef.clientScope),
     domain: C.DOMAIN,
     source: C.STATS_SOURCE,
     version: C.STATS_VERSION,
@@ -558,6 +683,20 @@ const handleSafariChanges = function (stream: RtpStatsStream): RtpStatsStream {
   return stream;
 };
 
+const checkIfIdPresent = function (candidateInfo: LocalCandidateMap, id: string)
+  : Promise<boolean> {
+  return new Promise((resolve) => {
+    let idPresent: boolean = false;
+    Object.keys(candidateInfo).forEach((timestamp) => {
+      const localCandidate = candidateInfo[timestamp];
+      if (localCandidate.id === id) {
+        idPresent = true;
+      }
+    });
+    resolve(idPresent);
+  });
+};
+
 /**
  * Get RTP stats.
  * @param {RtpStatsStream} stream - holds local and remote stat details
@@ -566,8 +705,8 @@ export const handleWebRTCStats = function (stream: RtpStatsStream): void {
   stream.codec = getCodecName.call(this);
   const senders = this.pc.getSenders();
   if (senders) {
-    senders[0]
-      .getStats()
+    this.rtpsender = senders[0].getStats();
+    this.rtpsender
       .then((senderResults: any[]) => {
         Array.from(senderResults.values()).forEach((stats: any) => {
           if (stats.type === 'outbound-rtp') {
@@ -614,16 +753,46 @@ export const handleWebRTCStats = function (stream: RtpStatsStream): void {
           ) {
             stream.local.rtt = stats.currentRoundTripTime;
           }
+          if (stats.type === 'local-candidate') {
+            stream.networkType = stats.networkType;
+            const lc: LocalCandidate = {
+              id: stats.id,
+              address: stats.address,
+              port: stats.port,
+              relatedAddress: stats.relatedAddress,
+              relatedPort: stats.relatedPort,
+            };
+            if (this.localCandidateInfo) {
+              const isEmpty = Object.keys(this.localCandidateInfo).length === 0;
+              if (isEmpty) {
+                this.localCandidateInfo[stats.timestamp] = lc;
+              } else {
+                try {
+                  // Call the function and await the result
+                  checkIfIdPresent(this.localCandidateInfo, stats.id).then(
+                    (idPresent: boolean) => {
+                      // Handle the result here
+                      if (idPresent === false) {
+                        Plivo.log.debug(`${C.LOGCAT.CALL} | Local Candidate Info Change`);
+                        this.localCandidateInfo[stats.timestamp] = lc;
+                      }
+                    },
+                  );
+                } catch (error) {
+                  // Handle any errors that may occur during the execution of checkIfIdPresent
+                  Plivo.log.debug(`${C.LOGCAT.CALL} | Error in getStats LocalStreams API during Local Candidate Info Check `, error.message);
+                }
+              }
+            }
+          }
           if (stats.type === 'media-source' && this.clientScope.browserDetails.browser === 'chrome') {
             stream.local.googEchoCancellationReturnLoss = Math.floor(stats.echoReturnLoss);
             // eslint-disable-next-line max-len
             stream.local.googEchoCancellationReturnLossEnhancement = Math.floor(stats.echoReturnLossEnhancement);
           }
-          if (stats.type === 'local-candidate') {
-            stream.networkType = stats.networkType;
-          }
         });
 
+        this.rtpreceiver = this.pc.getReceivers()[0].getStats();
         // get remote stream stats
         let jitterBufferDelay = 0;
         this.pc
@@ -713,6 +882,12 @@ export class GetRTPStats {
    * @private
    */
   pc: RTCPeerConnection;
+
+  rtpsender: RTCStatsReport;
+
+  rtpreceiver: RTCStatsReport;
+
+  localCandidateInfo: LocalCandidateMap = {};
 
   /**
    * Unique identifier generated for a call by server
@@ -879,10 +1054,144 @@ export class GetRTPStats {
     startStatsTimer.call(this);
   }
 
+  public sendCallStatsDump = function sendCallStatsDump(stream: StatsDump): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const senders = this.rtpsender;
+      if (senders) {
+        senders
+          .then((senderResults: any[]) => {
+            Array.from(senderResults.values()).forEach((stats: any) => {
+              if (stats.type === 'local-candidate') {
+                stream.localCandidate.id = stats.id;
+                stream.localCandidate.address = stats.address;
+                stream.localCandidate.port = stats.port;
+                stream.localCandidate.relatedAddress = stats.relatedAddress;
+                stream.localCandidate.relatedPort = stats.relatedPort;
+                stream.localCandidate.candidateType = stats.candidateType;
+                stream.localCandidate.usernameFragment = stats.usernameFragment;
+              }
+              if (stats.type === 'remote-candidate') {
+                stream.remoteCandidate.id = stats.id;
+                stream.remoteCandidate.address = stats.address;
+                stream.remoteCandidate.port = stats.port;
+                stream.remoteCandidate.candidateType = stats.candidateType;
+                stream.remoteCandidate.usernameFragment = stats.usernameFragment;
+              }
+              if (stats.type === 'transport') {
+                stream.transport.id = stats.id;
+                stream.transport.dtlsRole = stats.dtlsRole;
+                stream.transport.dtlsState = stats.dtlsState;
+                stream.transport.iceRole = stats.iceRole;
+                stream.transport.iceState = stats.iceState;
+                stream.transport.packetsReceived = stats.packetsReceived;
+                stream.transport.packetsSent = stats.packetsSent;
+                stream.transport.selectedCandidatePairChanges = stats.selectedCandidatePairChanges;
+                stream.transport.selectedCandidatePairId = stats.selectedCandidatePairId;
+              }
+              if (stats.type === 'candidate-pair') {
+                stream.candidatePair.id = stats.id;
+                stream.candidatePair.availableOutgoingBitrate = stats.availableOutgoingBitrate;
+                stream.candidatePair.consentRequestsSent = stats.consentRequestsSent;
+                // eslint-disable-next-line max-len
+                stream.candidatePair.lastPacketReceivedTimestamp = stats.lastPacketReceivedTimestamp;
+                stream.candidatePair.lastPacketSentTimestamp = stats.lastPacketSentTimestamp;
+                stream.candidatePair.localCandidateId = stats.localCandidateId;
+                stream.candidatePair.remoteCandidateId = stats.remoteCandidateId;
+                stream.candidatePair.nominated = stats.nominated;
+                stream.candidatePair.packetsDiscardedOnSend = stats.packetsDiscardedOnSend;
+                stream.candidatePair.packetsReceived = stats.packetsReceived;
+                stream.candidatePair.packetsSent = stats.packetsSent;
+                stream.candidatePair.requestsReceived = stats.requestsReceived;
+                stream.candidatePair.requestsSent = stats.requestsSent;
+                stream.candidatePair.responsesReceived = stats.responsesReceived;
+                stream.candidatePair.responsesSent = stats.responsesSent;
+                stream.candidatePair.state = stats.state;
+                stream.candidatePair.transportId = stats.transportId;
+                stream.candidatePair.writable = stats.writable;
+              }
+
+              if (stats.type === 'outbound-rtp') {
+                stream.outboundRTP.bytesSent = stats.bytesSent;
+                stream.outboundRTP.packetsSent = stats.packetsSent;
+                stream.outboundRTP.retransmittedBytesSent = stats.retransmittedBytesSent;
+                stream.outboundRTP.retransmittedPacketsSent = stats.retransmittedBytesSent;
+                stream.outboundRTP.transportId = stats.transportId;
+              }
+              if (stats.type === 'remote-inbound-rtp') {
+                stream.remoteInboundRTP.fractionLost = stats.fractionLost;
+                stream.remoteInboundRTP.packetsLost = stats.packetsLost;
+                stream.remoteInboundRTP.roundTripTime = stats.roundTripTime;
+                stream.remoteInboundRTP.roundTripTimeMeasurements = stats.roundTripTimeMeasurements;
+                stream.remoteInboundRTP.totalRoundTripTime = stats.totalRoundTripTime;
+                stream.remoteInboundRTP.transportId = stats.transportId;
+              }
+            });
+            stream.changedCandidatedInfo = this.localCandidateInfo;
+          })
+          .catch((e: any) => {
+            Plivo.log.debug(`${C.LOGCAT.CALL} | Error during CALL_STATS_DUMP event creation `, e.message);
+          });
+      }
+      const receivers = this.rtpreceiver;
+      if (receivers) {
+        receivers
+          .then((receiverResults: any[]) => {
+            Array.from(receiverResults.values()).forEach((stats: any) => {
+              if (stats.type === 'inbound-rtp') {
+                stream.inboundRTP.bytesReceived = stats.bytesReceived;
+                stream.inboundRTP.jitterBufferDelay = stats.jitterBufferDelay;
+                stream.inboundRTP.jitterBufferEmittedCount = stats.jitterBufferEmittedCount;
+                stream.inboundRTP.jitterBufferMinimumDelay = stats.jitterBufferMinimumDelay;
+                stream.inboundRTP.jitterBufferTargetDelay = stats.jitterBufferTargetDelay;
+                stream.inboundRTP.packetsDiscarded = stats.packetsDiscarded;
+                stream.inboundRTP.packetsLost = stats.packetsLost;
+                stream.inboundRTP.packetsReceived = stats.packetsReceived;
+                stream.inboundRTP.totalSamplesDuration = stats.totalSamplesDuration;
+                stream.inboundRTP.totalSamplesReceived = stats.totalSamplesDuration;
+                stream.inboundRTP.transportId = stats.transportId;
+              }
+              if (stats.type === 'remote-outbound-rtp') {
+                stream.remoteOutboundRTP.bytesSent = stats.bytesSent;
+                stream.remoteOutboundRTP.packetsSent = stats.packetsSent;
+                stream.remoteOutboundRTP.reportsSent = stats.reportsSent;
+                stream.remoteOutboundRTP.totalRoundTripTime = stats.totalRoundTripTime;
+                stream.remoteOutboundRTP.transportId = stats.transportId;
+              }
+            });
+            Plivo.log.debug(`${C.LOGCAT.CALL} | Created CALL_STATS_DUMP Event`);
+            sendStatsDump.call(this.clientScope, stream);
+          })
+          .catch((e: any) => {
+            Plivo.log.debug(`${C.LOGCAT.CALL} | Error during CALL_STATS_DUMP event creation `, e.message);
+            reject(new Error('Error in getStats LocalStreams API'));
+          });
+      }
+      resolve();
+    });
+  };
+
   /**
    * Stop analysing audio levels for local and remote streams.
    */
-  public stop = (): void => {
+  public stop = async (): Promise<void> => {
+    const stream: StatsDump = {
+      msg: 'CALL_STATS_DUMP',
+      callUUID: this.callUUID,
+      xcallUUID: this.xcallUUID,
+      source: C.STATS_SOURCE,
+      timeStamp: Date.now(),
+      version: C.STATS_VERSION,
+      changedCandidatedInfo: {},
+      localCandidate: {},
+      remoteCandidate: {},
+      transport: {},
+      candidatePair: {},
+      outboundRTP: {},
+      remoteInboundRTP: {},
+      inboundRTP: {},
+      remoteOutboundRTP: {},
+    };
+    this.sendCallStatsDump(stream);
     this.localAudioLevelHelper.stop();
     this.remoteAudioLevelHelper.stop();
   };

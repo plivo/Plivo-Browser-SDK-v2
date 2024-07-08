@@ -139,6 +139,8 @@ export class NoiseSuppressionEffect {
     try {
       if (this.originalMediaTrack && this.outputMediaTrack) {
         this.originalMediaTrack.enabled = this.outputMediaTrack.enabled;
+        this.originalMediaTrack?.stop();
+        this.outputMediaTrack?.stop();
       }
 
       this.audioDestination?.disconnect();

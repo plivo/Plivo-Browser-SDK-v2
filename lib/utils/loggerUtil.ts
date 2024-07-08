@@ -10,6 +10,8 @@ export class LoggerUtil {
 
   private userName: string = "";
 
+  private identifier: string = "";
+
   private client: Client;
 
   constructor(client: Client) {
@@ -42,5 +44,13 @@ export class LoggerUtil {
 
   setUserName(value: string): void {
     this.userName = value;
+  }
+
+  setIdentifier(identifier: string) {
+    this.identifier = identifier;
+  }
+
+  getIdentifier(): string {
+    return this.identifier;
   }
 }

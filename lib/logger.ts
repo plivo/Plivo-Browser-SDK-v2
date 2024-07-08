@@ -123,7 +123,23 @@ class PlivoLogger {
     if (arg1.includes(LOGCAT.NIMBUS)) flag = true;
     if (arg1.includes(LOGCAT.WS)) flag = true;
 
-    if (flag) Storage.getInstance().setData(premsg, arg1, arg2);
+    if (flag) {
+      if (!process.env.PLIVO_ENV) return;
+      (navigator as any).locks.request('PLIVO_LOG', () => {
+        const storageInstance = Storage.getInstance();
+        try {
+          storageInstance.setData(premsg, arg1, arg2);
+        } catch (e) {
+          if (e.name === 'QuotaExceededError') {
+            storageInstance.clear();
+            storageInstance.setData(premsg, 'NIMBUS | Storage is full. clearing it.', '');
+          } else {
+            storageInstance.setData(premsg, 'NIMBUS | Error while storing logs', e.name);
+          }
+          storageInstance.setData(premsg, arg1, arg2);
+        }
+      });
+    }
   };
 
   /**
@@ -144,7 +160,7 @@ class PlivoLogger {
       if (enableDate) msdate = `[${date.toISOString().substring(0, 10)} ${date.toISOString().split('T')[1].split('.')[0]}.${date.getUTCMilliseconds()}]`;
       let premsg = "";
       if (this.loggerUtil) {
-        premsg = `${msdate} ${loggingName} : ${this.loggerUtil?.getUserName()} ${this.loggerUtil?.getSipCallID()} [${ucFilter}] `;
+        premsg = `${msdate} ${loggingName} [${this.loggerUtil.getIdentifier()}] : ${this.loggerUtil?.getUserName()} ${this.loggerUtil?.getSipCallID()} [${ucFilter}] `;
       } else {
         premsg = `${msdate} ${loggingName} :[${ucFilter}] `;
       }
@@ -207,7 +223,7 @@ class PlivoLogger {
     index: number,
     callUUID: string = "",
     userName: string | null = "",
-  ): Promise<string> => new Promise((resolve, reject) => {
+  ): Promise<string> => new Promise((resolve) => {
     const sdkVersionParse = getSDKVersion();
     const deviceOs = getOS();
 
@@ -245,7 +261,7 @@ class PlivoLogger {
         .then((response) => {
           if (!response.ok) {
             this.info(`${LOGCAT.NIMBUS} | Error while uploading logs to nimbus`);
-            reject(new Error('failure'));
+            resolve('failure');
           } else {
             index += 1;
             if (logs.length > index) {
@@ -260,10 +276,10 @@ class PlivoLogger {
 
           response.text();
         })
-        .then((result) => console.log(result))
+        .then(() => console.log('logs synced'))
         .catch((error) => {
           console.log('error', error);
-          reject(error);
+          resolve(error);
         });
     }
   });
@@ -274,22 +290,23 @@ class PlivoLogger {
   send = (client: Client): void => {
     if (!process.env.PLIVO_ENV) return;
 
-    const myHeaders = new Headers();
-    myHeaders.append("Content-Type", "application/json");
+    (navigator as any).locks.request('PLIVO_LOG', () => {
+      const myHeaders = new Headers();
+      myHeaders.append("Content-Type", "application/json");
+      const data = Storage.getInstance().getData();
 
-    const data = Storage.getInstance().getData();
+      if (!data) {
+        console.log("No data to send");
+        return;
+      }
+      if (!client.userName) return;
 
-    if (!data) {
-      console.log("No data to send");
-      return;
-    }
-
-    if (!client.userName) return;
-
-    const parsedData = JSON.parse(data);
-    const arr = parsedData.split("\n");
-    const batchData = this._getLogsBatchData(arr, 20000);
-    this._sendBatchedLogsToServer(client, myHeaders, batchData, 0);
+      const parsedData = JSON.parse(data);
+      const arr = parsedData.split("\n");
+      const batchData = this._getLogsBatchData(arr, 20000);
+      // eslint-disable-next-line consistent-return
+      return this._sendBatchedLogsToServer(client, myHeaders, batchData, 0);
+    });
   };
 }
 

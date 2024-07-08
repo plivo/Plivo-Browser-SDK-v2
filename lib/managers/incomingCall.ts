@@ -65,6 +65,30 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
+
+/**
+ * Play ringtone for an incoming call.
+ */
+export const playRingtone = () : void => {
+  if (cs.ringToneFlag !== false && !cs._currentSession) {
+    if (!mobileBrowserCheck()) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Not a mobile browser. Playing ring tone`);
+      playAudio(RINGTONE_ELEMENT_ID);
+    } else if (!isBrowserInBackground) {
+      Plivo.log.debug(`${LOGCAT.CALL} | Not in background. Playing ring tone`);
+      playAudio(RINGTONE_ELEMENT_ID);
+    }
+    Plivo.log.debug(`${LOGCAT.CALL} | incoming call ringtone started`);
+    isIncomingCallRinging = true;
+  }
+};
+export const stopRingtone = (): void => {
+  if (cs.ringToneView && !cs.ringToneView.paused) {
+    Plivo.log.debug(`${LOGCAT.CALL} | incoming call ringtone stopped`);
+    stopAudio(RINGTONE_ELEMENT_ID);
+  }
+};
+
 /**
  * Update incoming call information.
  * @param {UserAgentNewRtcSessionEvent} evt - rtcsession information
@@ -80,9 +104,9 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
       cs.callUUID = call.callUUID;
       (cs as any).direction = call.direction;
     }
-    call.addConnectionStage(`I-invite@${getCurrentTime()}`);
+    call.addConnectionStage(`I-invite@${getCurrentTime(cs)}`);
     call.updateSignallingInfo({
-      invite_time: getCurrentTime(),
+      invite_time: getCurrentTime(cs),
     });
 
     Plivo.log.debug(`callSession - ${call.callUUID}`);
@@ -94,14 +118,20 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
  */
 const onProgress = (incomingCall: CallSession) => (): void => {
   // allow incomming call only if permission granted
-  incomingCall.onRinging(cs);
+  // send CALL_RINGING if the tab is primary and registered
+  const inviteURI = (cs.getCurrentSession()?.session as any)._request.ruri._user;
+  if (inviteURI !== cs.userName) {
+    Plivo.log.debug(`${LOGCAT.CALL} | inviteURI: ${inviteURI} does not match the username`);
+    incomingCall.onRinging(cs);
+  }
   Plivo.log.debug(`${LOGCAT.CALL} | Incoming call ringing`);
-  incomingCall.addConnectionStage(`progress-180@${getCurrentTime()}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | Incoming Call Extra Headers : ${JSON.stringify(incomingCall.extraHeaders)}`);
+  incomingCall.addConnectionStage(`progress-180@${getCurrentTime(cs)}`);
   incomingCall.updateSignallingInfo({
-    call_progress_time: getCurrentTime(),
+    call_progress_time: getCurrentTime(cs),
   });
   incomingCall.setState(incomingCall.STATE.RINGING);
-  incomingCall.setPostDialDelayEndTime(getCurrentTime());
+  incomingCall.setPostDialDelayEndTime(getCurrentTime(cs));
   Plivo.log.debug(`${LOGCAT.CALL} | call ringing with 180 code, incoming call in progress`);
   const callerUri = incomingCall.session.remote_identity.uri.toString();
   // Fetch the caller name
@@ -109,38 +139,39 @@ const onProgress = (incomingCall: CallSession) => (): void => {
   // if already on an incomingCall then do not play the ringtone
   Plivo.log.debug(`${LOGCAT.CALL} | ringtone enabled : ${cs.ringToneFlag}`);
   Plivo.log.debug(`${LOGCAT.CALL} | no session is active currently: ${!cs._currentSession}`);
-  if (cs.ringToneFlag !== false && !cs._currentSession) {
-    if (!mobileBrowserCheck()) {
-      Plivo.log.debug(`${LOGCAT.CALL} | Not a mobile browser. Playing ring tone`);
-      playAudio(RINGTONE_ELEMENT_ID);
-    } else if (!isBrowserInBackground) {
-      Plivo.log.debug(`${LOGCAT.CALL} | Not in background. Playing ring tone`);
-      playAudio(RINGTONE_ELEMENT_ID);
-    }
-    Plivo.log.debug(`${LOGCAT.CALL} | incoming call ringtone started`);
-    isIncomingCallRinging = true;
-  }
   const callerId = `${callerUri.substring(
     4,
     callerUri.indexOf('@'),
   )}@${DOMAIN}`;
+
   const emitIncomingCall = () => {
+    const callInfo = incomingCall.getCallInfo('local');
+    if (inviteURI === cs.userName) {
+      Plivo.log.debug(`${LOGCAT.CALL} | setting callInfo reason to redirected since inviteURI: ${inviteURI}`);
+      callInfo.reason = 'redirected';
+    }
     Plivo.log.debug(`${LOGCAT.CALL} | Emitting onIncomingCall`);
     cs.emit(
       'onIncomingCall',
       callerId,
       incomingCall.extraHeaders,
-      incomingCall.getCallInfo("local"),
+      callInfo,
       callerName,
     );
   };
+
   cs.noiseSuppresion.setLocalMediaStream().then(() => {
+    // play ringtone if the tab is primary and registered
+    if (inviteURI !== cs.userName) {
+      Plivo.log.debug(`${LOGCAT.CALL} | starting ringtone`);
+      playRingtone();
+    }
     emitIncomingCall();
   }).catch(() => {
+    Plivo.log.debug(`${LOGCAT.CALL} | Media stream cannot be fetched in ringing state. Emitting onIncomingCall`);
     emitIncomingCall();
   });
   addCloseProtectionListeners.call(cs);
-  Plivo.log.debug(`${LOGCAT.CALL} | Incoming Call Extra Headers : ${JSON.stringify(incomingCall.extraHeaders)}`);
 };
 
 /**
@@ -583,11 +614,11 @@ export const answerIncomingCall = function (
 export const handleIgnoreState = (curIncomingCall: CallSession): void => {
   curIncomingCall.setState(curIncomingCall.STATE.IGNORED);
   curIncomingCall.updateSignallingInfo({
-    hangup_time: getCurrentTime(),
+    hangup_time: getCurrentTime(cs),
     hangup_party: 'local',
     hangup_reason: 'Ignored',
     signalling_errors: {
-      timestamp: getCurrentTime(),
+      timestamp: getCurrentTime(cs),
       error_code: 'Ignored',
       error_description: 'Ignored',
     },

@@ -10,6 +10,7 @@ import { Client, ConfiguationOptions } from '../client';
 import * as C from '../constants';
 import { FeedbackObject } from '../utils/feedback';
 import getBrowserDetails from '../utils/browserDetection';
+import { getCurrentTime } from '../managers/util';
 
 export interface AnsweredEvent{
   msg: string;
@@ -124,14 +125,14 @@ const Plivo = { log: Logger };
  * @returns Stat message with call information
  */
 export const addCallInfo = function (
-  callSession: CallSession, statMsg: any, callstatskey: string, userName: string,
+  callSession: CallSession, statMsg: any, callstatskey: string, userName: string, timeStamp: number,
 ): object {
   const obj = statMsg;
   obj.callstats_key = callstatskey;
   obj.callUUID = callSession.sipCallID;
   obj.corelationId = callSession.sipCallID;
   obj.xcallUUID = callSession.callUUID;
-  obj.timeStamp = Date.now();
+  obj.timeStamp = timeStamp;
   obj.userName = userName;
   obj.domain = C.DOMAIN;
   obj.source = C.STATS_SOURCE;
@@ -152,7 +153,13 @@ export const sendEvents = function (statMsg: any, session: CallSession): void {
     && session
     && session.sipCallID
   ) {
-    const obj = addCallInfo(session, statMsg, client.callstatskey, client.userName as string);
+    const obj = addCallInfo(
+      session,
+      statMsg,
+      client.callstatskey,
+      client.userName as string,
+      getCurrentTime(client),
+    );
     client.statsSocket.send(obj, client);
     // To do : Initiate unregister incase when call gets extended after token expiry
     if (client.isUnregisterPending === true) {
