@@ -390,8 +390,8 @@ describe('plivoWebSdk', function () {
       Client4.call(primary_user);
 
       waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
-        console.log('received on incoming call');
         spyOnSocket = sinon.spy(Client1.statsSocket, "send");
+        console.log('received on incoming call');
         listenCallInsightsEvent('CALL_RINGING', () => {
           console.log('received call ringing');
           Client1.answer();
@@ -407,7 +407,7 @@ describe('plivoWebSdk', function () {
             });
           });
         });
-      }, 500);
+      }, 50);
     });
 
     // eslint-disable-next-line no-undef
