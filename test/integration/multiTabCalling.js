@@ -385,9 +385,12 @@ describe('plivoWebSdk', function () {
         }, 10);
       };
 
+      spyOnSocket.resetHistory();
       events['client1-onCallAnswered'].status = false;
       Client4.call(primary_user);
+
       waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
+        console.log('received on incoming call');
         spyOnSocket = sinon.spy(Client1.statsSocket, "send");
         listenCallInsightsEvent('CALL_RINGING', () => {
           console.log('received call ringing');
