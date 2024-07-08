@@ -5,7 +5,7 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## v2.2.11-beta.0 (released@ 08-07-2024)
+## v2.2.12-beta.0 (released@ 08-07-2024)
 
 **Features**
 * Added support for connecting and registering the SDK independently: If the `stopAutoRegisterOnConnect` flag is set to true, the `login()` method will only connect the SDK to Plivo servers. Default is set to `false`. 
