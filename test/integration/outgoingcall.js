@@ -325,7 +325,7 @@ describe("plivoWebSdk", function () {
 
     // eslint-disable-next-line no-undef
     it("multiple outbound calls to the same user should ring", (done) => {
-      console.log('calling call method multiple times should only allow first call to go through');
+      console.log('multiple outbound calls to the same user should ring');
       if (bail) {
         done(new Error("Bailing"));
         return;
@@ -360,7 +360,7 @@ describe("plivoWebSdk", function () {
 
     // eslint-disable-next-line no-undef
     it("multiple outbound calls to the different user should ring", (done) => {
-      console.log('calling call method multiple times should only allow first call');
+      console.log('multiple outbound calls to the different user should ring');
       if (bail) {
         done(new Error("Bailing"));
         return;
