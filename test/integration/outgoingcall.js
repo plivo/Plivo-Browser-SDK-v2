@@ -390,7 +390,7 @@ describe("plivoWebSdk", function () {
           if (Client1._currentSession.extraHeaders && Client1._currentSession.extraHeaders['X-PH-plivoHeaders'] === '1' && Client1._currentSession.dest === 'user1') {
             done();
           }
-        }, 200);
+        }, 20);
       }, 1000);
       bailTimer = setTimeout(() => {
         bail = true;
