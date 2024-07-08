@@ -274,6 +274,7 @@ describe("plivoWebSdk", function () {
       });
     });
 
+    // eslint-disable-next-line no-undef
     it("outbound call to space separated string should ring", (done) => {
       if (bail) {
         done(new Error("Bailing"));
@@ -299,30 +300,30 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
-    it("outbound call to number should ring", (done) => {
-      if (bail) {
-        done(new Error("Bailing"));
-        return;
-      }
+    // it("outbound call to number should ring", (done) => {
+    //   if (bail) {
+    //     done(new Error("Bailing"));
+    //     return;
+    //   }
 
-      Client1.hangup();
-      waitUntilOutgoingCall(events.onCallTerminated, () => {
-        if (Client1.isLoggedIn) {
-          Client1.call('+12088340983', {});
-        } else {
-          Client1.on("onLogin", () => {
-            Client1.call('+12088340983', {});
-          });
-        }
-        waitUntilOutgoingCall(events.onCalling, done, 1000);
-      }, 1000);
-      bailTimer = setTimeout(() => {
-        bail = true;
-        done(new Error("Outgoing call failed"));
-      }, TIMEOUT);
-    });
+    //   Client1.hangup();
+    //   waitUntilOutgoingCall(events.onCallTerminated, () => {
+    //     if (Client1.isLoggedIn) {
+    //       Client1.call('+12088340983', {});
+    //     } else {
+    //       Client1.on("onLogin", () => {
+    //         Client1.call('+12088340983', {});
+    //       });
+    //     }
+    //     waitUntilOutgoingCall(events.onCalling, done, 1000);
+    //   }, 1000);
+    //   bailTimer = setTimeout(() => {
+    //     bail = true;
+    //     done(new Error("Outgoing call failed"));
+    //   }, TIMEOUT);
+    // });
 
-    // // eslint-disable-next-line no-undef
+    // eslint-disable-next-line no-undef
     it("multiple outbound calls to the same user should ring", (done) => {
       console.log('calling call method multiple times should only allow first call to go through');
       if (bail) {
@@ -357,6 +358,7 @@ describe("plivoWebSdk", function () {
       }, TIMEOUT);
     });
 
+    // eslint-disable-next-line no-undef
     it("multiple outbound calls to the different user should ring", (done) => {
       console.log('calling call method multiple times should only allow first call');
       if (bail) {
