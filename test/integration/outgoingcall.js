@@ -368,6 +368,7 @@ describe("plivoWebSdk", function () {
 
       Client1.hangup();
       waitUntilOutgoingCall(events.onCallTerminated, () => {
+        console.log('starting the call')
         Client1.call('user1', {
           'X-PH-plivoHeaders': '1',
         });
@@ -384,6 +385,8 @@ describe("plivoWebSdk", function () {
           'X-PH-plivoHeaders': '5',
         });
         waitUntilOutgoingCall(events.onCalling, () => {
+          console.log('received the call ', Client1._currentSession.extraHeaders);
+
           if (Client1._currentSession.extraHeaders && Client1._currentSession.extraHeaders['X-PH-plivoHeaders'] === '1' && Client1._currentSession.dest === 'user1') {
             done();
           }
