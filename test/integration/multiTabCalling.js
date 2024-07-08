@@ -390,11 +390,15 @@ describe('plivoWebSdk', function () {
       waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
         spyOnSocket = sinon.spy(Client1.statsSocket, "send");
         listenCallInsightsEvent('CALL_RINGING', () => {
+          console.log('received call ringing');
           Client1.answer();
           listenCallInsightsEvent('CALL_ANSWERED', () => {
+            console.log('received call answered');
             listenCallInsightsEvent('CALL_STATS', () => {
+              console.log('received call stats');
               Client1.hangup();
               listenCallInsightsEvent('CALL_SUMMARY', () => {
+                console.log('received call summary');
                 done();
               });
             });
