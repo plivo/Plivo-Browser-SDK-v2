@@ -21,6 +21,7 @@
     "test": "npm-run-all test:integration test:unit",
     "test:unit": "export USERAGENT_OS=darwin && jest --testPathPattern=test/unit/ --coverage --colors",
     "test:unit-jenkins": "export USERAGENT_OS=linux && jest --testPathPattern=test/unit/ --coverage --colors",
+    "test:unit-windows": "npx cross-env USERAGENT_OS=win32 jest --testPathPattern=test/unit/ --coverage --colors",
     "test:integration": "karma start --single-run --browsers ChromeWebRTC karma.conf.js",
     "test:integration-safari": "karma start --single-run --browsers Safari karma.conf.js",
     "beta-version-patch": "npm version $(semver $npm_package_version -i prerelease --preid beta)",
