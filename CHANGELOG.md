@@ -5,6 +5,11 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.12 (released@ 24-07-2024)
+
+**Bug Fixes**
+* Renamed `DOMError` to `DOMException` in the underlying JSSIP library to support latest Typescript versions.
+
 ## v2.2.11 (released@ 07-06-2024)
 
 **Bug Fixes**
