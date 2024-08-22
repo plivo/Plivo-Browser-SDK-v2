@@ -107,7 +107,6 @@
     "pre-commit": "^1.2.2",
     "replace-in-file-webpack-plugin": "^1.0.6",
     "script-loader": "^0.7.2",
-    "selenium-webdriver": "4.0.0-alpha.7",
     "sinon": "^9.2.3",
     "source-map-loader": "^1.1.0",
     "string-replace-loader": "^2.3.0",
