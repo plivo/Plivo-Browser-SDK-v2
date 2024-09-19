@@ -5,6 +5,11 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.14 (released@ 19-09-2024)
+
+**Feature**
+* A new event named `onCallConnected` has been introduced, which is triggered when the PSTN callee starts ringing.
+
 ## v2.2.13 (released@ 22-08-2024)
 
 **Bug Fixes**
