@@ -345,6 +345,9 @@ const newDTMF = (evt: SessionNewDtmfEvent): void => {
  */
 const newInfo = (evt: SessionNewInfoEvent): void => {
   Plivo.log.info(`${LOGCAT.CALL} | Incoming Call | ${evt.originator} INFO packet with body : ${evt.info.body}`);
+  if (cs._currentSession && evt.info.body === "remote-party-ringing") {
+    cs.emit('onCallConnected', cs._currentSession.getCallInfo(evt.originator));
+  }
   if (evt.info.body === 'no-remote-audio') {
     cs.emit('remoteAudioStatus', false);
   }
