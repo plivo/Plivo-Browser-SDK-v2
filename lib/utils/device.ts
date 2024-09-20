@@ -54,6 +54,16 @@ export const getSDKVersion = (): SemverParserVersion => semverParser.parseSemVer
 );
 
 /**
+ * Get pre SDK version.
+ */
+export const getSdkVersionPre = (sdkVersionParse) => {
+  if (!sdkVersionParse.pre) return '';
+  const firstElement = sdkVersionParse.pre ? sdkVersionParse.pre[0] : '';
+  const secondElement = sdkVersionParse.pre ? sdkVersionParse.pre[1] : '';
+  return (firstElement !== '' && secondElement !== '') ? `${firstElement}.${secondElement}` : firstElement || secondElement || '';
+};
+
+/**
  * Get browser version.
  */
 const getBrowserVersion = (): string => {

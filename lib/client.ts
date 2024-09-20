@@ -910,6 +910,7 @@ export class Client extends EventEmitter {
       captureSDKCrashOnly: _options.captureSDKCrashOnly,
       permOnClick: _options.permOnClick,
       stopAutoRegisterOnConnect: _options.stopAutoRegisterOnConnect,
+      registrationRefreshTimer: _options.registrationRefreshTimer,
     };
     Plivo.log.info(`${C.LOGCAT.INIT} | Plivo SDK initialized successfully with options:- `, JSON.stringify(data), `in ${Plivo.log.level()} mode`);
     // instantiates event emitter

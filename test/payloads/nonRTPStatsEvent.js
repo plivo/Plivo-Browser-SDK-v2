@@ -11,6 +11,7 @@ const ANSWER_EVENT = {
   sdkVersionMajor: 2,
   sdkVersionMinor: 1,
   sdkVersionPatch: 31,
+  sdkVersionPre: 'beta.0',
   devicePlatform: "",
   deviceOs: "Unknown OS",
   setupOptions: {
@@ -70,6 +71,7 @@ const SUMMARY_EVENT = {
   sdkVersionMajor: 2,
   sdkVersionMinor: 1,
   sdkVersionPatch: 31,
+  sdkVersionPre: 'beta.0',
   devicePlatform: "",
   deviceOs: "Unknown OS",
   setupOptions: {

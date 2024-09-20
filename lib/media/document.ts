@@ -110,15 +110,15 @@ const getLocalMedia = function (
       .getUserMedia({ audio: audioConstraints, video: false })
       .then((stream) => {
         (window as any).localStream = stream;
-        Plivo.log.debug(`${LOGCAT.LOGIN} UserMedia:Access granted for audio`);
+        Plivo.log.debug(`${LOGCAT.LOGIN} | UserMedia:Access granted for audio`);
         cb(clientObject, { status: 'success', stream: true });
       })
       .catch((err) => {
-        Plivo.log.error(`${LOGCAT.LOGIN}UserMedia:Access to audio failed - ${err.name}`);
+        Plivo.log.error(`${LOGCAT.LOGIN} | UserMedia:Access to audio failed - ${err.name}`);
         cb(clientObject, { status: 'failure', error: err.name });
       });
   } else {
-    Plivo.log.error(`${LOGCAT.LOGIN} UserMedia:Not available`);
+    Plivo.log.error(`${LOGCAT.LOGIN} | UserMedia:Not available`);
     cb(clientObject, {
       status: 'failure',
       error: 'getUserMedia not supported',

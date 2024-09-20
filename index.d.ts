@@ -1763,6 +1763,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             sdkVersionMajor: number;
             sdkVersionMinor: number;
             sdkVersionPatch: number;
+            sdkVersionPre: any;
             devicePlatform: string;
             deviceOs: string;
             setupOptions: ConfiguationOptions;
@@ -1791,6 +1792,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             sdkVersionMajor: number;
             sdkVersionMinor: number;
             sdkVersionPatch: number;
+            sdkVersionPre: any;
             clientName: string;
             devicePlatform: string;
             deviceOs: string;
@@ -1813,6 +1815,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             sdkVersionMajor: number;
             sdkVersionMinor: number;
             sdkVersionPatch: number;
+            sdkVersionPre: any;
             clientName: string;
             devicePlatform: string;
             deviceOs: string;

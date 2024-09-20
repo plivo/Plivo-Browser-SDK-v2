@@ -9,6 +9,7 @@ import {
   getSDKVersion,
   getOS,
   SemverParserVersion,
+  getSdkVersionPre,
 } from '../utils/device';
 import {
   sendEvents,
@@ -61,6 +62,7 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
     sdkVersionMajor: sdkVersionParse.major,
     sdkVersionMinor: sdkVersionParse.minor,
     sdkVersionPatch: sdkVersionParse.patch,
+    sdkVersionPre: getSdkVersionPre(sdkVersionParse),
     clientName: getBrowserDetails().browser,
     devicePlatform: navigator.platform,
     deviceOs,
@@ -72,7 +74,6 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
     isAudioDeviceToggled: client.deviceToggledInCurrentSession,
     isNetworkChanged: client.networkChangeInCurrentSession,
     jsFramework: client.jsFramework,
-
   };
   if (client._currentSession) {
     summaryEvent.signalling = client._currentSession.signallingInfo;
