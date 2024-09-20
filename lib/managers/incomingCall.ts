@@ -593,7 +593,11 @@ export const answerIncomingCall = function (
       Plivo.log.debug(`${LOGCAT.CALL} | CallUUID is ${cs.callUUID}`);
       cs.callDirection = cs._currentSession.direction;
       getAnswerOptions().then((options) => {
-        curIncomingCall.session.answer(options);
+        if (cs.getCurrentSession()) {
+          curIncomingCall.session.answer(options);
+        } else {
+          Plivo.log.info(`${LOGCAT.CALL} | No Call session exists to answer the incoming call`);
+        }
       });
     } catch (err) {
       Plivo.log.error(`${LOGCAT.CALL} | error in answering incoming call : `, err.message);
