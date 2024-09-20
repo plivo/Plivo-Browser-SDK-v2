@@ -1,7 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint func-names: ["error", "as-needed"] */
 /* eslint-disable import/no-cycle */
-import { SemverParserVersion } from '../utils/device';
+import { getSdkVersionPre, SemverParserVersion } from '../utils/device';
 import pkg from '../../package.json';
 import * as device from '../utils/device';
 import { Logger } from '../logger';
@@ -24,6 +24,7 @@ export interface AnsweredEvent{
   sdkVersionMajor: number;
   sdkVersionMinor: number;
   sdkVersionPatch: number;
+  sdkVersionPre: any;
   devicePlatform: string;
   deviceOs: string;
   setupOptions: ConfiguationOptions;
@@ -54,6 +55,7 @@ export interface RingingEvent {
   sdkVersionMajor: number;
   sdkVersionMinor: number;
   sdkVersionPatch: number;
+  sdkVersionPre: any;
   clientName: string;
   devicePlatform: string;
   deviceOs: string;
@@ -78,6 +80,7 @@ export interface SummaryEvent {
   sdkVersionMajor: number;
   sdkVersionMinor: number;
   sdkVersionPatch: number;
+  sdkVersionPre: any;
   clientName: string;
   devicePlatform: string;
   deviceOs: string;
@@ -247,6 +250,7 @@ export const sendCallAnsweredEvent = function (
     sdkVersionMajor: sdkVersionParse.major,
     sdkVersionMinor: sdkVersionParse.minor,
     sdkVersionPatch: sdkVersionParse.patch,
+    sdkVersionPre: getSdkVersionPre(sdkVersionParse),
     devicePlatform: navigator.platform,
     deviceOs,
     noiseReduction: {
@@ -300,6 +304,7 @@ export const sendCallSummaryEvent = function (
     sdkVersionMajor: sdkVersionParse.major,
     sdkVersionMinor: sdkVersionParse.minor,
     sdkVersionPatch: sdkVersionParse.patch,
+    sdkVersionPre: getSdkVersionPre(sdkVersionParse),
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
@@ -346,6 +351,7 @@ export const sendCallRingingEvent = function (
     sdkVersionMajor: sdkVersionParse.major,
     sdkVersionMinor: sdkVersionParse.minor,
     sdkVersionPatch: sdkVersionParse.patch,
+    sdkVersionPre: getSdkVersionPre(sdkVersionParse),
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,

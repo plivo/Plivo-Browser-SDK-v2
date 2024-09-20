@@ -9,6 +9,7 @@ import {
   getSDKVersion,
   getOS,
   SemverParserVersion,
+  getSdkVersionPre,
 } from '../utils/device';
 import {
   sendEvents,
@@ -61,6 +62,7 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
     sdkVersionMajor: sdkVersionParse.major,
     sdkVersionMinor: sdkVersionParse.minor,
     sdkVersionPatch: sdkVersionParse.patch,
+    sdkVersionPre: getSdkVersionPre(sdkVersionParse),
     clientName: getBrowserDetails().browser,
     devicePlatform: navigator.platform,
     deviceOs,
@@ -72,7 +74,6 @@ const getSummaryEvent = async function (client: Client): Promise<SummaryEvent> {
     isAudioDeviceToggled: client.deviceToggledInCurrentSession,
     isNetworkChanged: client.networkChangeInCurrentSession,
     jsFramework: client.jsFramework,
-
   };
   if (client._currentSession) {
     summaryEvent.signalling = client._currentSession.signallingInfo;
@@ -219,7 +220,7 @@ const applyStatsSettings = function (): boolean {
 };
 
 /**
- * Initialise callstats storage.
+ * Initialize callstats storage.
  */
 export const callStart = function (): void {
   const client: Client = this;
@@ -470,7 +471,7 @@ const calcConnStage = function (obj: string[]): string {
 export const clearSessionInfo = function (session: CallSession): void {
   const client: Client = this;
   if (session === client._currentSession) {
-    // audio element clearence
+    // audio element clearance
     if (client.remoteView) {
       client.remoteView.pause();
     }
@@ -653,7 +654,7 @@ export const addCallstatsIOFabric = function (
 };
 
 /**
- * Send error to stats wahen media error occurs.
+ * Send error to stats when media error occurs.
  * @param {SessionFailedEvent} evt - rtcsession failed information
  * @param {CallSession} callSession - call session information
  */

@@ -198,7 +198,7 @@ export class Client extends EventEmitter {
   timeDiff: number;
 
   /**
-   * Holds the incoming or outgoing JSSIP RTCSession(WebRTC media session)
+   * Holds the incoming or outgoing JsSIP RTCSession(WebRTC media session)
    * @private
    */
   callSession: null | RTCSession;
@@ -220,7 +220,7 @@ export class Client extends EventEmitter {
    * speech when the user speaks on mute
    * @private
    */
-  speechRecognition: SpeechRecognition;
+  speechRecognition: any;
 
   /**
    * Holds the loggerUtil instance which keeps the
@@ -463,7 +463,7 @@ export class Client extends EventEmitter {
   statsSocket: null | StatsSocket;
 
   /**
-   * Contains available audio devices.This is done for backward compatiblity
+   * Contains available audio devices.This is done for backward compatibility
    * @private
    */
   audioDevDic: any;
@@ -910,6 +910,7 @@ export class Client extends EventEmitter {
       captureSDKCrashOnly: _options.captureSDKCrashOnly,
       permOnClick: _options.permOnClick,
       stopAutoRegisterOnConnect: _options.stopAutoRegisterOnConnect,
+      registrationRefreshTimer: _options.registrationRefreshTimer,
     };
     Plivo.log.info(`${C.LOGCAT.INIT} | Plivo SDK initialized successfully with options:- `, JSON.stringify(data), `in ${Plivo.log.level()} mode`);
     // instantiates event emitter
@@ -1525,7 +1526,7 @@ export class Client extends EventEmitter {
     this.loggerUtil.setSipCallID(incomingCall.sipCallID ?? "");
     Plivo.log.debug(`${LOGCAT.CALL} | reject - ${incomingCall.callUUID}`);
     if (incomingCall.session && incomingCall.session.isEstablished()) {
-      Plivo.log.warn(`${LOGCAT.CALL} |call already answerd, please use hangup() method`);
+      Plivo.log.warn(`${LOGCAT.CALL} | Call already answered, please use hangup() method`);
       return false;
     }
     if (incomingCall) {

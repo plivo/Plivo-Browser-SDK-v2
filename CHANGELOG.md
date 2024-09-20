@@ -5,6 +5,26 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.15-beta.0 (released@ 20-09-2024)
+
+**Bug Fixes**
+* Fixed the error occurring when answer() and hangup() are called simultaneously.
+
+## v2.2.14 (released@ 19-09-2024)
+
+**Feature**
+* A new event named `onCallConnected` has been introduced, which is triggered when the PSTN callee starts ringing.
+
+## v2.2.13 (released@ 22-08-2024)
+
+**Bug Fixes**
+* Removed unnecessary dependency.
+
+## v2.2.12 (released@ 24-07-2024)
+
+**Bug Fixes**
+* Renamed `DOMError` to `DOMException` in the underlying JSSIP library to support latest Typescript versions.
+
 ## v2.2.12-beta.0 (released@ 08-07-2024)
 
 **Features**

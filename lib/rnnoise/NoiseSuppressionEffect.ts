@@ -28,7 +28,7 @@ function initializeKRnnoise(audioContext: AudioContext): Promise<AudioWorkletNod
 }
 
 /**
- * Class Implementing the effect expected by a NoiseSupression.
+ * Class Implementing the effect expected by a NoiseSuppression.
  * Effect applies rnnoise denoising on a audio localTrack.
  */
 export class NoiseSuppressionEffect {
@@ -88,7 +88,7 @@ export class NoiseSuppressionEffect {
   };
 
   /**
-   * Effect interface called by source NoiseSuppresion.
+   * Effect interface called by source NoiseSuppression.
    * Applies effect that uses a {@code NoiseSuppressor} service
    * initialized with {@code RnnoiseProcessor}
    * for denoising.

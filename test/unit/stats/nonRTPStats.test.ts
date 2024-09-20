@@ -1,6 +1,6 @@
 import * as nonRTPStats from '../../../lib/stats/nonRTPStats';
 import { StatsSocket } from '../../../lib/stats/ws';
-import { getSDKVersion } from '../../../lib/utils/device';
+import { getSDKVersion, getSdkVersionPre } from '../../../lib/utils/device';
 import WebSocket from '../../mock/WebSocket';
 import pkg from '../../../package.json';
 import nonRTPStatsResponse from '../../payloads/nonRTPStatsEvent';
@@ -226,7 +226,9 @@ const updateSDKVersions = (sdkVersionParse) => {
   nonRTPStatsResponse.ANSWER_EVENT.sdkVersionMajor = sdkVersionParse.major;
   nonRTPStatsResponse.ANSWER_EVENT.sdkVersionMinor = sdkVersionParse.minor;
   nonRTPStatsResponse.ANSWER_EVENT.sdkVersionPatch = sdkVersionParse.patch;
+  nonRTPStatsResponse.ANSWER_EVENT.sdkVersionPre = getSdkVersionPre(sdkVersionParse) === '' ? 'beta.0' : getSdkVersionPre(sdkVersionParse);
   nonRTPStatsResponse.SUMMARY_EVENT.sdkVersionMajor = sdkVersionParse.major;
   nonRTPStatsResponse.SUMMARY_EVENT.sdkVersionMinor = sdkVersionParse.minor;
   nonRTPStatsResponse.SUMMARY_EVENT.sdkVersionPatch = sdkVersionParse.patch;
+  nonRTPStatsResponse.SUMMARY_EVENT.sdkVersionPre = sdkVersionParse.pre;
 };

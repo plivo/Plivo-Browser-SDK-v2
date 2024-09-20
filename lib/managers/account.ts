@@ -441,7 +441,7 @@ class Account {
     // NOTE: This event is not documented by JsSIP.
     // Should be used to just record the timestamp of invite received only
     // Do not have any other logic here
-    // Invite Server Trasaction(ist) gives us the incoming invite timestamp.
+    // Invite Server Transaction(ist) gives us the incoming invite timestamp.
     if (evt.transaction.type === 'ist') {
       const callID = evt.transaction.request.getHeader('Call-ID') ?? "";
       Plivo.log.info(`${C.LOGCAT.LOGIN} | new Transaction created, incoming call received callUUID: ${callID}`);
@@ -576,7 +576,7 @@ class Account {
           this._tiggerNetworkChangeEvent(fetchIpCount);
         }, fetchIpCount * 200);
       } else {
-        Plivo.log.warn(`${C.LOGCAT.NETWORK_CHANGE} | Could not retreive ipaddress`);
+        Plivo.log.warn(`${C.LOGCAT.NETWORK_CHANGE} | Could not retrieve IP address`);
         fetchIpCount = 0;
       }
     });

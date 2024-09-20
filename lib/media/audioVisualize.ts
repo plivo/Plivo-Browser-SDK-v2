@@ -37,7 +37,7 @@ export interface AudioVisualize {
 }
 
 /**
- * Calculate audio levels in decibles from frequency bins and emit volume event.
+ * Calculate audio levels in decibels from frequency bins and emit volume event.
  */
 const emitLocalRemoteAudioVolumes = function (): void {
   reqFrame = window.requestAnimationFrame(emitLocalRemoteAudioVolumes);
