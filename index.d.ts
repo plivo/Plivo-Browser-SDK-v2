@@ -150,7 +150,7 @@ declare module 'plivo-browser-sdk/client' {
                 */
             timeDiff: number;
             /**
-                * Holds the incoming or outgoing JSSIP RTCSession(WebRTC media session)
+                * Holds the incoming or outgoing JsSIP RTCSession(WebRTC media session)
                 * @private
                 */
             callSession: null | RTCSession;
@@ -369,7 +369,7 @@ declare module 'plivo-browser-sdk/client' {
                 */
             statsSocket: null | StatsSocket;
             /**
-                * Contains available audio devices.This is done for backward compatiblity
+                * Contains available audio devices.This is done for backward compatibility
                 * @private
                 */
             audioDevDic: any;
@@ -864,7 +864,7 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 */
             isCallTerminatedDuringRinging: boolean;
             /**
-                * Holds the current status of speechrecgnition
+                * Holds the current status of speech recognition
                 * @private
                 */
             speech_state: string;
@@ -1256,7 +1256,7 @@ declare module 'plivo-browser-sdk/managers/workerManager' {
         /**
          * Start the network check timer.
          * @param {number} networkCheckInterval - time interval at which the timer is to be executed.
-         * @param {any} callback - callback to be trigerred when the timer executes.
+         * @param {any} callback - callback to be triggered when the timer executes.
          */
         startNetworkCheckTimer: (networkCheckInterval: number, callback: any, responseCallback: any) => void;
         /**
@@ -1908,11 +1908,11 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
 
 declare module 'plivo-browser-sdk/media/audioLevel' {
     /**
-        * Analyse the audio level for a stream(local/remote).
+        * Analyze the audio level for a stream(local/remote).
         */
     export class AudioLevel {
             /**
-                * Audio volume in decibles
+                * Audio volume in decibels
                 * @private
                 */
             volumeLevel: number;
@@ -1937,7 +1937,7 @@ declare module 'plivo-browser-sdk/media/audioLevel' {
                 */
             sourceNode: MediaStreamAudioSourceNode;
             /**
-                * Get audio level in decibles.
+                * Get audio level in decibels.
                 */
             getAudioLevel: () => number;
             /**
