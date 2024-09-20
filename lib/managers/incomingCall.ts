@@ -98,7 +98,8 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
   if (call.callUUID) {
     cs.incomingInvites.set(call.callUUID, call);
     cs.lastIncomingCall = call;
-    // Storing these info for backward compatibility, in case user used these non-document variables.
+    // Storing these info for backward compatibility,
+    // In case user used these non-document variables.
     if (!cs.options.allowMultipleIncomingCalls) {
       cs.callSession = call.session;
       cs.callUUID = call.callUUID;
@@ -345,6 +346,9 @@ const newDTMF = (evt: SessionNewDtmfEvent): void => {
  */
 const newInfo = (evt: SessionNewInfoEvent): void => {
   Plivo.log.info(`${LOGCAT.CALL} | Incoming Call | ${evt.originator} INFO packet with body : ${evt.info.body}`);
+  if (cs._currentSession && evt.info.body === "remote-party-ringing") {
+    cs.emit('onCallConnected', cs._currentSession.getCallInfo(evt.originator));
+  }
   if (evt.info.body === 'no-remote-audio') {
     cs.emit('remoteAudioStatus', false);
   }

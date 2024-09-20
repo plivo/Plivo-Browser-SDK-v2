@@ -220,7 +220,7 @@ export class Client extends EventEmitter {
    * speech when the user speaks on mute
    * @private
    */
-  speechRecognition: SpeechRecognition;
+  speechRecognition: any;
 
   /**
    * Holds the loggerUtil instance which keeps the
