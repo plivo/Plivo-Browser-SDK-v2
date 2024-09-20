@@ -272,7 +272,7 @@ export const playAudio = function (elementId: string, clientObj?: Client): void 
           if (clientObj) unmute.call(clientObj);
         });
       } else if (elementId.includes('dtmf')) {
-        Plivo.log.info(`sent inband dtmf`);
+        Plivo.log.info('sent inband dtmf');
       }
     });
 

@@ -58,13 +58,13 @@ class AudioContextFactory {
 const audioContextFactory = new AudioContextFactory();
 
 /**
- * Analyse the audio level for a stream(local/remote).
+ * Analyze the audio level for a stream(local/remote).
  */
 
 // eslint-disable-next-line import/prefer-default-export
 export class AudioLevel {
   /**
-   * Audio volume in decibles
+   * Audio volume in decibels
    * @private
    */
   volumeLevel: number;
@@ -94,7 +94,7 @@ export class AudioLevel {
   sourceNode: MediaStreamAudioSourceNode;
 
   /**
-   * Get audio level in decibles.
+   * Get audio level in decibels.
    */
   public getAudioLevel = (): number => {
     let maxVolume = -100;

@@ -85,7 +85,7 @@ export class WorkerManager {
   /**
   * Start the network check timer.
   * @param {number} networkCheckInterval - time interval at which the timer is to be executed.
-  * @param {any} callback - callback to be trigerred when the timer executes.
+  * @param {any} callback - callback to be triggered when the timer executes.
   */
   startNetworkCheckTimer = (networkCheckInterval: number, callback: any, responseCallback: any) => {
     Plivo.log.debug(`${LOGCAT.NIMBUS} | starting the network check timer`);

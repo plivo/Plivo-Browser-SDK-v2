@@ -207,7 +207,7 @@ const onSDP = (evt: SessionSdpEvent): void => {
  * @param {SessionProgressEvent} evt - rtcsession progress information
  */
 const handleProgressTone = (evt: SessionProgressEvent): void => {
-  Plivo.log.debug(`${LOGCAT.CALL} | ringback tone enabled : ${cs.ringToneBackFlag} audioPaused: ${cs.connectToneView.paused}`);
+  Plivo.log.debug(`${LOGCAT.CALL} | Ringback Tone Enabled : ${cs.ringToneBackFlag} | Audio Paused: ${cs.connectToneView.paused}`);
   if (!cs.connectToneView.paused) {
     stopAudio(CONNECT_TONE_ELEMENT_ID);
   }
@@ -237,7 +237,6 @@ const OnProgress = (evt: SessionProgressEvent): void => {
     cs._currentSession.onRinging(cs);
     const callUUID = evt.response.getHeader('X-Calluuid');
     cs._currentSession.setCallUUID(callUUID);
-    Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing`);
     cs._currentSession.setState(cs._currentSession.STATE.RINGING);
     cs.callUUID = callUUID;
     Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing, CallUUID: ${cs.callUUID}`);
@@ -265,7 +264,7 @@ const OnProgress = (evt: SessionProgressEvent): void => {
       cs.mute();
     }
   } else {
-    Plivo.log.debug(`${LOGCAT.CALL} | inavlid response received, while call in progress`);
+    Plivo.log.debug(`${LOGCAT.CALL} | Invalid response received, while call in progress`);
   }
 };
 

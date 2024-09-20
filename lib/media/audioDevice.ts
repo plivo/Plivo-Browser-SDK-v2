@@ -323,7 +323,7 @@ export const replaceStream = function (client: Client, constraints: any): Promis
   return new Promise((resolve, reject) => {
     const pc = client._currentSession ? client._currentSession.session.connection : null;
     if (!pc) {
-      Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | session is not active while replacing stream`);
+      Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Session is not active while replacing stream`);
       resolve();
     } else if (navigator && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices
@@ -348,7 +348,7 @@ export const replaceStream = function (client: Client, constraints: any): Promis
 
                 currentLocalStream = stream;
                 if (currentAudioState === false) {
-                  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | call was muted before replacing stream. Muting new stream`);
+                  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Call was muted before replacing stream. Muting new stream`);
                   updateAudioState(client);
                 }
                 if (client._currentSession && client._currentSession.stats) {
@@ -357,9 +357,9 @@ export const replaceStream = function (client: Client, constraints: any): Promis
                     client._currentSession.stats.senderMediaStream,
                   );
                 }
-                Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | replacing track`);
+                Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Replacing track`);
                 sender.replaceTrack(stream.getAudioTracks()[0]).catch(() => {
-                  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | error in replacing track`);
+                  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Error in replacing track`);
                   const pc2 = clientObject?.getPeerConnection().pc;
                   // eslint-disable-next-line
                   if (pc2) {
@@ -371,7 +371,7 @@ export const replaceStream = function (client: Client, constraints: any): Promis
               });
           }
         }).catch((err) => {
-          Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | error in replacing stream ${err}`);
+          Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Error in replacing stream ${err}`);
           reject(err);
         })
         .then(() => {
@@ -382,7 +382,7 @@ export const replaceStream = function (client: Client, constraints: any): Promis
           resolve();
         })
         .catch((err) => {
-          Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | main error in replacing stream ${err}`);
+          Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Main error in replacing stream ${err}`);
           reject(err);
         });
     } else {
@@ -402,7 +402,7 @@ export const replaceStream = function (client: Client, constraints: any): Promis
 const replaceAudioTrack = function (
   deviceId: string, client: Client, state: string, label: string,
 ): void {
-  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Inside replacetrack with device id  : ${deviceId}`);
+  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Inside replacetrack() with device id  : ${deviceId}`);
   let constraints: MediaStreamConstraints;
   if (!client._currentSession) {
     if (currentLocalStream) {
@@ -488,7 +488,7 @@ export const audioDevDictionary = function (
         });
         if (store) {
           if (lableIsPresent) availableAudioDevices = devices;
-          // Calling audioDevDicSetterCb for backward compatibity
+          // Calling audioDevDicSetterCb for backward compatibility
           if (audioDevDicSetterCb) audioDevDicSetterCb(audioRef);
           resolve(true);
         } else {
@@ -654,7 +654,7 @@ export const checkAudioDevChange = function (): void {
             /*
             Setting USB audio device as default in mac sound settings will create below
             1. fire new default device obj for USB audio
-            2. fire new device obj with proper lable name for USB audio
+            2. fire new device obj with proper label name for USB audio
             So ignore any new default device object, since we reference point '2'
           */
             if (!/default/i.test(device.deviceId)) {
@@ -690,7 +690,7 @@ export const checkAudioDevChange = function (): void {
             }
           }
         });
-        // Check if device is removed with exising audioDic
+        // Check if device is removed with existing audioDic
         availableAudioDevices.forEach((device) => {
           if (!devices.filter((a) => a.deviceId === device.deviceId).length) { // If not present
             // Ignore any default device object which is removed
@@ -754,7 +754,7 @@ export const checkAudioDevChange = function (): void {
       if (devices) {
         // Update existing audioDevDic
         availableAudioDevices = devices;
-        // Calling audioDevDicSetterCb for backward compatibity
+        // Calling audioDevDicSetterCb for backward compatibility
         if (audioDevDicSetterCb) audioDevDicSetterCb(audioRef);
       }
       return ([devices, addedDevice, lastActiveSpeakerDevice, lastConnectedMicDevice]);
@@ -880,7 +880,7 @@ export const outputDevices = ((): OutputDevices => ({
       getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
         const clientObj = clientObject;
         if (clientObj !== null) {
-          Plivo.log.info(`${LOGCAT.CALL} Audio device toggled to`, JSON.stringify(device));
+          Plivo.log.info(`${LOGCAT.CALL} | Audio device toggled to`, JSON.stringify(device));
           const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
           sendEvents.call(clientObject, obj, clientObj._currentSession);
           clientObj.deviceToggledInCurrentSession = true;
@@ -956,7 +956,7 @@ export const ringtoneDevices = ((): RingToneDevices => ({
  * Unmute the local stream.
  */
 export const unmute = function (): void {
-  Plivo.log.debug(`${LOGCAT.CALL} | call is now unmuted`);
+  Plivo.log.debug(`${LOGCAT.CALL} | Call is now unmuted`);
   const client: Client = this;
   if (currentLocalStream) {
     currentLocalStream.getAudioTracks()[0].enabled = true;
