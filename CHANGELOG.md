@@ -1,9 +1,17 @@
- 
+
 # Changelog
 All notable GA release changes to this project will be documented in this file.
  
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+
+## v2.2.15 (released@ 03-10-2024)
+
+**Feature**
+* Sending complete dump of getStats() API to call insights through newly introduced event named `CALL_STATS_DUMP`.
+
+**Bug Fixes**
+* Resolved the error when the logout is called just after the call is termintated.
 
 ## v2.2.14 (released@ 19-09-2024)
 
