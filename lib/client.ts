@@ -798,7 +798,7 @@ export class Client extends EventEmitter {
       this.isIncomingGrant = false;
       this.accessToken = null;
     }
-    if (this._currentSession) {
+    if (this._currentSession && !this._currentSession.session.isEnded()) {
       this._currentSession.addConnectionStage(
         `logout()@${new Date().getTime()}`,
       );
