@@ -18,51 +18,48 @@ const options = {
 const Client1 = new Client(options);
 const Client2 = new Client(options);
 
-const primary_user = process.env.PLIVO_ENDPOINT1_USERNAME;
-const primary_pass = process.env.PLIVO_ENDPOINT1_PASSWORD;
-
 const secondary_user = process.env.PLIVO_ENDPOINT2_USERNAME;
 const secondary_pass = process.env.PLIVO_ENDPOINT2_PASSWORD;
 
 let plivo_jwt = '';
-let plivo_jwt_without_outbound_access = ''
+let plivo_jwt_without_outbound_access = '';
 
 const auth_id = process.env.PLIVO_JWT_AUTHID;
 const basic_auth = process.env.PLIVO_JWT_BASIC_AUTH;
 
 async function getJWTToken(outgoing, incoming) {
-  var tokenGenServerURI = new URL(`https://api.plivo.com/v1/Account/${auth_id}/JWT/Token`);
+  const tokenGenServerURI = new URL(`https://api.plivo.com/v1/Account/${auth_id}/JWT/Token`);
 
   const payload = {
-    "iss": auth_id,
-    "per": {
-      "voice": {
-        "incoming_allow": incoming,
-        "outgoing_allow": outgoing,
-      }
+    iss: auth_id,
+    per: {
+      voice: {
+        incoming_allow: incoming,
+        outgoing_allow: outgoing,
+      },
     },
-    "sub": "Test9034"
-  }
-  let requestBody = {
+    sub: "Test9034",
+  };
+  const requestBody = {
     method: 'POST',
     headers: new Headers({
       'Content-Type': 'application/json',
-      'Authorization': basic_auth
+      Authorization: basic_auth,
     }),
     body: JSON.stringify(payload),
   };
 
-  let res = await fetch(tokenGenServerURI, requestBody).catch(function (err) {
+  const res = await fetch(tokenGenServerURI, requestBody).catch((err) => {
     console.error("Error in fetching the token ", err);
-    return null
+    return null;
   });
 
   try {
-    let myJson = await res.json()
-    return (myJson['token'])
+    const myJson = await res.json();
+    return myJson.token;
   } catch (error) {
     console.error("Error : " + error);
-    return null
+    return null;
   }
 }
 
@@ -127,12 +124,11 @@ describe("plivoWebSdk JWT", function () {
       Client1.on("onCalling", () => {
         events.onCalling.status = true;
       });
-      let token = await getJWTToken(true, true)
-      console.log("token is ", token)
-      plivo_jwt = token
+      const token = await getJWTToken(true, true);
+      console.log("token is ", token);
+      plivo_jwt = token;
       Client1.loginWithAccessToken(plivo_jwt);
       Client2.login(secondary_user, secondary_pass);
-
     });
 
     // eslint-disable-next-line no-undef
@@ -161,6 +157,7 @@ describe("plivoWebSdk JWT", function () {
     // #14
     // eslint-disable-next-line no-undef
     it("outbound call should go through and ring", (done) => {
+      console.log("outbound call should go through and ring");
       if (bail) {
         done(new Error("bailing"));
       }
@@ -184,21 +181,10 @@ describe("plivoWebSdk JWT", function () {
       }, TIMEOUT);
     });
 
-    // // #16
-    // // eslint-disable-next-line no-undef
-    // it("outbound call should ring", (done) => {
-    //   if (bail) {
-    //     done(new Error("bailing"));
-    //   }
-    //   bailTimer = setTimeout(() => {
-    //     bail = true;
-    //     done(new Error("outgoing call ring failed"));
-    //   }, TIMEOUT);
-    // });
-
     // #15
     // eslint-disable-next-line no-undef
     it("outbound call should be answered", (done) => {
+      console.log("outbound call should be answered");
       if (bail) {
         done(new Error("bailing"));
       }
@@ -215,6 +201,7 @@ describe("plivoWebSdk JWT", function () {
     // #16
     // eslint-disable-next-line no-undef
     it("outbound call should be hungup", (done) => {
+      console.log("outbound call should be hungup");
       if (bail) {
         done(new Error("bailing"));
       }
@@ -229,6 +216,7 @@ describe("plivoWebSdk JWT", function () {
     // #17
     // eslint-disable-next-line no-undef
     it("outbound call should be ended without answer", (done) => {
+      console.log("outbound call should be ended without answer");
       if (bail) {
         done(new Error("bailing"));
       }
@@ -381,9 +369,9 @@ describe("plivoWebSdk JWT", function () {
         events.onPermissionDenied.status = true;
       }); // done
 
-      let token = await getJWTToken(false, true)
-      console.log("token is ", token)
-      plivo_jwt_without_outbound_access = token
+      const token = await getJWTToken(false, true);
+      console.log("token is ", token);
+      plivo_jwt_without_outbound_access = token;
       Client1.loginWithAccessToken(plivo_jwt_without_outbound_access);
       Client2.login(secondary_user, secondary_pass);
     });
@@ -430,6 +418,5 @@ describe("plivoWebSdk JWT", function () {
         done(new Error("outgoing call failed"));
       }, TIMEOUT);
     });
-
   });
 });
