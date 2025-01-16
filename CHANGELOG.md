@@ -5,6 +5,11 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.16 (released@ 16-01-2025)
+
+**Feature**
+* Added support for JSON Web Token (JWT) login with new methods: `loginWithAccessToken` and `loginWithAccessTokenGenerator`.
+
 ## v2.2.15 (released@ 03-10-2024)
 
 **Feature**

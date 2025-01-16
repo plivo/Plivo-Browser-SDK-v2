@@ -240,6 +240,11 @@ declare module 'plivo-browser-sdk/client' {
                 */
             isAccessTokenGenerator: boolean | null;
             /**
+                * boolean that tells which type of login method is called
+                * @private
+                */
+            accessTokenGeneratorTimer: null | ReturnType<typeof setTimeout>;
+            /**
                 * boolean that tells if user logged in through access token
                 * @private
                 */

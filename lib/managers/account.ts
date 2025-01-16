@@ -478,7 +478,6 @@ class Account {
    * @param {Object} error - Login failure error
    */
   private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
-    Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: `, error.cause, error.response);
     if (this.cs.connectionInfo.state === ConnectionState.DISCONNECTED && this.cs.isLoggedIn) {
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | Registration failed when state: ${this.cs.connectionInfo.state} and login: ${this.cs.isLoggedIn} with error: `, error.cause, error.response);
       return;
@@ -487,12 +486,15 @@ class Account {
     this.cs.userName = null;
     this.cs.password = null;
     const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
-    if (this.cs.isAccessTokenGenerator) {
-      this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
-    } else if (error.cause && errorCode === 401) {
+    if (error.cause && errorCode === 401) {
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: `, error.cause, error.response);
       this.cs.emit('onLoginFailed', error.cause);
     } else {
-      this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
+      clearInterval(this.cs.networkChangeInterval as any);
+      this.cs.networkChangeInterval = null;
+      const errorString = this.cs.isAccessTokenGenerator ? "RELOGIN_FAILED_INVALID_TOKEN" : this.cs.getErrorStringByErrorCodes(errorCode);
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: ${errorString}`);
+      this.cs.emit('onLoginFailed', errorString);
     }
   };
 
