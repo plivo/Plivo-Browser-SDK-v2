@@ -5,6 +5,11 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.17 (released@ 23-01-2025)
+
+**Bug Fixes**
+* Fixed: Remote Audio Fails to Play Through the Default Device After Bluetooth Disconnection.
+
 ## v2.2.16 (released@ 16-01-2025)
 
 **Feature**
