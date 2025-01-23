@@ -710,13 +710,18 @@ export const checkAudioDevChange = function (): void {
 
               if (device.kind === 'audiooutput') {
                 if ((lastActiveSpeakerDevice !== '' && lastActiveSpeakerDevice !== 'default') && clientObject) {
-                  if (!client._currentSession) {
-                    const initialRemoteView = document.getElementById(REMOTE_VIEW_ID);
-                    initialRemoteView?.remove();
-                    setupRemoteView();
-                    Plivo.log.debug("Remote view id removed");
-                  }
+                  // if (!client._currentSession) {
+                  const remoteTrack = clientObject.remoteView.srcObject;
+                  const initialRemoteView = document.getElementById(REMOTE_VIEW_ID);
+                  initialRemoteView?.remove();
+                  setupRemoteView();
+                  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Remote view id replaced`);
+                  // }
                   clientObject.remoteView = document.getElementById(REMOTE_VIEW_ID);
+                  if (clientObject._currentSession && remoteTrack) {
+                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Remote view src object added`);
+                    clientObject.remoteView.srcObject = remoteTrack;
+                  }
                 }
                 Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio output device removed:- `, JSON.stringify(device));
                 setTimeout(() => {
