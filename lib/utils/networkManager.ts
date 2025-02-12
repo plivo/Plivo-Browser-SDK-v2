@@ -7,7 +7,6 @@ import { LOGCAT, WS_RECONNECT_RETRY_COUNT, WS_RECONNECT_RETRY_INTERVAL } from '.
 import { Logger } from '../logger';
 import { sendEvents } from '../stats/nonRTPStats';
 import { createStatsSocket } from '../stats/setup';
-import { setConectionInfo } from '../managers/util';
 
 interface PingPong {
   client: Client
@@ -145,9 +144,11 @@ export const reconnectSocket = (client: Client) => {
       Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Renegotiate Ice :: ${negotiationStarted}`);
     } else {
       Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Closing previous websocket connection. Starting a new one`);
-      (client.phone as any)._transport.disconnect(true);
-      (client.phone as any)._transport.connect();
-      socketReconnectionRetry(client);
+      if (client.phone) {
+        (client.phone as any)._transport.disconnect(true);
+        (client.phone as any)._transport.connect();
+        socketReconnectionRetry(client);
+      }
     }
     restartStatSocket(client);
   }
@@ -198,7 +199,10 @@ export const startPingPong = ({
           Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Ping request timed out in ${messageCheckTimeout}. Restarting the connection if options response not received: ${!isFailedMessageTriggered}`);
           if (!isFailedMessageTriggered) {
             isReconnectionStarted = true;
-            setConectionInfo(client, ConnectionState.DISCONNECTED, "Ping Timed Out");
+            client.connectionInfo = {
+              state: ConnectionState.DISCONNECTED,
+              reason: "Ping Timed Out",
+            };
             reconnectSocket(client);
             message = null;
           }
@@ -215,7 +219,10 @@ export const startPingPong = ({
             || !client.phone?.isConnected()
             || !client.phone?.isRegistered())) {
             Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Ping request failed with err: ${err.cause}, Client is connected: ${client.phone?.isConnected()} and client is registered: ${client.phone?.isRegistered()}. Restarting the connection`);
-            setConectionInfo(client, ConnectionState.DISCONNECTED, `Ping failed with err ${err.cause}`);
+            client.connectionInfo = {
+              state: ConnectionState.DISCONNECTED,
+              reason: `Ping failed with err ${err.cause}`,
+            };
             reconnectSocket(client);
             message = null;
           }
@@ -237,7 +244,10 @@ export const startPingPong = ({
           Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Terminating ${activeSession.direction} call with calluuid ${activeSession.callUUID} due to network change in ringing state`);
         }
         Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Websocket disconnected since internet is not available`);
-        setConectionInfo(client, ConnectionState.DISCONNECTED, `No Internet`);
+        client.connectionInfo = {
+          state: ConnectionState.DISCONNECTED,
+          reason: `No Internet`,
+        };
         (client.phone as any)._transport.disconnect(true);
         isConnected = false;
       }

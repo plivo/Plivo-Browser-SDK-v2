@@ -713,17 +713,6 @@ export const mobileBrowserCheck = function (): boolean {
   return check;
 };
 
-/**
- * set the state and reason for onConnectionChange event
- * @param {Client} client - client instance
- * @param {string} state - state of the connection
- * @param {string} reason - reason for disconnection/connection
-*/
-export const setConectionInfo = function (client: Client, state: string, reason: string): void {
-  client.connectionInfo.state = state;
-  client.connectionInfo.reason = reason;
-};
-
 export const logCandidatePairs = function (callSession: CallSession | null) {
   if (callSession) {
     const { candidateList } = callSession;
