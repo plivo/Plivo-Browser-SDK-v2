@@ -999,8 +999,13 @@ export const detectDeviceChange = function (): void {
       checkAudioDevChange.call(this);
     }, 5000);
   } else {
-    navigator.mediaDevices.ondevicechange = () => {
-      checkAudioDevChange.call(this);
+    navigator.mediaDevices.ondevicechange = (event) => {
+      if (event.isTrusted) {
+        Plivo.log.debug(`${LOGCAT.CALL} | Device change event is trusted`);
+        checkAudioDevChange.call(this);
+      } else {
+        Plivo.log.debug(`${LOGCAT.CALL} | Device change event is not trusted`);
+      }
     };
   }
 };
