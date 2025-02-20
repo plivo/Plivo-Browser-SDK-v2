@@ -32,7 +32,7 @@ import {
 import getBrowserDetails from './utils/browserDetection';
 import detectFramework from './utils/frameworkDetection';
 import AccessTokenInterface from './utils/token';
-import { setErrorCollector, setConectionInfo } from './managers/util';
+import { setErrorCollector } from './managers/util';
 import { NoiseSuppression } from './rnnoise/NoiseSuppression';
 import { ConnectionState } from './utils/networkManager';
 import { LOCAL_ERROR_CODES, LOGCAT } from './constants';
@@ -817,7 +817,10 @@ export class Client extends EventEmitter {
     }
     this.isLogoutCalled = true;
     this.noiseSuppresion.clearNoiseSupression();
-    setConectionInfo(this, ConnectionState.DISCONNECTED, "Logout");
+    this.connectionInfo = {
+      state: ConnectionState.DISCONNECTED,
+      reason: "Logout",
+    };
     if (this.phone && this.phone.isRegistered()) {
       this.phone.stop();
       this.phone = null;
