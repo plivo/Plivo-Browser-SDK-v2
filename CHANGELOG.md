@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## v2.2.18-rc.2 (released@ 20-02-2025)
 
 **Bug Fixes**
-* Fixed: Added logging to verify whether the device change event is trusted..
+* Fixed: Added logging to verify whether the device change event is trusted.
 * Fixed: Updated the URL for fetching the RNNoise processor.js file.
 
 ## v2.2.18-rc.1 (released@ 12-02-2025)
