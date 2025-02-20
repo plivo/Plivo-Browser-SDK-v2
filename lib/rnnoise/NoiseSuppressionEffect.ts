@@ -13,7 +13,7 @@ const Plivo = {
  */
 function initializeKRnnoise(audioContext: AudioContext): Promise<AudioWorkletNode | undefined> {
   return new Promise((resolve) => {
-    const distjs = `https://csdk-test.s3.ap-south-1.amazonaws.com/processor.js`;
+    const distjs = `https://cdn.plivo.com/sdk/browser/processor.js`;
 
     try {
       audioContext.audioWorklet.addModule(distjs).then(() => {
