@@ -11,14 +11,24 @@ const Plivo = {
  *
  * @returns {Promise<AudioWorkletNode | undefined>}
  */
-function initializeKRnnoise(audioContext: AudioContext): Promise<AudioWorkletNode | undefined> {
+function initializeKRnnoise(
+  audioContext: AudioContext,
+  noiseReductionFilePath: string,
+  retryCount: number,
+)
+  : Promise<AudioWorkletNode | undefined> {
   return new Promise((resolve) => {
-    const distjs = `https://cdn.plivo.com/sdk/browser/processor.js`;
-
     try {
-      audioContext.audioWorklet.addModule(distjs).then(() => {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Noise suppresion file path is: ${noiseReductionFilePath}`);
+      audioContext.audioWorklet.addModule(noiseReductionFilePath || "https://cdn.plivo.com/sdk/browser/processor.js").then(() => {
         Plivo.log.debug(`${C.LOGCAT.CALL_QUALITY} | audioWorklet setup is completed`);
         resolve(new AudioWorkletNode(audioContext, 'NoiseSuppressorWorklet-ts'));
+      }).catch((err) => {
+        Plivo.log.debug(`${C.LOGCAT.LOGIN} | Error while loading audio worklet: ${err} `);
+        if (noiseReductionFilePath && retryCount === 0) {
+          Plivo.log.debug(`${C.LOGCAT.LOGIN} | Could not add file from path: ${noiseReductionFilePath}. Fetching the file from plivo cdn`);
+          resolve(initializeKRnnoise(audioContext, "https://cdn.plivo.com/sdk/browser/processor.js", 1));
+        }
       });
     } catch (e) {
       Plivo.log.error(`${C.LOGCAT.CALL_QUALITY} | Error while initializing noise suppression effect ${e}`);
@@ -61,10 +71,11 @@ export class NoiseSuppressionEffect {
 
   private audioContext: AudioContext;
 
-  prepareAudioWorklet = function (): Promise<AudioWorkletNode | undefined> {
+  prepareAudioWorklet = function (noiseReductionFilePath: string)
+    : Promise<AudioWorkletNode | undefined> {
     return new Promise((resolve) => {
       const initRnnoise = () => {
-        initializeKRnnoise(this.audioContext).then((node) => {
+        initializeKRnnoise(this.audioContext, noiseReductionFilePath, 0).then((node) => {
           if (node) {
             this.noiseSuppressorNode = node;
             resolve(this.noiseSuppressorNode);

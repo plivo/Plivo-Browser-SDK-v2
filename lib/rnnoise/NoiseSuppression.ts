@@ -32,7 +32,9 @@ export class NoiseSuppression {
   private initNoiseSuppresionEffect = function (): Promise<void> {
     return new Promise((resolve) => {
       this.noiseSuppresionEffect = new NoiseSuppressionEffect();
-      this.noiseSuppresionEffect.prepareAudioWorklet().then(() => {
+      this.noiseSuppresionEffect.prepareAudioWorklet(
+        this.client.noiseReductionFilePath,
+      ).then(() => {
         this.client.emit('onNoiseReductionReady');
         resolve();
       });
