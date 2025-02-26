@@ -5,6 +5,14 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.18-rc.3 (released@ 26-02-2025)
+
+**Feature**
+* Introduced a mechanism to fetch the noise reduction model (script) from the local file system instead of Plivo CDN:
+  
+  - The file path can be provided using the `noiseReductionFilePath` flag during initialization
+  - If no file path is provided, the SDK will fetch the model from Plivo CDN by default
+
 ## v2.2.18-rc.2 (released@ 20-02-2025)
 
 **Bug Fixes**

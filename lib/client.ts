@@ -76,6 +76,7 @@ export interface ConfiguationOptions {
   enableNoiseReduction?: boolean;
   usePlivoStunServer?: boolean
   dtmfOptions?: DtmfOptions;
+  noiseReductionFilePath?: string;
 }
 
 export interface BrowserDetails {
@@ -579,6 +580,12 @@ export class Client extends EventEmitter {
   didFetchInitialNetworkInfo: boolean;
 
   /**
+   * Holds the path of the noise reduction file(processor.js) provided by the application
+   * @private
+   */
+  noiseReductionFilePath: string | undefined;
+
+  /**
    * Determines which js framework sdk is running with
    * @private
    */
@@ -886,6 +893,7 @@ export class Client extends EventEmitter {
     this.connectToneFlag = true;
     this.isLoggedIn = false;
     this.reconnectInterval = null;
+    this.noiseReductionFilePath = options.noiseReductionFilePath;
     this.reconnectTryCount = 0;
     this.phone = null;
     this._currentSession = null;
