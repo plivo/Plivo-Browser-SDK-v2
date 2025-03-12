@@ -10,7 +10,7 @@ import {
   createIncomingSession,
 } from './incomingCall';
 import { createOutgoingSession } from './outgoingCall';
-import { getCurrentTime, addMidAttribute, setConectionInfo } from './util';
+import { getCurrentTime, addMidAttribute } from './util';
 import { stopAudio } from '../media/document';
 import { Client } from '../client';
 import {
@@ -156,7 +156,10 @@ class Account {
       this.cs.loginCallback = callback;
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | deleting the existing phone instance`);
       this.cs.phone.stop();
-      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "Relogin");
+      this.cs.connectionInfo = {
+        state: ConnectionState.DISCONNECTED,
+        reason: "Relogin",
+      };
       return this.cs.loginCallback;
     }
     return true;
@@ -314,7 +317,10 @@ class Account {
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
     Plivo.log.info(`${C.LOGCAT.LOGOUT} | WebSocket Connection Closed - Code: ${evt.code ?? 'Unknown code'}, Reason: ${evt.reason ?? 'No reason provided'}, Socket URL: ${evt.socket.url}`);
     if (evt.code) {
-      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, evt.code.toString());
+      this.cs.connectionInfo = {
+        state: ConnectionState.DISCONNECTED,
+        reason: evt.code.toString(),
+      };
     }
     if (this.isPlivoSocketConnected) {
       this.isPlivoSocketConnected = false;
@@ -349,9 +355,12 @@ class Account {
     if (this.cs.loginCallback) {
       this.cs.loginCallback = null;
     }
-    setConectionInfo(this.cs, ConnectionState.CONNECTED, 'registered');
+    this.cs.connectionInfo = {
+      state: ConnectionState.CONNECTED,
+      reason: 'registered',
+    };
     Plivo.log.debug(`${C.LOGCAT.WS} |  websocket connected: ${this.cs.connectionInfo.reason}`);
-    this.cs.emit('onConnectionChange', this.cs.connectionInfo);
+    this.cs.emit('onConnectionChange', { ...this.cs.connectionInfo });
     if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
       const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
       this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
@@ -442,10 +451,13 @@ class Account {
   private _onUnRegistered = (): void => {
     this.cs.isLoggedIn = false;
     if (this.cs.connectionInfo.state === "" || this.cs.connectionInfo.state === ConnectionState.CONNECTED) {
-      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "unregistered");
+      this.cs.connectionInfo = {
+        state: ConnectionState.DISCONNECTED,
+        reason: "unregistered",
+      };
     }
     Plivo.log.debug(`${C.LOGCAT.WS} |  websocket disconnected with reason : ${this.cs.connectionInfo.reason}`);
-    this.cs.emit('onConnectionChange', this.cs.connectionInfo);
+    this.cs.emit('onConnectionChange', { ...this.cs.connectionInfo });
     if (!this.cs.isLogoutCalled) {
       return;
     }

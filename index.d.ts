@@ -50,6 +50,7 @@ declare module 'plivo-browser-sdk/client' {
             enableNoiseReduction?: boolean;
             usePlivoStunServer?: boolean;
             dtmfOptions?: DtmfOptions;
+            noiseReductionFilePath?: string;
     }
     export interface BrowserDetails {
             browser: string;
@@ -475,6 +476,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             didFetchInitialNetworkInfo: boolean;
+            /**
+                * Holds the path of the noise reduction file(processor.js) provided by the application
+                * @private
+                */
+            noiseReductionFilePath: string | undefined;
             /**
                 * Determines which js framework sdk is running with
                 * @private

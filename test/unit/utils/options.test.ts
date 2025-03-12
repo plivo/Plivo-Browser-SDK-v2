@@ -26,6 +26,7 @@ describe('ValidateOptions', () => {
       enableNoiseReduction: true,
       registrationRefreshTimer: 120,
       usePlivoStunServer: false,
+      noiseReductionFilePath: "",
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
       }
@@ -91,6 +92,18 @@ describe('ValidateOptions', () => {
     expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(false);
     inputOptions.useDefaultAudioDevice = true;
     expect(validateOptions(inputOptions).useDefaultAudioDevice).toStrictEqual(true);
+  });
+
+  it('should check if noiseReductionFilePath is valid', () => {
+    const input = { ...options };
+    input.noiseReductionFilePath = true;
+    expect(validateOptions(input).noiseReductionFilePath).toStrictEqual("");
+    input.noiseReductionFilePath = 12345;
+    expect(validateOptions(input).noiseReductionFilePath).toStrictEqual("");
+    input.noiseReductionFilePath = 12345.12345;
+    expect(validateOptions(input).noiseReductionFilePath).toStrictEqual("");
+    input.noiseReductionFilePath = "processor.js";
+    expect(validateOptions(input).noiseReductionFilePath).toStrictEqual("processor.js");
   });
 
   it('should check if usePlivoStunServer is valid', () => {

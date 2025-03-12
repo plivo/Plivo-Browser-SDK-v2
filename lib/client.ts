@@ -32,7 +32,7 @@ import {
 import getBrowserDetails from './utils/browserDetection';
 import detectFramework from './utils/frameworkDetection';
 import AccessTokenInterface from './utils/token';
-import { setErrorCollector, setConectionInfo } from './managers/util';
+import { setErrorCollector } from './managers/util';
 import { NoiseSuppression } from './rnnoise/NoiseSuppression';
 import { ConnectionState } from './utils/networkManager';
 import { LOCAL_ERROR_CODES, LOGCAT } from './constants';
@@ -76,6 +76,7 @@ export interface ConfiguationOptions {
   enableNoiseReduction?: boolean;
   usePlivoStunServer?: boolean
   dtmfOptions?: DtmfOptions;
+  noiseReductionFilePath?: string;
 }
 
 export interface BrowserDetails {
@@ -579,6 +580,12 @@ export class Client extends EventEmitter {
   didFetchInitialNetworkInfo: boolean;
 
   /**
+   * Holds the path of the noise reduction file(processor.js) provided by the application
+   * @private
+   */
+  noiseReductionFilePath: string | undefined;
+
+  /**
    * Determines which js framework sdk is running with
    * @private
    */
@@ -817,7 +824,10 @@ export class Client extends EventEmitter {
     }
     this.isLogoutCalled = true;
     this.noiseSuppresion.clearNoiseSupression();
-    setConectionInfo(this, ConnectionState.DISCONNECTED, "Logout");
+    this.connectionInfo = {
+      state: ConnectionState.DISCONNECTED,
+      reason: "Logout",
+    };
     if (this.phone && this.phone.isRegistered()) {
       this.phone.stop();
       this.phone = null;
@@ -883,6 +893,7 @@ export class Client extends EventEmitter {
     this.connectToneFlag = true;
     this.isLoggedIn = false;
     this.reconnectInterval = null;
+    this.noiseReductionFilePath = options.noiseReductionFilePath;
     this.reconnectTryCount = 0;
     this.phone = null;
     this._currentSession = null;
