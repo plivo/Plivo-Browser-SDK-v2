@@ -53,25 +53,25 @@ const setupCallback = function (clientObject: Client, evt: AudioEvent): void {
     audioDevDictionary.call(clientObject, true).then(() => {
       availableDevices()
         .then((devices: MediaDeviceInfo[]) => {
-          if (navigator.platform === ' Win32'
-          || navigator.platform === 'Win16'
-          || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
-            let activeInputDevice: any = null;
-            let activeOutputDevice: any = null;
+          // if (navigator.platform === ' Win32'
+          // || navigator.platform === 'Win16'
+          // || navigator.platform.toString().toLocaleLowerCase().includes('win')) {
+          let activeInputDevice: any = null;
+          let activeOutputDevice: any = null;
 
-            devices.forEach((device: MediaDeviceInfo) => {
-              if (device.deviceId === 'default' && device.kind === 'audioinput') {
-                activeInputDevice = device;
-              }
-              if (device.deviceId === 'default' && device.kind === 'audiooutput') {
-                activeOutputDevice = device;
-              }
-            });
-            Plivo.log.debug(`${LOGCAT.CALL} Setting Input device set to default i.e ${JSON.stringify(activeInputDevice)}`);
-            clientObject.audio.microphoneDevices.set("default");
-            Plivo.log.debug(`${LOGCAT.CALL} Setting Output device set to default i.e ${JSON.stringify(activeOutputDevice)}`);
-            clientObject.audio.speakerDevices.set("default");
-          }
+          devices.forEach((device: MediaDeviceInfo) => {
+            if (device.deviceId === 'default' && device.kind === 'audioinput') {
+              activeInputDevice = device;
+            }
+            if (device.deviceId === 'default' && device.kind === 'audiooutput') {
+              activeOutputDevice = device;
+            }
+          });
+          Plivo.log.debug(`${LOGCAT.CALL} Setting Input device set to default i.e ${JSON.stringify(activeInputDevice)}`);
+          clientObject.audio.microphoneDevices.set("default");
+          Plivo.log.debug(`${LOGCAT.CALL} Setting Output device set to default i.e ${JSON.stringify(activeOutputDevice)}`);
+          clientObject.audio.speakerDevices.set("default");
+          // }
         });
       Plivo.log.debug(
         `${LOGCAT.LOGIN} UserMedia:audioDevDictionary is updated, onMediaPermission:${evt.status}`,

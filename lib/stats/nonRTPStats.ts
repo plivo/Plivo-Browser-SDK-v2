@@ -41,6 +41,8 @@ export interface DeviceAudioInfo {
   audioOutputIdSet: string;
   activeInputAudioDevice: string;
   activeOutputAudioDevice: string;
+  activeInputDeviceGroupId: string;
+  activeOutputDeviceGroupId: string;
 }
 
 export interface RingingEvent {
@@ -63,6 +65,7 @@ export interface RingingEvent {
   isAudioDeviceToggled?: boolean;
   isNetworkChanged?: boolean;
   jsFramework: string[];
+  isAudioDeviceMismatch?: boolean;
   noiseReduction: NoiseReduction;
 
 }
@@ -87,6 +90,7 @@ export interface SummaryEvent {
   isAudioDeviceToggled?: boolean;
   isNetworkChanged?: boolean;
   jsFramework: string[];
+  isAudioDeviceMismatch?: boolean,
   noiseReduction: NoiseReduction
 
 }
@@ -296,6 +300,7 @@ export const sendCallSummaryEvent = function (
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
+    isAudioDeviceMismatch: session.isAudioDeviceMismatch,
     noiseReduction: {
       enabled: client.enableNoiseReduction ?? false,
       noiseSuprressionStarted: client.noiseSuppresion.started,
@@ -342,6 +347,7 @@ export const sendCallRingingEvent = function (
     devicePlatform: navigator.platform,
     deviceOs,
     setupOptions: client.options,
+    isAudioDeviceMismatch: session.isAudioDeviceMismatch,
     noiseReduction: {
       enabled: client.enableNoiseReduction ?? false,
       noiseSuprressionStarted: client.noiseSuppresion.started,

@@ -16,6 +16,7 @@ import {
 } from '../stats/nonRTPStats';
 import { emitMetrics } from '../stats/mediaMetrics';
 import {
+  matchDevices,
   getAudioDevicesInfo,
   speechListeners,
   startVolumeDataStreaming,
@@ -179,6 +180,12 @@ export class CallSession {
    * @private
    */
   extraHeaders: ExtraHeaders;
+
+  /**
+   * Holds the state of input and output device mismatch
+   * @private
+   */
+  isAudioDeviceMismatch: boolean;
 
   /**
    * Holds the WebRTC media session
@@ -518,9 +525,19 @@ export class CallSession {
   private _onRinging = (clientObject: Client): void => {
     const signallingInfo = this.getSignallingInfo();
     const mediaConnectionInfo = this.getMediaConnectionInfo();
+    this.isAudioDeviceMismatch = false;
     getAudioDevicesInfo
       .call(clientObject)
       .then((deviceInfo: DeviceAudioInfo) => {
+        if (!matchDevices(
+          deviceInfo.activeInputDeviceGroupId,
+          deviceInfo.activeOutputDeviceGroupId,
+          deviceInfo.activeInputAudioDevice,
+          deviceInfo.activeOutputAudioDevice,
+        )) {
+          this.isAudioDeviceMismatch = true;
+          Plivo.log.debug(`${LOGCAT.CALL} | Input and output device mismatch while ringing ${JSON.stringify(deviceInfo)}`);
+        }
         sendCallRingingEvent.call(clientObject,
           deviceInfo,
           signallingInfo,
