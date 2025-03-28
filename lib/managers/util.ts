@@ -104,6 +104,7 @@ export const addCloseProtectionListeners = function (): void {
   const client: Client = this;
   getSummaryEvent(client).then((summaryEvent) => {
     if (client.options.closeProtection) {
+      Plivo.log.info(`${LOGCAT.NIMBUS} | closeProtection is true, perventing default behaviour`);
       window.onbeforeunload = (event: BeforeUnloadEvent) => {
         Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
         event.preventDefault();
@@ -112,6 +113,7 @@ export const addCloseProtectionListeners = function (): void {
       };
     } else {
       window.onbeforeunload = () => {
+        Plivo.log.info(`${LOGCAT.NIMBUS} | Terminating an active call onbeforeunload`);
         Plivo.sendEvents.call(client, summaryEvent, client._currentSession);
         if (client._currentSession) {
           client._currentSession.session.terminate();
@@ -119,6 +121,7 @@ export const addCloseProtectionListeners = function (): void {
       };
     }
     window.onunload = () => {
+      Plivo.log.info(`${LOGCAT.NIMBUS} | Terminating an active call onunload`);
       if (client._currentSession) {
         client._currentSession.session.terminate();
       }
@@ -461,6 +464,7 @@ const calcConnStage = function (obj: string[]): string {
  */
 const clearSessionInfo = function (session: CallSession): void {
   const client: Client = this;
+  Plivo.log.info(`${LOGCAT.CALL} | Clearing session info`);
   if (session === client._currentSession) {
     // audio element clearence
     if (client.remoteView) {

@@ -85,7 +85,7 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
       invite_time: getCurrentTime(),
     });
 
-    Plivo.log.debug(`callSession - ${call.callUUID}`);
+    Plivo.log.debug(`${LOGCAT.CALL} | callSession - ${call.callUUID}`);
   }
 };
 
@@ -436,13 +436,17 @@ export const getCurrentIncomingCall = (
 ): CallSession | null => {
   let curIncomingCall: CallSession | null = null;
   if (callUUID && clientObject.incomingInvites.has(callUUID)) {
+    Plivo.log.debug(`${LOGCAT.CALL} | ${callUUID} found in the incoming invites`);
     curIncomingCall = clientObject.incomingInvites.get(callUUID);
-  } else if (clientObject.lastIncomingCall) {
+  } else if (clientObject.lastIncomingCall !== null) {
+    Plivo.log.debug(`${LOGCAT.CALL} | setting last incoming call session`);
     curIncomingCall = clientObject.lastIncomingCall;
     if (callUUID && clientObject.options.allowMultipleIncomingCalls) {
       Plivo.log.error(`${LOGCAT.CALL} | No incomingCall with callUUID - ${callUUID}`);
       return null;
     }
+  } else {
+    Plivo.log.debug(`${LOGCAT.CALL} | callUUID not found in incoming invites and typeof last incoming call: ${typeof clientObject.lastIncomingCall}`);
   }
   return curIncomingCall;
 };
@@ -554,6 +558,7 @@ export const answerIncomingCall = function (
       cs._currentSession = curIncomingCall;
       cs.incomingInvites.delete(curIncomingCall.callUUID as string);
       if (curIncomingCall === cs.lastIncomingCall) {
+        Plivo.log.info(`${LOGCAT.CALL} | resetting lastIncomingCall and removing call from map.`);
         cs.lastIncomingCall = null;
         if (cs.incomingInvites.size) {
           cs.lastIncomingCall = cs.incomingInvites.values().next().value;
