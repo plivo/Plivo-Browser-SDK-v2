@@ -208,14 +208,15 @@ export class StatsSocket {
         // return false;
       }
     }
-    setTimeout(() => {
-      retrySecondsCount += 1;
-      retryAttempts -= 1;
-      this.send(message, client);
-    }, retrySecondsCount * 900);
-
-    Plivo.log.warn(`${C.LOGCAT.CALL} | statsSocket is not open, retrying to connect`);
-    this.reconnect();
+    if (navigator.onLine && !this.isConnecting && !this.isConnected()) {
+      setTimeout(() => {
+        retrySecondsCount += 1;
+        retryAttempts -= 1;
+        this.send(message, client);
+      }, retrySecondsCount * 900);
+      Plivo.log.warn(`${C.LOGCAT.CALL} | statsSocket is not open, retrying to connect`);
+      this.reconnect();
+    }
     return false;
   };
 
