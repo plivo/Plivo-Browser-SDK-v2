@@ -184,14 +184,14 @@ export class StatsSocket {
           const item = this.messageBuffer.shift();
           this.ws.send(item as string);
           Plivo.log.debug('stats send success');
-          if ((client.callSession == null) && (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK')) {
-            // destroying stats socket since call has ended
-            this.disconnect();
-            client.statsSocket = null;
-            client.networkChangeInCurrentSession = false;
-            client.deviceToggledInCurrentSession = false;
-          }
         }
+      }
+      if ((client.callSession == null) && (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK')) {
+        // destroying stats socket since call has ended
+        this.disconnect();
+        client.statsSocket = null;
+        client.networkChangeInCurrentSession = false;
+        client.deviceToggledInCurrentSession = false;
       }
       if (retryAttempts !== C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
         retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
