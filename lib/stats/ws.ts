@@ -208,7 +208,7 @@ export class StatsSocket {
         // return false;
       }
     }
-    if (navigator.onLine && !this.isConnecting && !this.isConnected()) {
+    if (!this.isConnecting && !this.isConnected()) {
       setTimeout(() => {
         retrySecondsCount += 1;
         retryAttempts -= 1;
