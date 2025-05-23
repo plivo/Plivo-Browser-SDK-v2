@@ -5,6 +5,11 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.19-rc.2 (released@ 23-05-2025)
+
+**Bug Fixes**
+* Fixed: Browser UI responsiveness issue when rejecting incoming calls immediately upon receipt.
+
 ## v2.2.19-rc.1 (released@ 28-03-2025)
 
 **Feature**
