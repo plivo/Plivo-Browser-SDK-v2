@@ -5,6 +5,11 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.19-rc.2 (released@ 23-05-2025)
+
+**Bug Fixes**
+* Fixed: Browser UI responsiveness issue when rejecting incoming calls immediately upon receipt.
+
 ## v2.2.19-rc.1 (released@ 28-03-2025)
 
 **Feature**
@@ -289,7 +294,7 @@ Note: The `errorCode` in the callinfo object has been renamed to `code`.
   googEchoCancellationReturnLoss
   googEchoCancellationReturnLossEnhancement
   googJitterBufferMs.
-* Added: On network change, a new event, ‘CALL_NETWORK’, will now be sent to Call Insights.
+* Added: On network change, a new event, 'CALL_NETWORK', will now be sent to Call Insights.
 
 
 ## v2.2.4 (released@ 05-07-2021)
@@ -300,7 +305,7 @@ Note: The `errorCode` in the callinfo object has been renamed to `code`.
 
 **Features**
 
-* Added: Attribute called ‘callerName’ to the onIncoming call event. This attribute contains the name of the caller (if set by the initiator of the call) and can be displayed on the user interface.
+* Added: Attribute called 'callerName' to the onIncoming call event. This attribute contains the name of the caller (if set by the initiator of the call) and can be displayed on the user interface.
 * Added: Ability to identify custom modifications to the officially released SDK versions.
 * Added: Capture audio input/output device toggle events during an active call
 * Added: Ability to select between Inband and Outband DTMF during initialization. For more information, refer to the Configuration Parameters section in the detailed reference.
@@ -565,7 +570,7 @@ Note: The `errorCode` in the callinfo object has been renamed to `code`.
  
   1) reduced ice gathering timeout to 2 secs
  
-  2) removed dependency with '\_is_confirmed' variable
+  2) removed dependency with '_is_confirmed' variable
 * Callstats.io version upgraded to v3.53.1
 * Switched off pre-call-test of callstats.io
 * endpoint registration status fix
@@ -628,7 +633,7 @@ Optimize local storage values
  
 **BUG fix**
  
-* Fixed: Twilio webrtc API gets overridden by Plivo Sdk, Don’t alter URL.createObjectURL native code.
+* Fixed: Twilio webrtc API gets overridden by Plivo Sdk, Don't alter URL.createObjectURL native code.
  
 **Added**
  
@@ -674,7 +679,7 @@ debug: "ALL-PLAIN" will show all logs including SIP trace, Colour  mode OFF
  
 **BUG fix**
  
-*  on logout() - use stop() instead of unregister(‘all’);
+*  on logout() - use stop() instead of unregister('all');
 * URL.createObjectURL(stream) is deprecated! Use elem.srcObject = stream instead!
 * reject () - only if call is not answered.
  
@@ -684,7 +689,7 @@ debug: "ALL-PLAIN" will show all logs including SIP trace, Colour  mode OFF
  
 **Added**
  
-* Feature added: Even if users don’t set enableTracking in options, we should set enableTracking=true
+* Feature added: Even if users don't set enableTracking in options, we should set enableTracking=true
 * Feature added: mediaMetrics Alert if ICE gathering takes more than 2 sec either for outgoing call invite or incoming call answer. Event name `ice_timeout`
 *  Feature added: setConnectTone(true), Dial beep will play till we get 18X response from server. setting `false` will not play beep tone.
  
