@@ -90,6 +90,28 @@ const updateSessionInfo = (evt: UserAgentNewRtcSessionEvent, call: CallSession):
 };
 
 /**
+ * Get incoming call object based on CallUUID.
+ * @param {String} callUUID - provide active CallUUID
+ * @param {Client} clientObject - client reference
+ * @returns Incoming call session information
+ */
+export const getCurrentIncomingCall = (
+  callUUID: string, clientObject: Client,
+): CallSession | null => {
+  let curIncomingCall: CallSession | null = null;
+  if (callUUID && clientObject.incomingInvites.has(callUUID)) {
+    curIncomingCall = clientObject.incomingInvites.get(callUUID);
+  } else if (clientObject.lastIncomingCall) {
+    curIncomingCall = clientObject.lastIncomingCall;
+    if (callUUID && clientObject.options.allowMultipleIncomingCalls) {
+      Plivo.log.error(`${LOGCAT.CALL} | No incomingCall with callUUID - ${callUUID}`);
+      return null;
+    }
+  }
+  return curIncomingCall;
+};
+
+/**
  * Triggered when call is ringing.
  */
 const onProgress = (incomingCall: CallSession) => (): void => {
@@ -118,7 +140,6 @@ const onProgress = (incomingCall: CallSession) => (): void => {
       playAudio(RINGTONE_ELEMENT_ID);
     }
     Plivo.log.debug(`${LOGCAT.CALL} | incoming call ringtone started`);
-    isIncomingCallRinging = true;
   }
   const callerId = `${callerUri.substring(
     4,
@@ -126,13 +147,18 @@ const onProgress = (incomingCall: CallSession) => (): void => {
   )}@${DOMAIN}`;
   const emitIncomingCall = () => {
     Plivo.log.debug(`${LOGCAT.CALL} | Emitting onIncomingCall`);
-    cs.emit(
-      'onIncomingCall',
-      callerId,
-      incomingCall.extraHeaders,
-      incomingCall.getCallInfo("local"),
-      callerName,
-    );
+    if (getCurrentIncomingCall(incomingCall.callUUID ?? "", cs)) {
+      isIncomingCallRinging = true;
+      cs.emit(
+        'onIncomingCall',
+        callerId,
+        incomingCall.extraHeaders,
+        incomingCall.getCallInfo("local"),
+        callerName,
+      );
+    } else {
+      Plivo.log.error(`${LOGCAT.CALL} |Cannot emit onIncomingCall for callUUID: ${incomingCall.callUUID}. Incoming call does not exists`);
+    }
   };
   cs.noiseSuppresion.setLocalMediaStream().then(() => {
     emitIncomingCall();
@@ -240,7 +266,9 @@ const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession)
   if (evt.cause === JSSIP_C.causes.CANCELED) {
     incomingCall.setState(incomingCall.STATE.CANCELED);
     Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}}`);
-    cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
+    if (isIncomingCallRinging) {
+      cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
+    }
   } else {
     Plivo.log.info(`${LOGCAT.CALL} | Incoming call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
     if (evt.cause === 'Rejected') {
@@ -248,7 +276,9 @@ const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession)
     } else {
       incomingCall.setState(incomingCall.STATE.FAILED);
     }
-    cs.emit('onCallFailed', evt.cause, incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
+    if (isIncomingCallRinging) {
+      cs.emit('onCallFailed', evt.cause, incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
+    }
   }
 };
 
@@ -257,9 +287,9 @@ const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession)
  * @param {SessionFailedEvent} evt - rtcsession failed information
  */
 const onFailed = (incomingCall: CallSession) => (evt: SessionFailedEvent): void => {
-  isIncomingCallRinging = false;
   Plivo.log.debug(`${LOGCAT.CALL} | Incoming call failed: ${evt.cause}`);
   handleFailureCauses(evt, incomingCall);
+  isIncomingCallRinging = false;
   incomingCall.onFailed(cs, evt);
 
   // //  logout if logged in by token and token get expired
@@ -423,28 +453,6 @@ export const createIncomingSession = (
   }
   updateSessionInfo(evt, incomingCall);
   createIncomingCallListeners(incomingCall);
-};
-
-/**
- * Get incoming call object based on CallUUID.
- * @param {String} callUUID - provide active CallUUID
- * @param {Client} clientObject - client reference
- * @returns Incoming call session information
- */
-export const getCurrentIncomingCall = (
-  callUUID: string, clientObject: Client,
-): CallSession | null => {
-  let curIncomingCall: CallSession | null = null;
-  if (callUUID && clientObject.incomingInvites.has(callUUID)) {
-    curIncomingCall = clientObject.incomingInvites.get(callUUID);
-  } else if (clientObject.lastIncomingCall) {
-    curIncomingCall = clientObject.lastIncomingCall;
-    if (callUUID && clientObject.options.allowMultipleIncomingCalls) {
-      Plivo.log.error(`${LOGCAT.CALL} | No incomingCall with callUUID - ${callUUID}`);
-      return null;
-    }
-  }
-  return curIncomingCall;
 };
 
 /**
