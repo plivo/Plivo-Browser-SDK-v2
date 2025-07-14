@@ -5,6 +5,36 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.19 (released@ 14-07-2025)
+
+**Feature**
+* Added a mechanism to check if the input and output devices are same/different based on the device group id and device label name for better debugging.
+
+**Bug Fixes**
+* Fixed: Suppress the `onIncomingCall` event if the incoming call is not in an active state.
+* Fixed: Browser UI responsiveness issue when rejecting incoming calls immediately upon receipt.
+* Fixed: Incorrect I/O device data sent to call-insights when input device is changed during idle state.
+* Fixed: Output Audio playing through the built-in speakers even when the default output device is changed
+
+## v2.2.19-rc.3 (released@ 25-06-2025)
+
+**Bug Fixes**
+* Fixed: Suppress the `onIncomingCall` event if the incoming call is not in an active state.
+
+## v2.2.19-rc.2 (released@ 23-05-2025)
+
+**Bug Fixes**
+* Fixed: Browser UI responsiveness issue when rejecting incoming calls immediately upon receipt.
+
+## v2.2.19-rc.1 (released@ 28-03-2025)
+
+**Feature**
+* Added a mechanism to check if the input and output devices are same/different based on the device group id and device label name for better debugging.
+
+**Bug Fixes**
+* Fixed: Incorrect I/O device data sent to call-insights when input device is changed during idle state.
+* Fixed: Output Audio playing through the built-in speakers even when the default output device is changed 
+
 ## v2.2.18 (released@ 12-03-2025)
 
 **Feature**

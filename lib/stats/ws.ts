@@ -184,14 +184,14 @@ export class StatsSocket {
           const item = this.messageBuffer.shift();
           this.ws.send(item as string);
           Plivo.log.debug('stats send success');
-          if ((client.callSession == null) && (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK')) {
-            // destroying stats socket since call has ended
-            this.disconnect();
-            client.statsSocket = null;
-            client.networkChangeInCurrentSession = false;
-            client.deviceToggledInCurrentSession = false;
-          }
         }
+      }
+      if ((client.callSession == null) && (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK')) {
+        // destroying stats socket since call has ended
+        this.disconnect();
+        client.statsSocket = null;
+        client.networkChangeInCurrentSession = false;
+        client.deviceToggledInCurrentSession = false;
       }
       if (retryAttempts !== C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
         retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
@@ -208,14 +208,15 @@ export class StatsSocket {
         // return false;
       }
     }
-    setTimeout(() => {
-      retrySecondsCount += 1;
-      retryAttempts -= 1;
-      this.send(message, client);
-    }, retrySecondsCount * 900);
-
-    Plivo.log.warn(`${C.LOGCAT.CALL} | statsSocket is not open, retrying to connect`);
-    this.reconnect();
+    if (!this.isConnecting && !this.isConnected()) {
+      setTimeout(() => {
+        retrySecondsCount += 1;
+        retryAttempts -= 1;
+        this.send(message, client);
+      }, retrySecondsCount * 900);
+      Plivo.log.warn(`${C.LOGCAT.CALL} | statsSocket is not open, retrying to connect`);
+      this.reconnect();
+    }
     return false;
   };
 

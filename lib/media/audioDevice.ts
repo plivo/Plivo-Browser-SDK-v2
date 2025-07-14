@@ -4,7 +4,6 @@
 import {
   AUDIO_DEVICE_ABORT_ERROR_CODE,
   AUDIO_DEVICE_SECURITY_ERROR,
-  REMOTE_VIEW_ID,
   RINGBACK_ELEMENT_ID,
   RINGTONE_ELEMENT_ID,
   LOGCAT,
@@ -14,7 +13,6 @@ import { Logger } from '../logger';
 import { Client, PlivoObject } from '../client';
 import { DeviceAudioInfo, sendEvents } from '../stats/nonRTPStats';
 import getBrowserDetails from '../utils/browserDetection';
-import { setupRemoteView } from './document';
 import { emitMetrics } from '../stats/mediaMetrics';
 import { AudioLevel } from './audioLevel';
 
@@ -383,33 +381,7 @@ export const replaceStream = function (client: Client, constraints: any): Promis
   });
 };
 
-/**
- * Updates audio track in active stream after device change.
- * @param {String} deviceId - input or output audio device id
- * @param {Client} client - client reference
- * @param {String} state - specifies if audio device is added or removed
- * @param {String} label - input or output audio device label
- */
-const replaceAudioTrack = function (
-  deviceId: string, client: Client, state: string, label: string,
-): void {
-  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} |inside replacetrack with device id  : ${deviceId}`);
-  let constraints: MediaStreamConstraints;
-  if (!client._currentSession) {
-    if (currentLocalStream) {
-      currentLocalStream.getTracks().forEach((track) => track.stop());
-    } else if (!client.permOnClick) {
-      if ((window as any).localStream) {
-        (window as any).localStream.getTracks()
-          .forEach((track: { stop: () => void; }) => {
-            track.stop();
-            (window as any).localStream.removeTrack(track);
-          });
-        (window as any).localStream = null;
-      }
-    }
-    return;
-  }
+const updateAudioContraints = function (state, deviceId, label) {
   if (state === 'added') {
     if (
       typeof Plivo.audioConstraints === 'object'
@@ -431,24 +403,52 @@ const replaceAudioTrack = function (
     } else {
       (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
     }
-    constraints = {
+    return {
       audio: Plivo.audioConstraints,
       video: false,
     };
-  } else {
-    let audioConstraints: any = null;
-    if (isSafari) {
-      const newDeviceId = activeDeviceLabelDeviceIdMap[label];
-      audioConstraints = {
-        deviceId: newDeviceId ? { exact: newDeviceId } : undefined,
-      };
-    } else {
-      audioConstraints = true;
-    }
-    constraints = {
-      audio: audioConstraints,
-      video: false,
+  }
+  let audioConstraints: any = null;
+  if (isSafari) {
+    const newDeviceId = activeDeviceLabelDeviceIdMap[label];
+    audioConstraints = {
+      deviceId: newDeviceId ? { exact: newDeviceId } : undefined,
     };
+  } else {
+    audioConstraints = true;
+  }
+  return {
+    audio: audioConstraints,
+    video: false,
+  };
+};
+
+/**
+ * Updates audio track in active stream after device change.
+ * @param {String} deviceId - input or output audio device id
+ * @param {Client} client - client reference
+ * @param {String} state - specifies if audio device is added or removed
+ * @param {String} label - input or output audio device label
+ */
+const replaceAudioTrack = function (
+  deviceId: string, client: Client, state: string, label: string,
+): void {
+  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} |inside replacetrack with device id  : ${deviceId}`);
+  const constraints: MediaStreamConstraints = updateAudioContraints(state, deviceId, label);
+  if (!client._currentSession) {
+    if (currentLocalStream) {
+      currentLocalStream.getTracks().forEach((track) => track.stop());
+    } else if (!client.permOnClick) {
+      if ((window as any).localStream) {
+        (window as any).localStream.getTracks()
+          .forEach((track: { stop: () => void; }) => {
+            track.stop();
+            (window as any).localStream.removeTrack(track);
+          });
+        (window as any).localStream = null;
+      }
+    }
+    return;
   }
 
   replaceStream(client, constraints);
@@ -514,6 +514,30 @@ export const isElectronApp = function (): boolean {
   return false;
 };
 
+export const matchDevices = function (
+  activeInputDeviceGroupId,
+  activeOutputDeviceGroupId,
+  activeInputDevice,
+  activeOutputDevice,
+): boolean {
+  const checkDeviceLabelName = (inputDeviceLabel, outputDeviceLable) => {
+    const match = inputDeviceLabel.match(/\(([^)]+)\)/);
+    return match && outputDeviceLable.includes(match[1]);
+  };
+
+  if (activeInputDeviceGroupId !== activeOutputDeviceGroupId) {
+    Plivo.log.debug(`${LOGCAT.CALL} | Input and output group IDs mismatch found inputGroupId: ${activeInputDeviceGroupId}, outputGroupId: ${activeOutputDeviceGroupId}`);
+    Plivo.log.debug(`${LOGCAT.CALL} | Checking if the active input and output devices are same, activeInputDevice: ${activeInputDevice}, activeOutputDevice: ${activeOutputDevice}`);
+    // check the device labels stricly
+    if (activeInputDevice !== activeOutputDevice) {
+      // check if both the labels are same but their text are different
+      return checkDeviceLabelName(activeInputDevice, activeOutputDevice);
+    }
+    return true;
+  }
+  return true;
+};
+
 /**
  * Get input and output audio device information to send to plivo stats.
  * @returns Fulfills with audio device information or reject with error
@@ -522,6 +546,8 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
   return navigator.mediaDevices.enumerateDevices().then((devices) => {
     const inputDeviceIdLabelMap: Map<any, any> = new Map();
     const outputDeviceIdLabelMap: Map<any, any> = new Map();
+    const inputDeviceLabelGroupIdMap: Map<any, any> = new Map();
+    const outputDeviceLabelGroupIdMap: Map<any, any> = new Map();
     const deviceInfo: DeviceAudioInfo = {
       noOfAudioInput: 0,
       noOfAudioOutput: 0,
@@ -533,6 +559,8 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
       audioOutputIdSet: this.audio.speakerDevices.get() || '',
       activeInputAudioDevice: '',
       activeOutputAudioDevice: '',
+      activeInputDeviceGroupId: '',
+      activeOutputDeviceGroupId: '',
     };
     let activeInputDeviceForSafari: any = null;
     devices.forEach((d) => {
@@ -546,6 +574,7 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
 
       if (d.kind === 'audioinput') {
         inputDeviceIdLabelMap.set(d.deviceId, d.label);
+        inputDeviceLabelGroupIdMap.set(d.label, d.groupId);
         deviceInfo.noOfAudioInput += 1;
         if (deviceInfo.noOfAudioInput === 1) {
           activeInputDeviceForSafari = d.label;
@@ -554,6 +583,7 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
         deviceInfo.audioInputGroupIds += `${d.groupId} ,`;
       } else if (d.kind === 'audiooutput') {
         outputDeviceIdLabelMap.set(d.deviceId, d.label);
+        outputDeviceLabelGroupIdMap.set(d.label, d.groupId);
         deviceInfo.noOfAudioOutput += 1;
         deviceInfo.audioOutputLables += `${d.label} ,`;
         deviceInfo.audioOutputGroupIds += `${d.groupId} ,`;
@@ -578,6 +608,12 @@ export const getAudioDevicesInfo = function (): Promise<DeviceAudioInfo> {
         deviceInfo.audioOutputIdSet,
       );
     }
+    deviceInfo.activeInputDeviceGroupId = inputDeviceLabelGroupIdMap.get(
+      deviceInfo.activeInputAudioDevice,
+    );
+    deviceInfo.activeOutputDeviceGroupId = outputDeviceLabelGroupIdMap.get(
+      deviceInfo.activeOutputAudioDevice,
+    );
     return deviceInfo;
   });
 };
@@ -709,20 +745,6 @@ export const checkAudioDevChange = function (): void {
               }
 
               if (device.kind === 'audiooutput') {
-                if ((lastActiveSpeakerDevice !== '' && lastActiveSpeakerDevice !== 'default') && clientObject) {
-                  // if (!client._currentSession) {
-                  const remoteTrack = clientObject.remoteView.srcObject;
-                  const initialRemoteView = document.getElementById(REMOTE_VIEW_ID);
-                  initialRemoteView?.remove();
-                  setupRemoteView();
-                  Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Remote view id replaced`);
-                  // }
-                  clientObject.remoteView = document.getElementById(REMOTE_VIEW_ID);
-                  if (clientObject._currentSession && remoteTrack) {
-                    Plivo.log.debug(`${LOGCAT.CALL_QUALITY} | Remote view src object added`);
-                    clientObject.remoteView.srcObject = remoteTrack;
-                  }
-                }
                 Plivo.log.info(`${LOGCAT.CALL_QUALITY} Audio output device removed:- `, JSON.stringify(device));
                 setTimeout(() => {
                   if (client && isFirefox) {
@@ -784,21 +806,29 @@ export const inputDevices = ((): InputDevices => ({
         const groupId = availableAudioDevicesDeviceIdGroupIdMap[deviceId];
         // eslint-disable-next-line no-param-reassign
         deviceId = groupIdDeviceIdMap[groupId];
-        Plivo.log.debug(deviceId);
         replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
       } else {
         replaceAudioTrack(deviceId, clientObject, 'added', activeDeviceIdDeviceLabelMap[deviceId]);
       }
       // send event to call insights
-      getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
-        const clientObj = clientObject;
-        if (clientObj !== null) {
-          Plivo.log.info(`${LOGCAT.CALL} | Audio device toggled to`, JSON.stringify(device));
-          const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
-          sendEvents.call(clientObject, obj, clientObj._currentSession);
-          clientObj.deviceToggledInCurrentSession = true;
-        }
-      });
+      setTimeout(() => {
+        getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
+          if (!matchDevices(toggledDeviceInfo.activeInputDeviceGroupId,
+            toggledDeviceInfo.activeOutputDeviceGroupId,
+            toggledDeviceInfo.activeInputAudioDevice,
+            toggledDeviceInfo.activeOutputAudioDevice)
+          ) {
+            Plivo.log.debug(`${LOGCAT.CALL} | Input and output device mismatch while adding new input device${JSON.stringify(toggledDeviceInfo)}`);
+          }
+          const clientObj = clientObject;
+          if (clientObj !== null && clientObj._currentSession) {
+            Plivo.log.info(`${LOGCAT.CALL} | Audio device toggled to`, JSON.stringify(device));
+            const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
+            sendEvents.call(clientObject, obj, clientObj._currentSession);
+            clientObj.deviceToggledInCurrentSession = true;
+          }
+        });
+      }, 1000);
     }
     return true;
   },
@@ -842,46 +872,62 @@ export const outputDevices = ((): OutputDevices => ({
     const speakerElement = document.querySelectorAll(
       '[data-devicetype="speakerDevice"]',
     ) as any;
-    speakerElement.forEach((e: any) => {
-      if (typeof e.sinkId !== 'undefined') {
-        e.setSinkId(deviceId)
-          .then(() => { })
-          .catch((error) => {
-            if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
-              e.src = '';
-              e.setSinkId(deviceId)
-                .then(() => { })
-                .catch((error2) => {
-                  Plivo.log.error(error2.message);
-                });
-            } else {
-              let errorMessage: string = error.message;
-              if (error.name === AUDIO_DEVICE_SECURITY_ERROR) {
-                errorMessage = `You need to use HTTPS for selecting audio output device: ${error}`;
+    const promiseArr: Array<any> = [];
+    speakerElement.forEach((element: any) => {
+      if (typeof element.sinkId !== 'undefined') {
+        const setId = (e: any) => new Promise((resolve) => {
+          e.setSinkId(deviceId)
+            .then(() => { resolve("success"); })
+            .catch((error) => {
+              if (error.code === AUDIO_DEVICE_ABORT_ERROR_CODE) {
+                e.src = '';
+                e.setSinkId(deviceId)
+                  .then(() => { resolve("success"); })
+                  .catch((error2) => {
+                    Plivo.log.error(error2.message);
+                    resolve("Fail");
+                  });
+              } else {
+                let errorMessage: string = error.message;
+                if (error.name === AUDIO_DEVICE_SECURITY_ERROR) {
+                  errorMessage = `You need to use HTTPS for selecting audio output device: ${error}`;
+                }
+                Plivo.log.error(errorMessage);
+                resolve("errorMessage");
               }
-              Plivo.log.error(errorMessage);
-            }
-            return false;
-          });
+              resolve("Fail");
+              return false;
+            });
+        });
+        promiseArr.push(setId(element));
       } else {
         Plivo.log.warn('Browser does not support output device selection.');
       }
-      return false;
     });
+
+    Promise.all(promiseArr).then(() => {
+      setTimeout(() => {
+        getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
+          const clientObj = clientObject;
+          if (!matchDevices(toggledDeviceInfo.activeInputDeviceGroupId,
+            toggledDeviceInfo.activeOutputDeviceGroupId,
+            toggledDeviceInfo.activeInputAudioDevice,
+            toggledDeviceInfo.activeOutputAudioDevice)
+          ) {
+            Plivo.log.debug(`${LOGCAT.CALL} | Input and output device mismatch while adding new output device${JSON.stringify(toggledDeviceInfo)}`);
+          }
+          if (clientObj !== null && clientObj._currentSession) {
+            Plivo.log.info(`${LOGCAT.CALL} Audio device toggled to`, JSON.stringify(device));
+            const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
+            sendEvents.call(clientObject, obj, clientObj._currentSession);
+            clientObj.deviceToggledInCurrentSession = true;
+          }
+        });
+      }, 1000);
+    });
+
     if (!settingFromWindows) {
       setByWindows = false;
-    }
-    // send event to call insights
-    if (clientObject !== null && clientObject._currentSession) {
-      getAudioDevicesInfo.call(clientObject).then((toggledDeviceInfo: DeviceAudioInfo) => {
-        const clientObj = clientObject;
-        if (clientObj !== null) {
-          Plivo.log.info(`${LOGCAT.CALL} Audio device toggled to`, JSON.stringify(device));
-          const obj = { msg: 'AUDIO_DEVICES_TOGGLE', deviceInfo: toggledDeviceInfo };
-          sendEvents.call(clientObject, obj, clientObj._currentSession);
-          clientObj.deviceToggledInCurrentSession = true;
-        }
-      });
     }
     return true;
   },

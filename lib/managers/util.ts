@@ -19,6 +19,7 @@ import {
 import { emitMetrics as _emitMetrics } from '../stats/mediaMetrics';
 import { GetRTPStats } from '../stats/rtpStats';
 import {
+  matchDevices,
   getAudioDevicesInfo, isElectronApp, resetMuteOnHangup, updateAudioDeviceFlags,
 } from '../media/audioDevice';
 import { Logger } from '../logger';
@@ -559,9 +560,18 @@ export const hangupClearance = function (session: CallSession) {
     const signallingInfo = session.getSignallingInfo();
     const mediaConnectionInfo = session.getMediaConnectionInfo();
     if (client.callstatskey) {
+      session.isAudioDeviceMismatch = false;
       getAudioDevicesInfo
         .call(client)
         .then((deviceInfo) => {
+          if (!matchDevices(deviceInfo.activeInputDeviceGroupId,
+            deviceInfo.activeOutputDeviceGroupId,
+            deviceInfo.activeInputAudioDevice,
+            deviceInfo.activeOutputAudioDevice)
+          ) {
+            session.isAudioDeviceMismatch = true;
+            Plivo.log.debug(`${LOGCAT.CALL} | Input and output device mismatch while hangup: ${JSON.stringify(deviceInfo)}`);
+          }
           sendCallSummaryEvent.call(
             client,
             deviceInfo,

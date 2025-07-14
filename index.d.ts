@@ -825,6 +825,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 */
             extraHeaders: ExtraHeaders;
             /**
+                * Holds the state of input and output device mismatch
+                * @private
+                */
+            isAudioDeviceMismatch: boolean;
+            /**
                 * Holds the WebRTC media session
                 * @private
                 */
@@ -1120,6 +1125,7 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Return if the app consuming Browser SDK is electron app or not.
         */
     export const isElectronApp: () => boolean;
+    export const matchDevices: (activeInputDeviceGroupId: any, activeOutputDeviceGroupId: any, activeInputDevice: any, activeOutputDevice: any) => boolean;
     /**
         * Get input and output audio device information to send to plivo stats.
         * @returns Fulfills with audio device information or reject with error
@@ -1695,6 +1701,8 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             audioOutputIdSet: string;
             activeInputAudioDevice: string;
             activeOutputAudioDevice: string;
+            activeInputDeviceGroupId: string;
+            activeOutputDeviceGroupId: string;
     }
     export interface RingingEvent {
             msg: string;
@@ -1716,6 +1724,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
             jsFramework: string[];
+            isAudioDeviceMismatch?: boolean;
             noiseReduction: NoiseReduction;
     }
     export interface SummaryEvent {
@@ -1738,6 +1747,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
             jsFramework: string[];
+            isAudioDeviceMismatch?: boolean;
             noiseReduction: NoiseReduction;
     }
     export interface NoiseReduction {
