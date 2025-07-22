@@ -39,7 +39,7 @@
   "bugs": {
     "url": "https://github.com/plivo/plivo-websdk-2.0-example/issues"
   },
-  "homepage": "https://www.plivo.com/docs/sdk/web/",
+  "homepage": "https://www.plivo.com/docs/sdk/client/browser/reference",
   "pre-commit": [
     "lint",
     "test:unit",
