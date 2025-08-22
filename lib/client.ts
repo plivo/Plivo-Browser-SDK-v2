@@ -220,6 +220,24 @@ export class Client extends EventEmitter {
   speechRecognition: any;
 
   /**
+   * Counter for speech recognition retry attempts
+   * @private
+   */
+  speechRecognitionRetryCount: number;
+
+  /**
+   * Flag to track audio-capture errors in speech recognition
+   * @private
+   */
+  speechRecognitionAudioCaptureError: boolean;
+
+  /**
+   * Flag to completely disable speech recognition for the session
+   * @private
+   */
+  speechRecognitionDisabled: boolean;
+
+  /**
    * Holds the loggerUtil instance which keeps the
    * value of username and sipCallID to attached to each log
    * @private
@@ -925,6 +943,9 @@ export class Client extends EventEmitter {
       // eslint-disable-next-line new-cap, no-undef
       this.speechRecognition = new webkitSpeechRecognition();
     }
+    this.speechRecognitionRetryCount = 0;
+    this.speechRecognitionAudioCaptureError = false;
+    this.speechRecognitionDisabled = false;
     this.loggerUtil = new LoggerUtil(this);
     Plivo.log.setLoggerUtil(this.loggerUtil);
     if (this.options.usePlivoStunServer === true

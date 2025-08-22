@@ -874,7 +874,7 @@ export const outputDevices = ((): OutputDevices => ({
     ) as any;
     const promiseArr: Array<any> = [];
     speakerElement.forEach((element: any) => {
-      if (typeof element.sinkId !== 'undefined') {
+      if (element && typeof element.sinkId !== 'undefined') {
         const setId = (e: any) => new Promise((resolve) => {
           e.setSinkId(deviceId)
             .then(() => { resolve("success"); })
@@ -935,7 +935,11 @@ export const outputDevices = ((): OutputDevices => ({
     const speakerElement = document.querySelector(
       '[data-devicetype="speakerDevice"]',
     ) as any;
-    if (speakerElement.sinkId) return speakerElement.sinkId;
+    if (speakerElement && speakerElement.sinkId) {
+      return speakerElement.sinkId;
+    } else {
+      Plivo.log.warn('No speaker element found');
+    }
     return null;
   },
   reset() {
@@ -943,8 +947,10 @@ export const outputDevices = ((): OutputDevices => ({
       '[data-devicetype="speakerDevice"]',
     ) as any;
     speakerElement.forEach((e: any) => {
-      if (e.setSinkId) {
+      if (e && e.setSinkId) {
         e.setSinkId('');
+      } else {
+        Plivo.log.warn('No speaker element found');
       }
     });
     return true;

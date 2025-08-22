@@ -174,6 +174,21 @@ declare module 'plivo-browser-sdk/client' {
                 */
             speechRecognition: any;
             /**
+                * Counter for speech recognition retry attempts
+                * @private
+                */
+            speechRecognitionRetryCount: number;
+            /**
+                * Flag to track audio-capture errors in speech recognition
+                * @private
+                */
+            speechRecognitionAudioCaptureError: boolean;
+            /**
+                * Flag to completely disable speech recognition for the session
+                * @private
+                */
+            speechRecognitionDisabled: boolean;
+            /**
                 * Holds the loggerUtil instance which keeps the
                 * value of username and sipCallID to attached to each log
                 * @private
