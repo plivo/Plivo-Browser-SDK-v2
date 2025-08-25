@@ -947,7 +947,7 @@ export const outputDevices = ((): OutputDevices => ({
       '[data-devicetype="speakerDevice"]',
     ) as any;
     speakerElement.forEach((e: any) => {
-      if (e &&e.setSinkId) {
+      if (e && e.setSinkId) {
         e.setSinkId('');
       } else {
         Plivo.log.warn('No speaker element found');
