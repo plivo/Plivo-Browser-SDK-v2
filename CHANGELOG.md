@@ -5,6 +5,11 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.20 (released@ 25-08-2025)
+
+**Bug Fixes**
+* Fixed: Fixing crash issue due to sinkid during audio device change.
+
 ## v2.2.19 (released@ 14-07-2025)
 
 **Feature**
