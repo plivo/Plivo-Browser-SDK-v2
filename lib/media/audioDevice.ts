@@ -901,7 +901,7 @@ export const outputDevices = ((): OutputDevices => ({
         });
         promiseArr.push(setId(element));
       } else {
-        Plivo.log.warn('Browser does not support output device selection.');
+        Plivo.log.warn(`${LOGCAT.CALL} | Browser does not support output device selection.`);
       }
     });
 
@@ -938,7 +938,7 @@ export const outputDevices = ((): OutputDevices => ({
     if (speakerElement && speakerElement.sinkId) {
       return speakerElement.sinkId;
     } else {
-      Plivo.log.warn('No speaker element found');
+      Plivo.log.warn(`${LOGCAT.CALL} | No speaker element found`);
     }
     return null;
   },
@@ -950,7 +950,7 @@ export const outputDevices = ((): OutputDevices => ({
       if (e && e.setSinkId) {
         e.setSinkId('');
       } else {
-        Plivo.log.warn('No speaker element found');
+        Plivo.log.warn(`${LOGCAT.CALL} | No speaker element found.`);
       }
     });
     return true;
