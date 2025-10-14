@@ -28,6 +28,7 @@ describe('ValidateOptions', () => {
       registrationRefreshTimer: 120,
       stopAutoRegisterOnConnect: false,
       usePlivoStunServer: false,
+      noiseReductionFilePath: "",
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
       }
@@ -105,6 +106,18 @@ describe('ValidateOptions', () => {
     expect(validateOptions(inputOptions).stopAutoRegisterOnConnect).toStrictEqual(false);
     inputOptions.stopAutoRegisterOnConnect = true;
     expect(validateOptions(inputOptions).stopAutoRegisterOnConnect).toStrictEqual(true);
+  });
+
+  it('should check if noiseReductionFilePath is valid', () => {
+    const input = { ...options };
+    input.noiseReductionFilePath = true;
+    expect(validateOptions(input).noiseReductionFilePath).toStrictEqual("");
+    input.noiseReductionFilePath = 12345;
+    expect(validateOptions(input).noiseReductionFilePath).toStrictEqual("");
+    input.noiseReductionFilePath = 12345.12345;
+    expect(validateOptions(input).noiseReductionFilePath).toStrictEqual("");
+    input.noiseReductionFilePath = "processor.js";
+    expect(validateOptions(input).noiseReductionFilePath).toStrictEqual("processor.js");
   });
 
   it('should check if usePlivoStunServer is valid', () => {

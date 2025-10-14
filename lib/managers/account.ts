@@ -148,7 +148,10 @@ class Account {
       this.cs.loginCallback = callback;
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | deleting the existing phone instance`);
       this.cs.phone.stop();
-      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "Relogin");
+      this.cs.connectionInfo = {
+        state: ConnectionState.DISCONNECTED,
+        reason: "Relogin",
+      };
       return this.cs.loginCallback;
     }
     return true;
@@ -311,7 +314,10 @@ class Account {
   private _onDisconnected = (evt: SipLib.UserAgentDisconnectedEvent): void => {
     Plivo.log.info(`${C.LOGCAT.LOGOUT} | WebSocket Connection Closed - Code: ${evt.code ?? 'Unknown code'}, Reason: ${evt.reason ?? 'No reason provided'}, Socket URL: ${evt.socket.url}`);
     if (evt.code) {
-      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, evt.code.toString());
+      this.cs.connectionInfo = {
+        state: ConnectionState.DISCONNECTED,
+        reason: evt.code.toString(),
+      };
     }
     Plivo.log.debug(`${C.LOGCAT.WS} |  websocket disconnected with reason : ${this.cs.connectionInfo.reason}`);
     this.cs.networkDisconnectedTimestamp = getCurrentTime(this.cs);
@@ -339,6 +345,17 @@ class Account {
     // below is the example to get basic 120 sec expiry from response
     // To do : This needs to be changed in case of login through access Token method
     setConectionInfo(this.cs, ConnectionState.CONNECTED, 'registered');
+    if (this.cs._currentSession && this.cs.isCallMuted) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Speech Recognition restarted after network disruption`);
+      this.cs._currentSession.startSpeechRecognition(this.cs);
+    }
+    if (this.cs.loginCallback) {
+      this.cs.loginCallback = null;
+    }
+    this.cs.connectionInfo = {
+      state: ConnectionState.CONNECTED,
+      reason: 'registered',
+    };
     Plivo.log.debug(`${C.LOGCAT.WS} |  websocket connected: ${this.cs.connectionInfo.reason}`);
     this.cs.emit('onConnectionChange', this.cs.connectionInfo);
     if (this.cs.loginCallback) {
@@ -390,11 +407,14 @@ class Account {
   private _onUnRegistered = (): void => {
     this.cs.isLoggedIn = false;
     if (this.cs.connectionInfo.state === "" || this.cs.connectionInfo.state === ConnectionState.CONNECTED) {
-      setConectionInfo(this.cs, ConnectionState.DISCONNECTED, "unregistered");
+      this.cs.connectionInfo = {
+        state: ConnectionState.DISCONNECTED,
+        reason: "unregistered",
+      };
     }
     this.cs.connectionStatus = 'unregistered';
     Plivo.log.debug(`${C.LOGCAT.WS} |  websocket disconnected with reason : ${this.cs.connectionInfo.reason}`);
-    this.cs.emit('onConnectionChange', this.cs.connectionInfo);
+    this.cs.emit('onConnectionChange', { ...this.cs.connectionInfo });
     if (!this.cs.isLogoutCalled) {
       return;
     }
@@ -415,7 +435,6 @@ class Account {
    * @param {Object} error - Login failure error
    */
   private _onRegistrationFailed = (error: { cause?: string, response: any }): void => {
-    Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: `, error.cause, error.response);
     if (this.cs.connectionInfo.state === ConnectionState.DISCONNECTED && this.cs.isLoggedIn) {
       Plivo.log.debug(`${C.LOGCAT.LOGIN} | Registration failed when state: ${this.cs.connectionInfo.state} and login: ${this.cs.isLoggedIn} with error: `, error.cause, error.response);
       return;
@@ -424,12 +443,15 @@ class Account {
     this.cs.userName = null;
     this.cs.password = null;
     const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
-    if (this.cs.isAccessTokenGenerator) {
-      this.cs.emit('onLoginFailed', "RELOGIN_FAILED_INVALID_TOKEN");
-    } else if (error.cause && errorCode === 401) {
+    if (error.cause && errorCode === 401) {
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: `, error.cause, error.response);
       this.cs.emit('onLoginFailed', error.cause);
     } else {
-      this.cs.emit('onLoginFailed', this.cs.getErrorStringByErrorCodes(errorCode));
+      clearInterval(this.cs.networkChangeInterval as any);
+      this.cs.networkChangeInterval = null;
+      const errorString = this.cs.isAccessTokenGenerator ? "RELOGIN_FAILED_INVALID_TOKEN" : this.cs.getErrorStringByErrorCodes(errorCode);
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: ${errorString}`);
+      this.cs.emit('onLoginFailed', errorString);
     }
   };
 

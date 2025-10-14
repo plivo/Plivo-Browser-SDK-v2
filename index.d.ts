@@ -4,1969 +4,2097 @@
 //   ../../plivo-jssip
 
 declare module 'plivo-browser-sdk' {
-    import { Client, ConfiguationOptions } from 'plivo-browser-sdk/client';
-    class Plivo {
-        client: Client;
-        constructor(options: ConfiguationOptions);
-    }
-    export default Plivo;
+  import { Client, ConfiguationOptions } from 'plivo-browser-sdk/client';
+  class Plivo {
+    client: Client;
+    constructor(options: ConfiguationOptions);
+  }
+  export default Plivo;
 }
 
 declare module 'plivo-browser-sdk/client' {
-    import { EventEmitter } from 'events';
-    import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
-    import { Logger, AvailableLogMethods, AvailableFlagValues, DtmfOptions } from 'plivo-browser-sdk/logger';
-    import { CallSession } from 'plivo-browser-sdk/managers/callSession';
-    import { StatsSocket } from 'plivo-browser-sdk/stats/ws';
-    import { OutputDevices, InputDevices, RingToneDevices } from 'plivo-browser-sdk/media/audioDevice';
-    import { NoiseSuppression } from 'plivo-browser-sdk/rnnoise/NoiseSuppression';
-    import { WorkerManager } from 'plivo-browser-sdk/managers/workerManager';
-    import { LoggerUtil } from 'plivo-browser-sdk/utils/loggerUtil';
-    export interface PlivoObject {
-            log: typeof Logger;
-            sendEvents?: (obj: any, session: CallSession) => void;
-            AppError?: (obj: any, log: any) => boolean;
-            audioConstraints?: MediaTrackConstraints;
-    }
-    export interface ConfiguationOptions {
-            codecs?: string[];
-            enableTracking?: boolean;
-            enableQualityTracking?: AvailableFlagValues;
-            debug?: AvailableLogMethods;
-            permOnClick?: boolean;
-            enableIPV6?: boolean;
-            audioConstraints?: MediaTrackConstraints;
-            dscp?: boolean;
-            appId?: null | string;
-            appSecret?: null | string;
-            registrationDomainSocket?: string[] | null;
-            clientRegion?: null | string;
-            preDetectOwa?: boolean;
-            disableRtpTimeOut?: boolean;
-            allowMultipleIncomingCalls?: boolean;
-            closeProtection?: boolean;
-            maxAverageBitrate?: number;
-            useDefaultAudioDevice?: boolean;
-            registrationRefreshTimer?: number;
-            enableNoiseReduction?: boolean;
-            usePlivoStunServer?: boolean;
-            stopAutoRegisterOnConnect: boolean;
-            dtmfOptions?: DtmfOptions;
-            captureSDKCrashOnly: boolean;
-    }
-    export interface BrowserDetails {
-            browser: string;
-            version: number;
-    }
-    export interface ExtraHeaders {
-            [key: string]: string;
-    }
-    export interface Storage {
-            local_audio: any[];
-            remote_audio: any[];
-            mosLocalMeasures: any[];
-            jitterLocalMeasures: number[];
-            jitterRemoteMeasures: number[];
-            packetLossRemoteMeasures: number[];
-            packetLossLocalMeasures: number[];
-            rtt: number[];
-            mosRemoteMeasures: number[];
-            audioCodec: null | string;
-            startAnalysis: boolean;
-            warning: {
-                    audioLocalMeasures: boolean;
-                    audioRemoteMeasures: boolean;
-                    mosLocalMeasures: boolean;
-                    mosRemoteMeasures: boolean;
-                    jitterLocalMeasures: boolean;
-                    jitterRemoteMeasures: boolean;
-                    packetLossRemoteMeasures: boolean;
-                    packetLossLocalMeasures: boolean;
-                    rtt: boolean;
-                    ice_connection: boolean;
-            };
-    }
-    export interface ConnectionInfo {
-            reason: string;
-            state: string;
-    }
+  import { EventEmitter } from 'events';
+  import { WebSocketInterface, UA, RTCSession } from 'plivo-jssip';
+  import {
+    Logger,
+    AvailableLogMethods,
+    AvailableFlagValues,
+    DtmfOptions,
+  } from 'plivo-browser-sdk/logger';
+  import { CallSession } from 'plivo-browser-sdk/managers/callSession';
+  import { StatsSocket } from 'plivo-browser-sdk/stats/ws';
+  import {
+    OutputDevices,
+    InputDevices,
+    RingToneDevices,
+  } from 'plivo-browser-sdk/media/audioDevice';
+  import { NoiseSuppression } from 'plivo-browser-sdk/rnnoise/NoiseSuppression';
+  import { WorkerManager } from 'plivo-browser-sdk/managers/workerManager';
+  import { LoggerUtil } from 'plivo-browser-sdk/utils/loggerUtil';
+  export interface PlivoObject {
+    log: typeof Logger;
+    sendEvents?: (obj: any, session: CallSession) => void;
+    AppError?: (obj: any, log: any) => boolean;
+    audioConstraints?: MediaTrackConstraints;
+  }
+  export interface ConfiguationOptions {
+    codecs?: string[];
+    enableTracking?: boolean;
+    enableQualityTracking?: AvailableFlagValues;
+    debug?: AvailableLogMethods;
+    permOnClick?: boolean;
+    enableIPV6?: boolean;
+    audioConstraints?: MediaTrackConstraints;
+    dscp?: boolean;
+    appId?: null | string;
+    appSecret?: null | string;
+    registrationDomainSocket?: string[] | null;
+    clientRegion?: null | string;
+    preDetectOwa?: boolean;
+    disableRtpTimeOut?: boolean;
+    allowMultipleIncomingCalls?: boolean;
+    closeProtection?: boolean;
+    maxAverageBitrate?: number;
+    useDefaultAudioDevice?: boolean;
+    registrationRefreshTimer?: number;
+    enableNoiseReduction?: boolean;
+    usePlivoStunServer?: boolean;
+    stopAutoRegisterOnConnect: boolean;
+    dtmfOptions?: DtmfOptions;
+    noiseReductionFilePath?: string;
+    captureSDKCrashOnly: boolean;
+  }
+  export interface BrowserDetails {
+    browser: string;
+    version: number;
+  }
+  export interface ExtraHeaders {
+    [key: string]: string;
+  }
+  export interface Storage {
+    local_audio: any[];
+    remote_audio: any[];
+    mosLocalMeasures: any[];
+    jitterLocalMeasures: number[];
+    jitterRemoteMeasures: number[];
+    packetLossRemoteMeasures: number[];
+    packetLossLocalMeasures: number[];
+    rtt: number[];
+    mosRemoteMeasures: number[];
+    audioCodec: null | string;
+    startAnalysis: boolean;
+    warning: {
+      audioLocalMeasures: boolean;
+      audioRemoteMeasures: boolean;
+      mosLocalMeasures: boolean;
+      mosRemoteMeasures: boolean;
+      jitterLocalMeasures: boolean;
+      jitterRemoteMeasures: boolean;
+      packetLossRemoteMeasures: boolean;
+      packetLossLocalMeasures: boolean;
+      rtt: boolean;
+      ice_connection: boolean;
+    };
+  }
+  export interface ConnectionInfo {
+    reason: string;
+    state: string;
+  }
+  /**
+   * Initializes the client.
+   * @public
+   */
+  export class Client extends EventEmitter {
     /**
-        * Initializes the client.
-        * @public
-        */
-    export class Client extends EventEmitter {
-            /**
-                * Holds the browser details of the client
-                * @private
-                */
-            browserDetails: BrowserDetails;
-            /**
-                * Set to true if you want to ask for mic permission just
-                * before call connection. Otherwise it will be asked only on page load
-                * @private
-                */
-            permOnClick: boolean;
-            /**
-                * Play the ringtone audio for incoming calls if this flag is set to true
-                * Otherwise do not play audio.
-                * @private
-                */
-            ringToneFlag: boolean;
-            /**
-                * Callback to perform login after previous connection is disconnected successfully
-                * @private
-                */
-            loginCallback: any;
-            /**
-                * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
-                * Otherwise do not play audio.
-                * @private
-                */
-            ringToneBackFlag: boolean;
-            /**
-                * Play the connect tone audio for outgoing calls in sending state if this flag is set to true
-                * Otherwise do not play audio.
-                * @private
-                */
-            connectToneFlag: boolean;
-            /**
-                * Set to true if logged in. Otherwise set to false
-                * @private
-                */
-            isLoggedIn: boolean;
-            /**
-                * Holds the JSSIP user agent for the logged in user
-                * @private
-                */
-            phone: UA | null;
-            /**
-                * Holds the incoming or outgoing call session details
-                * @private
-                */
-            _currentSession: null | CallSession;
-            /**
-                * Difference in time(ms) between local machine and universal epoch time
-                * @private
-                */
-            timeDiff: number;
-            /**
-                * Holds the incoming or outgoing JsSIP RTCSession(WebRTC media session)
-                * @private
-                */
-            callSession: null | RTCSession;
-            /**
-                * Unique identifier generated for a call by server
-                * @private
-                */
-            callUUID: null | string;
-            /**
-                * Specifies whether the call direction is incoming or outgoing
-                * @private
-                */
-            callDirection: null | string;
-            /**
-                * Holds the SpeechRecognition instance which listens for
-                * speech when the user speaks on mute
-                * @private
-                */
-            speechRecognition: any;
-            /**
-                * Holds the loggerUtil instance which keeps the
-                * value of username and sipCallID to attached to each log
-                * @private
-                */
-            loggerUtil: LoggerUtil;
-            noiseSuppresion: NoiseSuppression;
-            /**
-                * Specifies whether the noise suppression should be enabled or not
-                * @private
-                */
-            enableNoiseReduction: boolean | undefined;
-            /**
-                * Contains the identifier for previous incoming or outgoing call
-                * @private
-                */
-            lastCallUUID: null | string;
-            /**
-                * Holds the call session of previous incoming or outgoing call
-                * @private
-                */
-            _lastCallSession: null | CallSession;
-            /**
-                * Contains the ongoing incoming calls identifiers with their call session
-                * @private
-                */
-            incomingInvites: Map<string, any>;
-            /**
-                * Contains the ongoing incoming calls identifiers with their start time
-                * @private
-                */
-            incomingCallsInitiationTime: Map<string, any>;
-            /**
-                * Holds the call session of previous incoming call
-                * @private
-                */
-            lastIncomingCall: null | CallSession;
-            /**
-                * Holds the callstats.io instance for sending the stats to callstats.io
-                * @private
-                */
-            callStats: any;
-            /**
-                * Username given when logging in
-                * @private
-                */
-            userName: null | string;
-            /**
-                * Password given when logging in
-                * @private
-                */
-            password: null | string;
-            /**
-                * Access Token  given when logging in
-                * @private
-                */
-            accessToken: null | string;
-            /**
-                * contactUri object which holds the connection details
-                * @private
-                */
-            contactUri: {
-                    name: string | null;
-                    ip: string;
-                    port: string;
-                    protocol: string;
-                    registrarIP: string;
-            };
-            /**
-                * Access Token object given when logging in
-                * @private
-                */
-            accessTokenObject: null | any;
-            /**
-                * boolean that tells which type of login method is called
-                * @private
-                */
-            isAccessTokenGenerator: boolean | null;
-            /**
-                * boolean that tells if user logged in through access token
-                * @private
-                */
-            isAccessToken: boolean;
-            /**
-                * access token expiry
-                * @private
-                */
-            accessTokenExpiryInEpoch: number | null;
-            /**
-                * Access Token  Outgoing Grant
-                * @private
-                */
-            isOutgoingGrant: boolean | null;
-            /**
-                * Access Token  Incoming Grant
-                * @private
-                */
-            isIncomingGrant: boolean | null;
-            /**
-                * Access Token  abstract class that needs to be implemented
-                * @private
-                */
-            accessTokenInterface: any;
-            /**
-                * Flag to monitor the feedback api that gets called after the token is expired
-                * @private
-                */
-            deferFeedback: null | boolean;
-            /**
-                * Flag that tells if unregister is pending or not
-                * @private
-                */
-            isUnregisterPending: null | boolean;
-            /**
-                * Options passed by the user while instantiating the client class
-                * @private
-                */
-            options: ConfiguationOptions;
-            /**
-                * It is a unique identifer which is not null when callstats permission is present
-                * @private
-                */
-            callstatskey: null | string;
-            /**
-                * Set to true if RTP stats needed to be sent for the call.Otherwise RTP stats are not sent
-                * @private
-                */
-            rtp_enabled: boolean;
-            /**
-                * Set to true if user is using callstats.io
-                * @private
-                */
-            statsioused: boolean;
-            /**
-                * Describes whether the call is in mute state or not
-                * @private
-                */
-            isCallMuted: boolean;
-            /**
-                * Specifically used for SpeechRecognition
-                * Describes whether the call is in mute state or not
-                * @private
-                */
-            isMuteCalled: boolean;
-            /**
-                * All audio related information
-                * @public
-                */
-            audio: {
-                    /**
-                        * Return a promise with the list of available devices
-                        */
-                    availableDevices: (filter: string) => Promise<MediaDeviceInfo[]>;
-                    /**
-                        * Object with getter and setter functions for ringtone devices
-                        */
-                    ringtoneDevices: RingToneDevices;
-                    /**
-                        * Object with getter and setter functions for microphone devices
-                        */
-                    microphoneDevices: InputDevices;
-                    /**
-                        * Object with getter and setter functions for audio output devices
-                        */
-                    speakerDevices: OutputDevices;
-                    /**
-                        * Return a promise with the list of audio output devices
-                        */
-                    revealAudioDevices: (arg: string) => Promise<string | MediaStream>;
-            };
-            /**
-                * Audio constraints object that will be passed to webRTC getUserMedia()
-                * @private
-                */
-            audioConstraints: MediaTrackConstraints;
-            /**
-                * Holds the previous one way audio detection details
-                * @private
-                */
-            owaLastDetect: {
-                    time: Date;
-                    isOneWay: boolean;
-            };
-            /**
-                * Specifies the interval at which one way audio detection happens
-                * @private
-                */
-            owaDetectTime: number;
-            /**
-                * explains whether call should be muted
-                * @private
-                */
-            shouldMuteCall: boolean;
-            /**
-                * Holds the websocket instance created for sending stats
-                * @private
-                */
-            statsSocket: null | StatsSocket;
-            /**
-                * Contains available audio devices.This is done for backward compatibility
-                * @private
-                */
-            audioDevDic: any;
-            /**
-                * It is a wrapper over ringback tone audio element.
-                * It is used for playing and pausing ringtone audio for outgoing call
-                * @private
-                */
-            ringBackToneView: null | HTMLAudioElement;
-            /**
-                * It is a wrapper over ring tone audio element.
-                * It is used for playing and pausing ringtone audio for incoming call
-                * @private
-                */
-            ringToneView: null | HTMLAudioElement;
-            /**
-                * Holds rtp stat information which will be used in capturing media metrics
-                * @private
-                */
-            storage: Storage | null;
-            /**
-                * Holds the websocket instance created for SIP signalling purpose
-                * @private
-                */
-            plivoSocket: WebSocketInterface;
-            /**
-                * Holds the connection state of the SDK
-                * @private
-                */
-            connectionInfo: ConnectionInfo;
-            /**
-                * Responsible for playing audio stream of remote user during call
-                * @private
-                */
-            remoteView: any;
-            /**
-                * It is a wrapper over connect tone audio element.
-                * It is used for playing and pausing connect tone audio for outgoing call
-                * @private
-                */
-            connectToneView: HTMLAudioElement;
-            /**
-                * Explains whether login method is called.
-                * @private
-                */
-            isLoginCalled: boolean;
-            /**
-                * Explains whether logout method is called.
-                * @private
-                */
-            isLogoutCalled: boolean;
-            /**
-                * Maintains a setInterval which checks for network change in idle state
-                * @private
-                */
-            networkChangeInterval: null | ReturnType<typeof setInterval>;
-            /**
-             * Maintains a setInterval which checks for WS reconnection
-             * @private
-             */
-            connectionRetryInterval: null | ReturnType<typeof setInterval>;
-            /**
-                * Calculate time taken for different stats
-                * @private
-                */
-            timeTakenForStats: {
-                    [key: string]: {
-                            init: number;
-                            end?: number;
-                    };
-            };
-            /**
-                * Holds network disconnected timestamp
-                * @private
-                */
-            networkDisconnectedTimestamp: number | null;
-            /**
-                * Holds network reconnection timestamp
-                * @private
-                */
-            networkReconnectionTimestamp: number | null;
-            /**
-                * Holds current network information
-                * @private
-                */
-            currentNetworkInfo: {
-                    networkType: string;
-                    ip: string;
-            };
-            /**
-                * Determines whether any audio device got toggled during current session
-                * @private
-                */
-            deviceToggledInCurrentSession: boolean;
-            /**
-                * Determines whether any audio device got toggled during current session
-                * @private
-                */
-            useDefaultAudioDevice: boolean;
-            /**
-                * Determines whether network got changed during current session
-                * @private
-                */
-            networkChangeInCurrentSession: boolean;
-            /**
-             * Holds the status of the websocket connection
-             * @private
-             */
-            connectionStatus: string;
-            /**
-             * Holds a string value tp uniquely identify each tab
-             * @private
-             */
-            identifier: string;
-            /**
-             * Holds the instance of WorkerManager class
-             * @private
-             */
-            workerManager: WorkerManager;
-            /**
-                * Holds a boolean to get initial network info
-                * @private
-                */
-            didFetchInitialNetworkInfo: boolean;
-            /**
-            * Flag which when set stops auto registration post websocket connection
-            * Defaults value is true
-            * @private
-            */
-            stopAutoRegisterOnConnect: boolean;
-            /**
-                * Determines which js framework sdk is running with
-                * @private
-                */
-            jsFramework: string[];
-            /**
-                * Get current version of the SDK
-                */
-            version: string;
-            /**
-                * Register using user credentials.
-                * @param {String} userName
-                * @param {String} password
-                */
-            login: (username: string, password: string) => boolean;
-            /**
-                * Register using user access token.
-                * @param {String} accessToken
-                */
-            loginWithAccessToken: (accessToken: string) => boolean;
-            /**
-                * Register using user access token.
-                * @param {Any} accessTokenObject
-                */
-            loginWithAccessTokenGenerator: (accessTokenObject: any) => boolean;
-            /**
-                * get error string by error code
-                * @param {number} errorCode
-                */
-            getErrorStringByErrorCodes: (errorCode: number) => string;
-            /**
-                * Unregister and clear stats timer, socket.
-                */
-            logout: () => boolean;
-            /**
-                * Unregister the user.
-                */
-            unregister: () => boolean;
-            /**
-                * disconnect the websocket and stop the network check timer.
-                */
-            disconnect: () => boolean;
-            /**
-                * Register the user.
-                *  @param {Array<string>} extraHeaders - (Optional) Extra headers to be sent along with register.
-                */
-            register: (extraHeaders: Array<string>) => boolean;
-            /**
-                * Start an outbound call.
-                * @param {String} phoneNumber - It can be a sip endpoint/number
-                * @param {Object} extraHeaders - (Optional) Custom headers which are passed in the INVITE.
-                * They should start with 'X-PH'
-                */
-            call: (phoneNumber: string, extraHeaders: ExtraHeaders) => boolean;
-            /**
-                * Answer the incoming call.
-                * @param {String} callUUID - (Optional) Provide latest CallUUID to answer the call
-                * @param {String} actionOnOtherIncomingCalls -  (Optional) Specify action(reject, ignore,
-                * letring)
-                * for next incoming calls when already on call
-                */
-            answer: (callUUID: string, actionOnOtherIncomingCalls: string) => boolean;
-            /**
-                * Hangup the call(Outgoing/Incoming).
-                */
-            hangup: () => boolean;
-            /**
-             * Redirect the call.
-             * @param {String} contactUri - details of the contact towards which the call should be redirected
-             */
-            redirect: (contactUri: string) => boolean;
-            /**
-                * Reject the Incoming call.
-                * @param {String} callUUID - (Optional) Provide latest CallUUID to reject the call
-                */
-            reject: (callUUID: string) => boolean;
-            /**
-                * Ignore the Incoming call.
-                * @param {String} callUUID - (Optional) Provide latest CallUUID to ignore the call
-                */
-            ignore: (callUUID: string) => boolean;
-            /**
-            * Set the unique identifier.
-            * @param {String} identifier - Identifier to be set.
-            */
-            setIdentifier: (identifier: string) => boolean;
-            /**
-                * Send DTMF for call(Outgoing/Incoming).
-                * @param {String} digit - Send the digits as dtmf 'digit'
-                * ("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "*", "#")
-                */
-            sendDtmf: (digit: string | number) => void;
-            /**
-                * Mute the call(Outgoing/Incoming).
-                */
-            mute: () => boolean;
-            /**
-                * Unmute the call(Outgoing/Incoming).
-                */
-            unmute: () => boolean;
-            /**
-                * Configure the ringtone played when an incoming call starts ringing.
-                * @param {Any} val - Can be media url or boolean value for enabling/disabling default ringtone
-                */
-            setRingTone: (val: string | boolean) => boolean;
-            /**
-                * Configure the ringtone played when an outgoing call starts ringing.
-                * @param {Any} val - Can be media url or boolean value for enabling/disabling default ringtone
-                */
-            setRingToneBack: (val: string | boolean) => boolean;
-            /**
-                * Configure the audio played when an outgoing call is being connected.
-                * @param {Boolean} val - Enable/Disable default connect tone
-                */
-            setConnectTone: (val: boolean) => boolean;
-            /**
-                * Starts the Noise Reduction.
-                * @param {Boolean} val - true if noise reduction is started, else false
-                */
-            startNoiseReduction: () => Promise<boolean>;
-            /**
-            * stops the Noise Reduction.
-            * @param {Boolean} val - true if noise reduction is stopped, else false
-            */
-            stopNoiseReduction: () => Promise<boolean>;
-            /**
-                * Configure the audio played when sending a DTMF.
-                * @param {String} digit - Specify digit for which audio needs to be configured
-                * @param {String} url - Media url for playing audio
-                */
-            setDtmfTone: (digit: string, url: string | boolean) => boolean;
-            /**
-                * Get the CallUUID if a call is active.
-                * @returns Current CallUUID
-                */
-            getCallUUID: () => string | null;
-            /**
-                * Check if the client is in registered state.
-                */
-            isRegistered: () => boolean | null;
-            /**
-             * Check if the client is in connecting state.
-             */
-            isConnecting: () => boolean | null;
-            /**
-             * Get the details of the contact.
-             */
-            getContactUri: () => string | null;
-            /**
-             * Check if the client is in connected state.
-             */
-            isConnected: () => boolean | null;
-            /**
-             * Get the details of the current active call session.
-             */
-            getCurrentSession: () => CallSession | null;
-            /**
-                * Get the CallUUID of the latest answered call.
-                */
-            getLastCallUUID: () => string | null;
-            /**
-                * Get a list of incoming calls which are active.
-                */
-            getIncomingCalls: () => any[];
-            /**
-                * Update log level
-                * @param {String} debug - log level
-                */
-            setDebug: (debug: AvailableLogMethods) => void;
-            /**
-                * Get RTCPeerConnection object
-                */
-            getPeerConnection: () => {
-                    status: string;
-                    pc: any;
-            };
-            /**
-                * Get webRTC support, return true if webRTC is supported
-                */
-            webRTC: () => boolean;
-            /**
-                * Get supported browsers
-                */
-            supportedBrowsers: () => string;
-            /**
-                * Configure the audio played when sending a DTMF.
-                * @param {String} callUUID - Specify CallUUID for which feedback needs to be sent
-                * @param {String} starRating - Rate the call from 1 to 5
-                * @param {Array<String>} issues - Provide suspected issues
-                * @param {String} note - Send any remarks
-                * @param {Boolean} sendConsoleLogs - Send browser logs to Plivo
-                */
-            submitCallQualityFeedback: (callUUID: string, starRating: string, issues: string[], note: string, sendConsoleLogs: boolean) => Promise<string>;
-            /**
-                * @constructor
-                * @param options - (Optional) client configuration parameters
-                * @private
-                */
-            constructor(options: ConfiguationOptions);
-            setExpiryTimeInEpoch: (timeInEpoch: number) => void;
-            getTokenExpiryTimeInEpoch: () => number | null;
-            clearOnLogout(): void;
-    }
+     * Holds the browser details of the client
+     * @private
+     */
+    browserDetails: BrowserDetails;
+    /**
+     * Set to true if you want to ask for mic permission just
+     * before call connection. Otherwise it will be asked only on page load
+     * @private
+     */
+    permOnClick: boolean;
+    /**
+     * Play the ringtone audio for incoming calls if this flag is set to true
+     * Otherwise do not play audio.
+     * @private
+     */
+    ringToneFlag: boolean;
+    /**
+     * Callback to perform login after previous connection is disconnected successfully
+     * @private
+     */
+    loginCallback: any;
+    /**
+     * Play the ringtone audio for outgoing calls in ringing state if this flag is set to true
+     * Otherwise do not play audio.
+     * @private
+     */
+    ringToneBackFlag: boolean;
+    /**
+     * Play the connect tone audio for outgoing calls in sending state if this flag is set to true
+     * Otherwise do not play audio.
+     * @private
+     */
+    connectToneFlag: boolean;
+    /**
+     * Set to true if logged in. Otherwise set to false
+     * @private
+     */
+    isLoggedIn: boolean;
+    /**
+     * Holds the JSSIP user agent for the logged in user
+     * @private
+     */
+    phone: UA | null;
+    /**
+     * Holds the incoming or outgoing call session details
+     * @private
+     */
+    _currentSession: null | CallSession;
+    /**
+     * Difference in time(ms) between local machine and universal epoch time
+     * @private
+     */
+    timeDiff: number;
+    /**
+     * Holds the incoming or outgoing JsSIP RTCSession(WebRTC media session)
+     * @private
+     */
+    callSession: null | RTCSession;
+    /**
+     * Unique identifier generated for a call by server
+     * @private
+     */
+    callUUID: null | string;
+    /**
+     * Specifies whether the call direction is incoming or outgoing
+     * @private
+     */
+    callDirection: null | string;
+    /**
+     * Holds the SpeechRecognition instance which listens for
+     * speech when the user speaks on mute
+     * @private
+     */
+    speechRecognition: any;
+    /**
+     * Holds the loggerUtil instance which keeps the
+     * value of username and sipCallID to attached to each log
+     * @private
+     */
+    loggerUtil: LoggerUtil;
+    noiseSuppresion: NoiseSuppression;
+    /**
+     * Specifies whether the noise suppression should be enabled or not
+     * @private
+     */
+    enableNoiseReduction: boolean | undefined;
+    /**
+     * Contains the identifier for previous incoming or outgoing call
+     * @private
+     */
+    lastCallUUID: null | string;
+    /**
+     * Holds the call session of previous incoming or outgoing call
+     * @private
+     */
+    _lastCallSession: null | CallSession;
+    /**
+     * Contains the ongoing incoming calls identifiers with their call session
+     * @private
+     */
+    incomingInvites: Map<string, any>;
+    /**
+     * Contains the ongoing incoming calls identifiers with their start time
+     * @private
+     */
+    incomingCallsInitiationTime: Map<string, any>;
+    /**
+     * Holds the call session of previous incoming call
+     * @private
+     */
+    lastIncomingCall: null | CallSession;
+    /**
+     * Holds the callstats.io instance for sending the stats to callstats.io
+     * @private
+     */
+    callStats: any;
+    /**
+     * Username given when logging in
+     * @private
+     */
+    userName: null | string;
+    /**
+     * Password given when logging in
+     * @private
+     */
+    password: null | string;
+    /**
+     * Access Token  given when logging in
+     * @private
+     */
+    accessToken: null | string;
+    /**
+     * contactUri object which holds the connection details
+     * @private
+     */
+    contactUri: {
+      name: string | null;
+      ip: string;
+      port: string;
+      protocol: string;
+      registrarIP: string;
+    };
+    /**
+     * Access Token object given when logging in
+     * @private
+     */
+    accessTokenObject: null | any;
+    /**
+     * boolean that tells which type of login method is called
+     * @private
+     */
+    isAccessTokenGenerator: boolean | null;
+    /**
+     * boolean that tells which type of login method is called
+     * @private
+     */
+    accessTokenGeneratorTimer: null | ReturnType<typeof setTimeout>;
+    /**
+     * boolean that tells if user logged in through access token
+     * @private
+     */
+    isAccessToken: boolean;
+    /**
+     * access token expiry
+     * @private
+     */
+    accessTokenExpiryInEpoch: number | null;
+    /**
+     * Access Token  Outgoing Grant
+     * @private
+     */
+    isOutgoingGrant: boolean | null;
+    /**
+     * Access Token  Incoming Grant
+     * @private
+     */
+    isIncomingGrant: boolean | null;
+    /**
+     * Access Token  abstract class that needs to be implemented
+     * @private
+     */
+    accessTokenInterface: any;
+    /**
+     * Flag to monitor the feedback api that gets called after the token is expired
+     * @private
+     */
+    deferFeedback: null | boolean;
+    /**
+     * Flag that tells if unregister is pending or not
+     * @private
+     */
+    isUnregisterPending: null | boolean;
+    /**
+     * Options passed by the user while instantiating the client class
+     * @private
+     */
+    options: ConfiguationOptions;
+    /**
+     * It is a unique identifer which is not null when callstats permission is present
+     * @private
+     */
+    callstatskey: null | string;
+    /**
+     * Set to true if RTP stats needed to be sent for the call.Otherwise RTP stats are not sent
+     * @private
+     */
+    rtp_enabled: boolean;
+    /**
+     * Set to true if user is using callstats.io
+     * @private
+     */
+    statsioused: boolean;
+    /**
+     * Describes whether the call is in mute state or not
+     * @private
+     */
+    isCallMuted: boolean;
+    /**
+     * Specifically used for SpeechRecognition
+     * Describes whether the call is in mute state or not
+     * @private
+     */
+    isMuteCalled: boolean;
+    /**
+     * All audio related information
+     * @public
+     */
+    audio: {
+      /**
+       * Return a promise with the list of available devices
+       */
+      availableDevices: (filter: string) => Promise<MediaDeviceInfo[]>;
+      /**
+       * Object with getter and setter functions for ringtone devices
+       */
+      ringtoneDevices: RingToneDevices;
+      /**
+       * Object with getter and setter functions for microphone devices
+       */
+      microphoneDevices: InputDevices;
+      /**
+       * Object with getter and setter functions for audio output devices
+       */
+      speakerDevices: OutputDevices;
+      /**
+       * Return a promise with the list of audio output devices
+       */
+      revealAudioDevices: (arg: string) => Promise<string | MediaStream>;
+    };
+    /**
+     * Audio constraints object that will be passed to webRTC getUserMedia()
+     * @private
+     */
+    audioConstraints: MediaTrackConstraints;
+    /**
+     * Holds the previous one way audio detection details
+     * @private
+     */
+    owaLastDetect: {
+      time: Date;
+      isOneWay: boolean;
+    };
+    /**
+     * Specifies the interval at which one way audio detection happens
+     * @private
+     */
+    owaDetectTime: number;
+    /**
+     * explains whether call should be muted
+     * @private
+     */
+    shouldMuteCall: boolean;
+    /**
+     * Holds the websocket instance created for sending stats
+     * @private
+     */
+    statsSocket: null | StatsSocket;
+    /**
+     * Contains available audio devices.This is done for backward compatibility
+     * @private
+     */
+    audioDevDic: any;
+    /**
+     * It is a wrapper over ringback tone audio element.
+     * It is used for playing and pausing ringtone audio for outgoing call
+     * @private
+     */
+    ringBackToneView: null | HTMLAudioElement;
+    /**
+     * It is a wrapper over ring tone audio element.
+     * It is used for playing and pausing ringtone audio for incoming call
+     * @private
+     */
+    ringToneView: null | HTMLAudioElement;
+    /**
+     * Holds rtp stat information which will be used in capturing media metrics
+     * @private
+     */
+    storage: Storage | null;
+    /**
+     * Holds the websocket instance created for SIP signalling purpose
+     * @private
+     */
+    plivoSocket: WebSocketInterface;
+    /**
+     * Holds the connection state of the SDK
+     * @private
+     */
+    connectionInfo: ConnectionInfo;
+    /**
+     * Responsible for playing audio stream of remote user during call
+     * @private
+     */
+    remoteView: any;
+    /**
+     * It is a wrapper over connect tone audio element.
+     * It is used for playing and pausing connect tone audio for outgoing call
+     * @private
+     */
+    connectToneView: HTMLAudioElement;
+    /**
+     * Explains whether login method is called.
+     * @private
+     */
+    isLoginCalled: boolean;
+    /**
+     * Explains whether logout method is called.
+     * @private
+     */
+    isLogoutCalled: boolean;
+    /**
+     * Maintains a setInterval which checks for network change in idle state
+     * @private
+     */
+    networkChangeInterval: null | ReturnType<typeof setInterval>;
+    /**
+     * Maintains a setInterval which checks for WS reconnection
+     * @private
+     */
+    connectionRetryInterval: null | ReturnType<typeof setInterval>;
+    /**
+     * Calculate time taken for different stats
+     * @private
+     */
+    timeTakenForStats: {
+      [key: string]: {
+        init: number;
+        end?: number;
+      };
+    };
+    /**
+     * Holds network disconnected timestamp
+     * @private
+     */
+    networkDisconnectedTimestamp: number | null;
+    /**
+     * Holds network reconnection timestamp
+     * @private
+     */
+    networkReconnectionTimestamp: number | null;
+    /**
+     * Holds current network information
+     * @private
+     */
+    currentNetworkInfo: {
+      networkType: string;
+      ip: string;
+    };
+    /**
+     * Determines whether any audio device got toggled during current session
+     * @private
+     */
+    deviceToggledInCurrentSession: boolean;
+    /**
+     * Determines whether any audio device got toggled during current session
+     * @private
+     */
+    useDefaultAudioDevice: boolean;
+    /**
+     * Determines whether network got changed during current session
+     * @private
+     */
+    networkChangeInCurrentSession: boolean;
+    /**
+     * Holds the status of the websocket connection
+     * @private
+     */
+    connectionStatus: string;
+    /**
+     * Holds a string value tp uniquely identify each tab
+     * @private
+     */
+    identifier: string;
+    /**
+     * Holds the instance of WorkerManager class
+     * @private
+     */
+    workerManager: WorkerManager;
+    /**
+     * Holds a boolean to get initial network info
+     * @private
+     */
+    didFetchInitialNetworkInfo: boolean;
+    /**
+     * Flag which when set stops auto registration post websocket connection
+     * Defaults value is true
+     * @private
+     */
+    stopAutoRegisterOnConnect: boolean;
+    /**
+     * Holds the path of the noise reduction file(processor.js) provided by the application
+     * @private
+     */
+    noiseReductionFilePath: string | undefined;
+    /**
+     * Determines which js framework sdk is running with
+     * @private
+     */
+    jsFramework: string[];
+    /**
+     * Get current version of the SDK
+     */
+    version: string;
+    /**
+     * Register using user credentials.
+     * @param {String} userName
+     * @param {String} password
+     */
+    login: (username: string, password: string) => boolean;
+    /**
+     * Register using user access token.
+     * @param {String} accessToken
+     */
+    loginWithAccessToken: (accessToken: string) => boolean;
+    /**
+     * Register using user access token.
+     * @param {Any} accessTokenObject
+     */
+    loginWithAccessTokenGenerator: (accessTokenObject: any) => boolean;
+    /**
+     * get error string by error code
+     * @param {number} errorCode
+     */
+    getErrorStringByErrorCodes: (errorCode: number) => string;
+    /**
+     * Unregister and clear stats timer, socket.
+     */
+    logout: () => boolean;
+    /**
+     * Unregister the user.
+     */
+    unregister: () => boolean;
+    /**
+     * disconnect the websocket and stop the network check timer.
+     */
+    disconnect: () => boolean;
+    /**
+     * Register the user.
+     *  @param {Array<string>} extraHeaders - (Optional) Extra headers to be sent along with register.
+     */
+    register: (extraHeaders: Array<string>) => boolean;
+    /**
+     * Start an outbound call.
+     * @param {String} phoneNumber - It can be a sip endpoint/number
+     * @param {Object} extraHeaders - (Optional) Custom headers which are passed in the INVITE.
+     * They should start with 'X-PH'
+     */
+    call: (phoneNumber: string, extraHeaders: ExtraHeaders) => boolean;
+    /**
+     * Answer the incoming call.
+     * @param {String} callUUID - (Optional) Provide latest CallUUID to answer the call
+     * @param {String} actionOnOtherIncomingCalls -  (Optional) Specify action(reject, ignore,
+     * letring)
+     * for next incoming calls when already on call
+     */
+    answer: (callUUID: string, actionOnOtherIncomingCalls: string) => boolean;
+    /**
+     * Hangup the call(Outgoing/Incoming).
+     */
+    hangup: () => boolean;
+    /**
+     * Redirect the call.
+     * @param {String} contactUri - details of the contact towards which the call should be redirected
+     */
+    redirect: (contactUri: string) => boolean;
+    /**
+     * Reject the Incoming call.
+     * @param {String} callUUID - (Optional) Provide latest CallUUID to reject the call
+     */
+    reject: (callUUID: string) => boolean;
+    /**
+     * Ignore the Incoming call.
+     * @param {String} callUUID - (Optional) Provide latest CallUUID to ignore the call
+     */
+    ignore: (callUUID: string) => boolean;
+    /**
+     * Set the unique identifier.
+     * @param {String} identifier - Identifier to be set.
+     */
+    setIdentifier: (identifier: string) => boolean;
+    /**
+     * Send DTMF for call(Outgoing/Incoming).
+     * @param {String} digit - Send the digits as dtmf 'digit'
+     * ("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "*", "#")
+     */
+    sendDtmf: (digit: string | number) => void;
+    /**
+     * Mute the call(Outgoing/Incoming).
+     */
+    mute: () => boolean;
+    /**
+     * Unmute the call(Outgoing/Incoming).
+     */
+    unmute: () => boolean;
+    /**
+     * Configure the ringtone played when an incoming call starts ringing.
+     * @param {Any} val - Can be media url or boolean value for enabling/disabling default ringtone
+     */
+    setRingTone: (val: string | boolean) => boolean;
+    /**
+     * Configure the ringtone played when an outgoing call starts ringing.
+     * @param {Any} val - Can be media url or boolean value for enabling/disabling default ringtone
+     */
+    setRingToneBack: (val: string | boolean) => boolean;
+    /**
+     * Configure the audio played when an outgoing call is being connected.
+     * @param {Boolean} val - Enable/Disable default connect tone
+     */
+    setConnectTone: (val: boolean) => boolean;
+    /**
+     * Starts the Noise Reduction.
+     * @param {Boolean} val - true if noise reduction is started, else false
+     */
+    startNoiseReduction: () => Promise<boolean>;
+    /**
+     * stops the Noise Reduction.
+     * @param {Boolean} val - true if noise reduction is stopped, else false
+     */
+    stopNoiseReduction: () => Promise<boolean>;
+    /**
+     * Configure the audio played when sending a DTMF.
+     * @param {String} digit - Specify digit for which audio needs to be configured
+     * @param {String} url - Media url for playing audio
+     */
+    setDtmfTone: (digit: string, url: string | boolean) => boolean;
+    /**
+     * Get the CallUUID if a call is active.
+     * @returns Current CallUUID
+     */
+    getCallUUID: () => string | null;
+    /**
+     * Check if the client is in registered state.
+     */
+    isRegistered: () => boolean | null;
+    /**
+     * Check if the client is in connecting state.
+     */
+    isConnecting: () => boolean | null;
+    /**
+     * Get the details of the contact.
+     */
+    getContactUri: () => string | null;
+    /**
+     * Check if the client is in connected state.
+     */
+    isConnected: () => boolean | null;
+    /**
+     * Get the details of the current active call session.
+     */
+    getCurrentSession: () => CallSession | null;
+    /**
+     * Get the CallUUID of the latest answered call.
+     */
+    getLastCallUUID: () => string | null;
+    /**
+     * Get a list of incoming calls which are active.
+     */
+    getIncomingCalls: () => any[];
+    /**
+     * Update log level
+     * @param {String} debug - log level
+     */
+    setDebug: (debug: AvailableLogMethods) => void;
+    /**
+     * Get RTCPeerConnection object
+     */
+    getPeerConnection: () => {
+      status: string;
+      pc: any;
+    };
+    /**
+     * Get webRTC support, return true if webRTC is supported
+     */
+    webRTC: () => boolean;
+    /**
+     * Get supported browsers
+     */
+    supportedBrowsers: () => string;
+    /**
+     * Configure the audio played when sending a DTMF.
+     * @param {String} callUUID - Specify CallUUID for which feedback needs to be sent
+     * @param {String} starRating - Rate the call from 1 to 5
+     * @param {Array<String>} issues - Provide suspected issues
+     * @param {String} note - Send any remarks
+     * @param {Boolean} sendConsoleLogs - Send browser logs to Plivo
+     */
+    submitCallQualityFeedback: (
+      callUUID: string,
+      starRating: string,
+      issues: string[],
+      note: string,
+      sendConsoleLogs: boolean,
+    ) => Promise<string>;
+    /**
+     * @constructor
+     * @param options - (Optional) client configuration parameters
+     * @private
+     */
+    constructor(options: ConfiguationOptions);
+    setExpiryTimeInEpoch: (timeInEpoch: number) => void;
+    getTokenExpiryTimeInEpoch: () => number | null;
+    clearOnLogout(): void;
+  }
 }
 
 declare module 'plivo-browser-sdk/logger' {
-    import { Client } from 'plivo-browser-sdk/client';
-    import { LoggerUtil } from 'plivo-browser-sdk/utils/loggerUtil';
-    export type AvailableLogMethods = 'INFO' | 'DEBUG' | 'WARN' | 'ERROR' | 'ALL' | 'OFF' | 'ALL-PLAIN';
-    export type AvailableFlagValues = 'ALL' | 'NONE' | 'REMOTEONLY' | 'LOCALONLY';
-    export interface DtmfOptions {
-            sendDtmfType: string[];
-    }
-    interface LoggerOptions {
-            enableDate?: boolean;
-            loggingName?: 'PlivoSDK';
-            logMethod?: AvailableLogMethods;
-    }
+  import { Client } from 'plivo-browser-sdk/client';
+  import { LoggerUtil } from 'plivo-browser-sdk/utils/loggerUtil';
+  export type AvailableLogMethods =
+    | 'INFO'
+    | 'DEBUG'
+    | 'WARN'
+    | 'ERROR'
+    | 'ALL'
+    | 'OFF'
+    | 'ALL-PLAIN';
+  export type AvailableFlagValues = 'ALL' | 'NONE' | 'REMOTEONLY' | 'LOCALONLY';
+  export interface DtmfOptions {
+    sendDtmfType: string[];
+  }
+  interface LoggerOptions {
+    enableDate?: boolean;
+    loggingName?: 'PlivoSDK';
+    logMethod?: AvailableLogMethods;
+  }
+  /**
+   * Create a new logger.
+   */
+  class PlivoLogger {
+    constructor(options?: LoggerOptions);
+    info: (...rest: any[]) => void;
+    debug: (...rest: any[]) => void;
+    warn: (...rest: any[]) => void;
+    error: (...rest: any[]) => void;
+    setLevel: (method: AvailableLogMethods) => string;
+    level: () => string;
+    consolelogs: () => string[];
     /**
-        * Create a new logger.
-        */
-    class PlivoLogger {
-            constructor(options?: LoggerOptions);
-            info: (...rest: any[]) => void;
-            debug: (...rest: any[]) => void;
-            warn: (...rest: any[]) => void;
-            error: (...rest: any[]) => void;
-            setLevel: (method: AvailableLogMethods) => string;
-            level: () => string;
-            consolelogs: () => string[];
-            /**
-                * Enable sip logs if log level is ALL.
-                * @param {AvailableLogMethods} debugLevel - passed by user while initializing client
-                */
-            enableSipLogs: (debugLevel: AvailableLogMethods) => void;
-            setLoggerUtil(loggerUtil: LoggerUtil): void;
-            /**
-            * Send logs to Plivo kibana.
-            */
-            send: (client: Client) => void;
-    }
-    export const Logger: PlivoLogger;
-    export {};
+     * Enable sip logs if log level is ALL.
+     * @param {AvailableLogMethods} debugLevel - passed by user while initializing client
+     */
+    enableSipLogs: (debugLevel: AvailableLogMethods) => void;
+    setLoggerUtil(loggerUtil: LoggerUtil): void;
+    /**
+     * Send logs to Plivo kibana.
+     */
+    send: (client: Client) => void;
+  }
+  export const Logger: PlivoLogger;
+  export {};
 }
 
 declare module 'plivo-browser-sdk/managers/callSession' {
-    import { RTCSession, SessionIceCandidateEvent, SessionFailedEvent, SessionEndedEvent } from 'plivo-jssip';
-    import * as C from 'plivo-browser-sdk/constants';
-    import { Client, ExtraHeaders } from 'plivo-browser-sdk/client';
-    import { GetRTPStats } from 'plivo-browser-sdk/stats/rtpStats';
-    export interface CallSessionOptions {
-            callUUID?: string;
-            sipCallID: string | null;
-            direction: string;
-            src: string;
-            dest: string;
-            session: RTCSession;
-            extraHeaders: ExtraHeaders;
-            call_initiation_time?: number;
-            client: Client;
-            stirShakenState: string;
-    }
-    export interface CallInfo {
-            callUUID: string;
-            direction: string;
-            src: string;
-            dest: string;
-            state: string;
-            stirShakenState: string;
-            extraHeaders: ExtraHeaders;
-            protocol: string;
-            originator: string;
-            reason: string;
-            code: number;
-    }
-    export interface SignallingInfo {
-            call_initiation_time?: number;
-            answer_time?: number;
-            call_confirmed_time?: number;
-            post_dial_delay?: number;
-            hangup_time?: number;
-            hangup_party?: string;
-            hangup_reason?: string;
-            invite_time?: number;
-            call_progress_time?: number;
-            signalling_errors?: {
-                    timestamp: number;
-                    error_code: string;
-                    error_description: string;
-            };
-            ring_start_time?: number;
-    }
-    export interface MediaConnectionInformation {
-            [key: string]: number;
-    }
+  import {
+    RTCSession,
+    SessionIceCandidateEvent,
+    SessionFailedEvent,
+    SessionEndedEvent,
+  } from 'plivo-jssip';
+  import * as C from 'plivo-browser-sdk/constants';
+  import { Client, ExtraHeaders } from 'plivo-browser-sdk/client';
+  import { GetRTPStats } from 'plivo-browser-sdk/stats/rtpStats';
+  export interface CallSessionOptions {
+    callUUID?: string;
+    sipCallID: string | null;
+    direction: string;
+    src: string;
+    dest: string;
+    session: RTCSession;
+    extraHeaders: ExtraHeaders;
+    call_initiation_time?: number;
+    client: Client;
+    stirShakenState: string;
+  }
+  export interface CallInfo {
+    callUUID: string;
+    direction: string;
+    src: string;
+    dest: string;
+    state: string;
+    stirShakenState: string;
+    extraHeaders: ExtraHeaders;
+    protocol: string;
+    originator: string;
+    reason: string;
+    code: number;
+  }
+  export interface SignallingInfo {
+    call_initiation_time?: number;
+    answer_time?: number;
+    call_confirmed_time?: number;
+    post_dial_delay?: number;
+    hangup_time?: number;
+    hangup_party?: string;
+    hangup_reason?: string;
+    invite_time?: number;
+    call_progress_time?: number;
+    signalling_errors?: {
+      timestamp: number;
+      error_code: string;
+      error_description: string;
+    };
+    ring_start_time?: number;
+  }
+  export interface MediaConnectionInformation {
+    [key: string]: number;
+  }
+  /**
+   * Initializes the CallSession.
+   */
+  export class CallSession {
     /**
-        * Initializes the CallSession.
-        */
-    export class CallSession {
-            /**
-                * Describes the various states of the call
-                * @private
-                */
-            STATE: {
-                    INITIALIZED: string;
-                    RINGING: string;
-                    ANSWERED: string;
-                    REJECTED: string;
-                    IGNORED: string;
-                    CANCELED: string;
-                    FAILED: string;
-                    ENDED: string;
-                    REDIRECTED: string;
-            };
-            SPEECH_STATE: {
-                    STOPPED: string;
-                    STARTING: string;
-                    RUNNING: string;
-                    STOPPING: string;
-                    STOPPED_AFTER_DETECTION: string;
-                    STOPPED_DUE_TO_NETWORK_ERROR: string;
-                    STOPPED_DUE_TO_ABORT: string;
-            };
-            /**
-                * Unique identifier generated for a call by server
-                * @private
-                */
-            callUUID: string | null;
-            /**
-                * call signed or not it will have these options ‘verified’ | ‘not_verified’ | ‘Not_applicable’
-                * @private
-                */
-            stirShakenState: string;
-            /**
-                * Identifier generated by JsSIP when a new RTCSession is created for the call
-                * @private
-                */
-            sipCallID: string | null;
-            /**
-                * Specifies whether the call direction is incoming or outgoing
-                * @private
-                */
-            direction: string;
-            /**
-                * Sip endpoint or a number from which a new call is made
-                * @private
-                */
-            src: string;
-            /**
-                * Sip endpoint or a number to which a new call is received
-                * @private
-                */
-            dest: string;
-            /**
-                * Holds the state of the incoming or outgoing call
-                * @private
-                */
-            state: string;
-            /**
-                * Holds the status if call is terminated during ringing state
-                * @private
-                */
-            isCallTerminatedDuringRinging: boolean;
-            /**
-                * Holds the current status of speech recognition
-                * @private
-                */
-            speech_state: string;
-            /**
-                * Custom headers which are passed in the INVITE. They should start with 'X-PH'
-                * @private
-                */
-            extraHeaders: ExtraHeaders;
-            /**
-                * Holds the WebRTC media session
-                * @private
-                */
-            session: RTCSession;
-            /**
-                * Holds stage(call state name and time) at each state of the call
-                * @private
-                */
-            connectionStages: string[];
-            /**
-                * Set to true if ice candidate gathering starts
-                * @private
-                */
-            gotInitalIce: boolean;
-            /**
-                * Holds the RTP stats instance which is used for collecting rtp stats
-                * @private
-                */
-            stats: GetRTPStats | null;
-            /**
-                * Holds the server flags received in 200 OK
-                * @private
-                */
-            serverFeatureFlags: Array<string>;
-            /**
-                * Holds timestamp for each state of call
-                * @private
-                */
-            signallingInfo: SignallingInfo;
-            /**
-                * Holds stream status and timestamp for each state of ice connection
-                * @private
-                */
-            mediaConnectionInfo: MediaConnectionInformation | {};
-            /**
-                * Delta between INVITE request and RINGING response for a call
-                * @private
-                */
-            postDialDelayEndTime: number | null;
-            candidateList: Map<string, C.CandidateListType>;
-            candidatePairsList: Map<string, C.CandidatePairListType>;
-            /**
-                * Update CallUUID in session.
-                * @param {String} callUUID - active call(Outgoing/Incoming) CallUUID
-                */
-            setCallUUID: (callUUID: string | null) => void;
-            /**
-                * Update state in session.
-                * @param {String} state - active call(Outgoing/Incoming) state(this.STATE)
-                */
-            setState: (state: string) => void;
-            setSpeechState: (state: string) => void;
-            /**
-                * Add stage at each state of call.
-                * @param {String} stage - Has state name and time at which state change happens
-                */
-            addConnectionStage: (stage: string) => void;
-            /**
-                * Get all stages for the call.
-                */
-            getConnectionStages: () => string[];
-            /**
-                * Add Plivo stats object.
-                * @param {GetRTPStats} stats - RTP stats object
-                */
-            setCallStats: (stats: GetRTPStats) => void;
-            /**
-                * Clear stats timers and audio levels.
-                */
-            clearCallStats: () => void;
-            /**
-                * Update signalling information(holds timestamp for each state of call).
-                * @param {SignallingInfo} object - contains signalling information
-                */
-            updateSignallingInfo: (object: SignallingInfo) => void;
-            /**
-                * Update media connection information(holds timestamp for media stream changes).
-                * @param {MediaConnectionInfo} object - contains media connection information
-                */
-            updateMediaConnectionInfo: (object: MediaConnectionInformation) => void;
-            /**
-                * Get signalling information.
-                */
-            getSignallingInfo: () => SignallingInfo;
-            stopSpeechRecognition: (clientObj: Client) => void;
-            startSpeechRecognition: (clientObj: Client) => void;
-            /**
-                * Get media connection information.
-                */
-            getMediaConnectionInfo: () => MediaConnectionInformation;
-            /**
-                * Add PostDialDelay(Delta between INVITE request and RINGING response) for a call.
-                * @param {Number} time - current timestamp
-                */
-            setPostDialDelayEndTime: (time: number) => void;
-            /**
-                * Get basic call information.
-                */
-            getCallInfo: (originator: string, protocol?: string, reason?: string, code?: number) => CallInfo;
-            /**
-                * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
-                * @param {Client} clientObject - client reference
-                */
-            onAccepted: (cs: Client) => void;
-            /**
-                * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
-                * @param {Client} clientObject - client reference
-                */
-            onRinging: (cs: Client) => void;
-            /**
-                * Triggered when the user answers the call(Outgoing/Incoming) and got or received ACK.
-                * @param {Client} clientObject - client reference
-                */
-            onConfirmed: (cs: Client) => void;
-            /**
-                * Triggered when a new ice candidate is gathered.
-                * @param {Client} clientObject - client reference
-                * @param {SessionIceCandidateEvent} event - rtcsession information
-                */
-            onIceCandidate: (cs: Client, event: SessionIceCandidateEvent) => void;
-            /**
-                * Triggered when ice candidates gathering is timed out.
-                * @param {Client} clientObject - client reference
-                * @param {Number} sec - ice timeout seconds
-                */
-            onIceTimeout: (cs: Client, sec: number) => void;
-            /**
-                * Triggered when a call(Outgoing/Incoming) is rejected or invalid.
-                * @param {Client} clientObject - client reference
-                * @param {SessionFailedEvent} evt - rtcsession information
-                */
-            onFailed: (cs: Client, event: SessionFailedEvent) => void;
-            /**
-                * Triggered when a call(Outgoing/Incoming) hung up.
-                * @param {Client} clientObject - client reference
-                * @param {SessionEndedEvent} evt - rtcsession information
-                */
-            onEnded: (cs: Client, event: SessionEndedEvent) => void;
-            /**
-                * Triggered when user media is not accessible.
-                * @param {Client} clientObject - client reference
-                * @param {Error} err - reason for issue
-                */
-            onGetUserMediaFailed: (cs: Client, error: Error) => void;
-            /**
-                * Triggered when peer connection issues(creating offer, answer and setting description) occur.
-                * @param {Client} clientObject - client reference
-                * @param {String} msg - type of issue
-                * @param {Function} callStatscb - callstats.io callback for each issue
-                * @param {Error} err - reason for issue
-                */
-            handlePeerConnectionFailures: (cs: Client, msg: string | Error, callStatscb: () => void, err: Error) => void;
-            /**
-                * @constructor
-                * @param {CallSessionOptions} options - call(Outgoing/Incoming) information
-                * @private
-                */
-            constructor(options: CallSessionOptions);
-    }
+     * Describes the various states of the call
+     * @private
+     */
+    STATE: {
+      INITIALIZED: string;
+      RINGING: string;
+      ANSWERED: string;
+      REJECTED: string;
+      IGNORED: string;
+      CANCELED: string;
+      FAILED: string;
+      ENDED: string;
+      REDIRECTED: string;
+    };
+    SPEECH_STATE: {
+      STOPPED: string;
+      STARTING: string;
+      RUNNING: string;
+      STOPPING: string;
+      STOPPED_AFTER_DETECTION: string;
+      STOPPED_DUE_TO_NETWORK_ERROR: string;
+      STOPPED_DUE_TO_ABORT: string;
+    };
+    /**
+     * Unique identifier generated for a call by server
+     * @private
+     */
+    callUUID: string | null;
+    /**
+     * call signed or not it will have these options ‘verified’ | ‘not_verified’ | ‘Not_applicable’
+     * @private
+     */
+    stirShakenState: string;
+    /**
+     * Identifier generated by JsSIP when a new RTCSession is created for the call
+     * @private
+     */
+    sipCallID: string | null;
+    /**
+     * Specifies whether the call direction is incoming or outgoing
+     * @private
+     */
+    direction: string;
+    /**
+     * Sip endpoint or a number from which a new call is made
+     * @private
+     */
+    src: string;
+    /**
+     * Sip endpoint or a number to which a new call is received
+     * @private
+     */
+    dest: string;
+    /**
+     * Holds the state of the incoming or outgoing call
+     * @private
+     */
+    state: string;
+    /**
+     * Holds the status if call is terminated during ringing state
+     * @private
+     */
+    isCallTerminatedDuringRinging: boolean;
+    /**
+     * Holds the current status of speech recognition
+     * @private
+     */
+    speech_state: string;
+    /**
+     * Custom headers which are passed in the INVITE. They should start with 'X-PH'
+     * @private
+     */
+    extraHeaders: ExtraHeaders;
+    /**
+     * Holds the state of input and output device mismatch
+     * @private
+     */
+    isAudioDeviceMismatch: boolean;
+    /**
+     * Holds the WebRTC media session
+     * @private
+     */
+    session: RTCSession;
+    /**
+     * Holds stage(call state name and time) at each state of the call
+     * @private
+     */
+    connectionStages: string[];
+    /**
+     * Set to true if ice candidate gathering starts
+     * @private
+     */
+    gotInitalIce: boolean;
+    /**
+     * Holds the RTP stats instance which is used for collecting rtp stats
+     * @private
+     */
+    stats: GetRTPStats | null;
+    /**
+     * Holds the server flags received in 200 OK
+     * @private
+     */
+    serverFeatureFlags: Array<string>;
+    /**
+     * Holds timestamp for each state of call
+     * @private
+     */
+    signallingInfo: SignallingInfo;
+    /**
+     * Holds stream status and timestamp for each state of ice connection
+     * @private
+     */
+    mediaConnectionInfo: MediaConnectionInformation | {};
+    /**
+     * Delta between INVITE request and RINGING response for a call
+     * @private
+     */
+    postDialDelayEndTime: number | null;
+    candidateList: Map<string, C.CandidateListType>;
+    candidatePairsList: Map<string, C.CandidatePairListType>;
+    /**
+     * Update CallUUID in session.
+     * @param {String} callUUID - active call(Outgoing/Incoming) CallUUID
+     */
+    setCallUUID: (callUUID: string | null) => void;
+    /**
+     * Update state in session.
+     * @param {String} state - active call(Outgoing/Incoming) state(this.STATE)
+     */
+    setState: (state: string) => void;
+    setSpeechState: (state: string) => void;
+    /**
+     * Add stage at each state of call.
+     * @param {String} stage - Has state name and time at which state change happens
+     */
+    addConnectionStage: (stage: string) => void;
+    /**
+     * Get all stages for the call.
+     */
+    getConnectionStages: () => string[];
+    /**
+     * Add Plivo stats object.
+     * @param {GetRTPStats} stats - RTP stats object
+     */
+    setCallStats: (stats: GetRTPStats) => void;
+    /**
+     * Clear stats timers and audio levels.
+     */
+    clearCallStats: () => void;
+    /**
+     * Update signalling information(holds timestamp for each state of call).
+     * @param {SignallingInfo} object - contains signalling information
+     */
+    updateSignallingInfo: (object: SignallingInfo) => void;
+    /**
+     * Update media connection information(holds timestamp for media stream changes).
+     * @param {MediaConnectionInfo} object - contains media connection information
+     */
+    updateMediaConnectionInfo: (object: MediaConnectionInformation) => void;
+    /**
+     * Get signalling information.
+     */
+    getSignallingInfo: () => SignallingInfo;
+    stopSpeechRecognition: (clientObj: Client) => void;
+    startSpeechRecognition: (clientObj: Client) => void;
+    /**
+     * Get media connection information.
+     */
+    getMediaConnectionInfo: () => MediaConnectionInformation;
+    /**
+     * Add PostDialDelay(Delta between INVITE request and RINGING response) for a call.
+     * @param {Number} time - current timestamp
+     */
+    setPostDialDelayEndTime: (time: number) => void;
+    /**
+     * Get basic call information.
+     */
+    getCallInfo: (
+      originator: string,
+      protocol?: string,
+      reason?: string,
+      code?: number,
+    ) => CallInfo;
+    /**
+     * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
+     * @param {Client} clientObject - client reference
+     */
+    onAccepted: (cs: Client) => void;
+    /**
+     * Triggered when the user answers the call(Outgoing/Incoming) and got or received 200 OK.
+     * @param {Client} clientObject - client reference
+     */
+    onRinging: (cs: Client) => void;
+    /**
+     * Triggered when the user answers the call(Outgoing/Incoming) and got or received ACK.
+     * @param {Client} clientObject - client reference
+     */
+    onConfirmed: (cs: Client) => void;
+    /**
+     * Triggered when a new ice candidate is gathered.
+     * @param {Client} clientObject - client reference
+     * @param {SessionIceCandidateEvent} event - rtcsession information
+     */
+    onIceCandidate: (cs: Client, event: SessionIceCandidateEvent) => void;
+    /**
+     * Triggered when ice candidates gathering is timed out.
+     * @param {Client} clientObject - client reference
+     * @param {Number} sec - ice timeout seconds
+     */
+    onIceTimeout: (cs: Client, sec: number) => void;
+    /**
+     * Triggered when a call(Outgoing/Incoming) is rejected or invalid.
+     * @param {Client} clientObject - client reference
+     * @param {SessionFailedEvent} evt - rtcsession information
+     */
+    onFailed: (cs: Client, event: SessionFailedEvent) => void;
+    /**
+     * Triggered when a call(Outgoing/Incoming) hung up.
+     * @param {Client} clientObject - client reference
+     * @param {SessionEndedEvent} evt - rtcsession information
+     */
+    onEnded: (cs: Client, event: SessionEndedEvent) => void;
+    /**
+     * Triggered when user media is not accessible.
+     * @param {Client} clientObject - client reference
+     * @param {Error} err - reason for issue
+     */
+    onGetUserMediaFailed: (cs: Client, error: Error) => void;
+    /**
+     * Triggered when peer connection issues(creating offer, answer and setting description) occur.
+     * @param {Client} clientObject - client reference
+     * @param {String} msg - type of issue
+     * @param {Function} callStatscb - callstats.io callback for each issue
+     * @param {Error} err - reason for issue
+     */
+    handlePeerConnectionFailures: (
+      cs: Client,
+      msg: string | Error,
+      callStatscb: () => void,
+      err: Error,
+    ) => void;
+    /**
+     * @constructor
+     * @param {CallSessionOptions} options - call(Outgoing/Incoming) information
+     * @private
+     */
+    constructor(options: CallSessionOptions);
+  }
 }
 
 declare module 'plivo-browser-sdk/stats/ws' {
-    import { Client } from 'plivo-browser-sdk/client';
+  import { Client } from 'plivo-browser-sdk/client';
+  /**
+   * Initialize stats socket.
+   */
+  export class StatsSocket {
     /**
-        * Initialize stats socket.
-        */
-    export class StatsSocket {
-            /**
-                * URL to establish websocket connection
-                * @private
-                */
-            url: string;
-            /**
-                * Holds the instance of websocket
-                * @private
-                */
-            ws: null | WebSocket;
-            /**
-                * Holds a bollean which determines whether the socket is trying for a connection
-                * @private
-                */
-            isConnecting: boolean;
-            /**
-                * Stores the messages in buffer if websocket is unable to send message
-                * @private
-                */
-            messageBuffer: string[];
-            /**
-                * @constructor
-                * @private
-                */
-            constructor();
-            /**
-                * Send continous keepalive heartbeat to plivo stats websocket server.
-                * @param {Client} cs - client reference
-                */
-            heartbeat(cs: Client): boolean;
-            /**
-                * Create a web socket for stats and add event listeners.
-                */
-            connect: () => void;
-            /**
-                * Close the web socket.
-                */
-            disconnect: () => void;
-            /**
-                * Check if web socket is open or not.
-                */
-            isConnected: () => boolean;
-            /**
-                * Send messages to the socket.
-                * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
-                */
-            send: (message: {
-                    [key: string]: any;
-            }, client: Client) => boolean;
-            /**
-                * Reconnect to the socket
-                */
-            reconnect: () => void;
-    }
+     * URL to establish websocket connection
+     * @private
+     */
+    url: string;
+    /**
+     * Holds the instance of websocket
+     * @private
+     */
+    ws: null | WebSocket;
+    /**
+     * Holds a bollean which determines whether the socket is trying for a connection
+     * @private
+     */
+    isConnecting: boolean;
+    /**
+     * Stores the messages in buffer if websocket is unable to send message
+     * @private
+     */
+    messageBuffer: string[];
+    /**
+     * @constructor
+     * @private
+     */
+    constructor();
+    /**
+     * Send continous keepalive heartbeat to plivo stats websocket server.
+     * @param {Client} cs - client reference
+     */
+    heartbeat(cs: Client): boolean;
+    /**
+     * Create a web socket for stats and add event listeners.
+     */
+    connect: () => void;
+    /**
+     * Close the web socket.
+     */
+    disconnect: () => void;
+    /**
+     * Check if web socket is open or not.
+     */
+    isConnected: () => boolean;
+    /**
+     * Send messages to the socket.
+     * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
+     */
+    send: (
+      message: {
+        [key: string]: any;
+      },
+      client: Client,
+    ) => boolean;
+    /**
+     * Reconnect to the socket
+     */
+    reconnect: () => void;
+  }
 }
 
 declare module 'plivo-browser-sdk/media/audioDevice' {
-    import { Client } from 'plivo-browser-sdk/client';
-    import { DeviceAudioInfo } from 'plivo-browser-sdk/stats/nonRTPStats';
-    export interface RingToneDevices {
-            set: (id: string) => void;
-            get: () => string;
-            reset: () => void;
-            media: () => HTMLElement | null;
-    }
-    export interface InputDevices {
-            set: (id: string) => void;
-            get: () => string;
-            reset: () => void;
-    }
-    export interface OutputDevices {
-            set: (id: string) => void;
-            get: () => string;
-            reset: () => void;
-            media: (source?: string) => HTMLElement | null;
-    }
-    export interface DeviceDictionary {
-            devices: MediaDeviceInfo[];
-            audioRef: string[];
-    }
-    /**
-        * Add audio constraints to client reference.
-        * @param {Client} _clientObject - client reference
-        */
-    export const setAudioContraints: (_clientObject: Client) => void;
-    /**
-        * Get list of input or output audio devices.
-        * @param {String} filterBy - pass input/output to filter the devices
-        * @returns Fulfills with a list of audio devices or reject with error
-        */
-    export const availableDevices: (filterBy?: string | undefined) => Promise<MediaDeviceInfo[]>;
-    /**
-        * Allow media permission forcefully to reveal available devices.
-        * @param {String} arg - returns media stream if arg is "returnStream"
-        * @returns Fulfills with a media stream if 'returnStream' is passed or resolve with success.
-        * If error occurs reject with error.
-        */
-    export const revealAudioDevices: (arg?: string | undefined) => Promise<MediaStream | string>;
-    export const speechListeners: () => void;
-    /**
-        * Mute the local stream.
-        */
-    export const mute: () => void;
-    /**
-        * Mute audio state.
-        * @param {Client} client - client reference
-        */
-    export const resetMuteOnHangup: () => void;
-    /**
-        * Collect realtime Audio levels for local and remote streams.
-        * @param {Client} client - client reference
-        */
-    export const startVolumeDataStreaming: (client: Client) => void;
-    /**
-        * Stopping the requesting frame. It would stop emitting the real time audio levels.
-        */
-    export const stopVolumeDataStreaming: () => void;
-    export const replaceStream: (client: Client, constraints: any) => Promise<void>;
-    /**
-        * Add audio device information whenever device is changed.
-        * @param {Boolean} store - pass true to store information in Client object for reference
-        * @returns Fulfills with audio device information or reject with error
-        */
-    export const audioDevDictionary: (store?: boolean | undefined) => Promise<DeviceDictionary | boolean>;
-    /**
-        * Return if the app consuming Browser SDK is electron app or not.
-        */
-    export const isElectronApp: () => boolean;
-    /**
-        * Get input and output audio device information to send to plivo stats.
-        * @returns Fulfills with audio device information or reject with error
-        */
-    export const getAudioDevicesInfo: () => Promise<DeviceAudioInfo>;
-    /**
-        * Updating the default input & output device
-        */
-    export const updateWindowDeviceList: (deviceList: any) => void;
-    /**
-        * Check the input & output audio device for windows machine such that both belong to same groupid
-        */
-    export const setAudioDeviceForForWindows: (devices: any, lastConnectedMicDevice: any, lastConnectedSpeakerDevice: any) => void;
-    /**
-        * Check if input or output audio device has changed.
-        */
-    export const checkAudioDevChange: () => void;
-    /**
-        * Add getters and setters for input audio devices.
-        */
-    export const inputDevices: InputDevices;
-    /**
-        * Add getters and setters for output audio devices.
-        */
-    export const outputDevices: OutputDevices;
-    /**
-        * Add getters and setters for ringtone which is played during the call.
-        */
-    export const ringtoneDevices: RingToneDevices;
-    /**
-        * Unmute the local stream.
-        */
-    export const unmute: () => void;
-    /**
-        * Stop all tracks in the local stream.
-        */
-    export const updateAudioDeviceFlags: () => void;
-    /**
-        * Set the callback which is used for storing list of audio device labels.
-        * @param {Function} setter - callback for storing device labels
-        */
-    export const audioDevDicSetter: (setter: (set: any) => void) => void;
-    /**
-        * Detect if input or output audio device has changed.
-        */
-    export const detectDeviceChange: () => void;
+  import { Client } from 'plivo-browser-sdk/client';
+  import { DeviceAudioInfo } from 'plivo-browser-sdk/stats/nonRTPStats';
+  export interface RingToneDevices {
+    set: (id: string) => void;
+    get: () => string;
+    reset: () => void;
+    media: () => HTMLElement | null;
+  }
+  export interface InputDevices {
+    set: (id: string) => void;
+    get: () => string;
+    reset: () => void;
+  }
+  export interface OutputDevices {
+    set: (id: string) => void;
+    get: () => string;
+    reset: () => void;
+    media: (source?: string) => HTMLElement | null;
+  }
+  export interface DeviceDictionary {
+    devices: MediaDeviceInfo[];
+    audioRef: string[];
+  }
+  /**
+   * Add audio constraints to client reference.
+   * @param {Client} _clientObject - client reference
+   */
+  export const setAudioContraints: (_clientObject: Client) => void;
+  /**
+   * Get list of input or output audio devices.
+   * @param {String} filterBy - pass input/output to filter the devices
+   * @returns Fulfills with a list of audio devices or reject with error
+   */
+  export const availableDevices: (
+    filterBy?: string | undefined,
+  ) => Promise<MediaDeviceInfo[]>;
+  /**
+   * Allow media permission forcefully to reveal available devices.
+   * @param {String} arg - returns media stream if arg is "returnStream"
+   * @returns Fulfills with a media stream if 'returnStream' is passed or resolve with success.
+   * If error occurs reject with error.
+   */
+  export const revealAudioDevices: (
+    arg?: string | undefined,
+  ) => Promise<MediaStream | string>;
+  export const speechListeners: () => void;
+  /**
+   * Mute the local stream.
+   */
+  export const mute: () => void;
+  /**
+   * Mute audio state.
+   * @param {Client} client - client reference
+   */
+  export const resetMuteOnHangup: () => void;
+  /**
+   * Collect realtime Audio levels for local and remote streams.
+   * @param {Client} client - client reference
+   */
+  export const startVolumeDataStreaming: (client: Client) => void;
+  /**
+   * Stopping the requesting frame. It would stop emitting the real time audio levels.
+   */
+  export const stopVolumeDataStreaming: () => void;
+  export const replaceStream: (
+    client: Client,
+    constraints: any,
+  ) => Promise<void>;
+  /**
+   * Add audio device information whenever device is changed.
+   * @param {Boolean} store - pass true to store information in Client object for reference
+   * @returns Fulfills with audio device information or reject with error
+   */
+  export const audioDevDictionary: (
+    store?: boolean | undefined,
+  ) => Promise<DeviceDictionary | boolean>;
+  /**
+   * Return if the app consuming Browser SDK is electron app or not.
+   */
+  export const isElectronApp: () => boolean;
+  export const matchDevices: (
+    activeInputDeviceGroupId: any,
+    activeOutputDeviceGroupId: any,
+    activeInputDevice: any,
+    activeOutputDevice: any,
+  ) => boolean;
+  /**
+   * Get input and output audio device information to send to plivo stats.
+   * @returns Fulfills with audio device information or reject with error
+   */
+  export const getAudioDevicesInfo: () => Promise<DeviceAudioInfo>;
+  /**
+   * Updating the default input & output device
+   */
+  export const updateWindowDeviceList: (deviceList: any) => void;
+  /**
+   * Check the input & output audio device for windows machine such that both belong to same groupid
+   */
+  export const setAudioDeviceForForWindows: (
+    devices: any,
+    lastConnectedMicDevice: any,
+    lastConnectedSpeakerDevice: any,
+  ) => void;
+  /**
+   * Check if input or output audio device has changed.
+   */
+  export const checkAudioDevChange: () => void;
+  /**
+   * Add getters and setters for input audio devices.
+   */
+  export const inputDevices: InputDevices;
+  /**
+   * Add getters and setters for output audio devices.
+   */
+  export const outputDevices: OutputDevices;
+  /**
+   * Add getters and setters for ringtone which is played during the call.
+   */
+  export const ringtoneDevices: RingToneDevices;
+  /**
+   * Unmute the local stream.
+   */
+  export const unmute: () => void;
+  /**
+   * Stop all tracks in the local stream.
+   */
+  export const updateAudioDeviceFlags: () => void;
+  /**
+   * Set the callback which is used for storing list of audio device labels.
+   * @param {Function} setter - callback for storing device labels
+   */
+  export const audioDevDicSetter: (setter: (set: any) => void) => void;
+  /**
+   * Detect if input or output audio device has changed.
+   */
+  export const detectDeviceChange: () => void;
 }
 
 declare module 'plivo-browser-sdk/rnnoise/NoiseSuppression' {
-    import { Client } from "plivo-browser-sdk/client";
-    export class NoiseSuppression {
-        noiseSupressionRunning: boolean;
-        started: boolean;
-        constructor(client: Client);
-        startNoiseSuppression: (mediaStream?: MediaStream | undefined) => Promise<MediaStream | null>;
-        stopNoiseSuppresion: () => void;
-        setLocalMediaStream: () => Promise<MediaStream | null>;
-        updateProcessingStream: (stream: MediaStream) => Promise<MediaStream | null>;
-        clearNoiseSupression: () => void;
-        muteStream: () => void;
-        unmuteStream: () => void;
-        startNoiseSuppresionManual: () => Promise<void>;
-        stopNoiseSuppressionManual: () => Promise<void>;
-    }
+  import { Client } from 'plivo-browser-sdk/client';
+  export class NoiseSuppression {
+    noiseSupressionRunning: boolean;
+    started: boolean;
+    constructor(client: Client);
+    startNoiseSuppression: (
+      mediaStream?: MediaStream | undefined,
+    ) => Promise<MediaStream | null>;
+    stopNoiseSuppresion: () => void;
+    setLocalMediaStream: () => Promise<MediaStream | null>;
+    updateProcessingStream: (
+      stream: MediaStream,
+    ) => Promise<MediaStream | null>;
+    clearNoiseSupression: () => void;
+    muteStream: () => void;
+    unmuteStream: () => void;
+    startNoiseSuppresionManual: () => Promise<void>;
+    stopNoiseSuppressionManual: () => Promise<void>;
+  }
 }
 
 declare module 'plivo-browser-sdk/managers/workerManager' {
-    export class WorkerManager {
-        workerInstance: Worker | null;
-        networkCheckRunning: boolean;
-        onTimerCallback: any;
-        responseCallback: any;
-        timerStartedOnMain: any;
-        constructor();
-        /**
-         * Callback triggered when error is received while starting worker thread.
-         * @param {ErrorEvent} msg - error message received
-         */
-        onErrorReceived: (msg: ErrorEvent) => void;
-        /**
-         * Callback triggered when message is received from the worker thread.
-         * @param {any} msg - message received
-         */
-        onMessageReceived: (msg: any) => void;
-        /**
-         * Start the network check timer.
-         * @param {number} networkCheckInterval - time interval at which the timer is to be executed.
-         * @param {any} callback - callback to be triggered when the timer executes.
-         */
-        startNetworkCheckTimer: (networkCheckInterval: number, callback: any, responseCallback: any) => void;
-        /**
-         * Stop the network check timer.
-         */
-        stopNetworkChecktimer: () => void;
-    }
+  export class WorkerManager {
+    workerInstance: Worker | null;
+    networkCheckRunning: boolean;
+    onTimerCallback: any;
+    responseCallback: any;
+    timerStartedOnMain: any;
+    constructor();
+    /**
+     * Callback triggered when error is received while starting worker thread.
+     * @param {ErrorEvent} msg - error message received
+     */
+    onErrorReceived: (msg: ErrorEvent) => void;
+    /**
+     * Callback triggered when message is received from the worker thread.
+     * @param {any} msg - message received
+     */
+    onMessageReceived: (msg: any) => void;
+    /**
+     * Start the network check timer.
+     * @param {number} networkCheckInterval - time interval at which the timer is to be executed.
+     * @param {any} callback - callback to be triggered when the timer executes.
+     */
+    startNetworkCheckTimer: (
+      networkCheckInterval: number,
+      callback: any,
+      responseCallback: any,
+    ) => void;
+    /**
+     * Stop the network check timer.
+     */
+    stopNetworkChecktimer: () => void;
+  }
 }
 
 declare module 'plivo-browser-sdk/utils/loggerUtil' {
-    import { Client } from "plivo-browser-sdk/client";
-    export class LoggerUtil {
-        constructor(client: Client);
-        static getInstance(): LoggerUtil | null;
-        getSipCallID(): string;
-        setSipCallID(value: string): void;
-        getUserName(): string;
-        setUserName(value: string): void;
-        setIdentifier(identifier: string): void;
-        getIdentifier(): string;
-    }
+  import { Client } from 'plivo-browser-sdk/client';
+  export class LoggerUtil {
+    constructor(client: Client);
+    static getInstance(): LoggerUtil | null;
+    getSipCallID(): string;
+    setSipCallID(value: string): void;
+    getUserName(): string;
+    setUserName(value: string): void;
+    setIdentifier(identifier: string): void;
+    getIdentifier(): string;
+  }
 }
 
 declare module 'plivo-browser-sdk/constants' {
-    export const DOMAIN = "phone.plivo.com";
-    export const WS_SERVERS: string[];
-    export const DEFAULT_LOG_LEVEL = "INFO";
-    export const DEFAULT_ENABLE_QUALITY_TRACKING = "ALL";
-    export const ENABLE_QUALITY_TRACKING_ALLOWED_VALUES: string[];
-    export const LOCALONLY = "LOCALONLY";
-    export const REMOTEONLY = "REMOTEONLY";
-    export const AUDIO_CONSTRAINTS: {
-        optional: {
-            googAutoGainControl: boolean;
-        }[];
-    };
-    export const DEFAULT_DTMFOPTIONS: {
-        sendDtmfType: string[];
-    };
-    export const NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED = 50;
-    export const REGISTER_EXPIRES_SECONDS = 120;
-    export const SESSION_TIMERS_EXPIRES = 300;
-    export const WS_RECOVERY_MAX_INTERVAL = 20;
-    export const WS_RECOVERY_MIN_INTERVAL = 2;
-    export const DEFAULT_MDNS_CANDIDATE = "192.168.0.1";
-    export const ICE_GATHERING_TIMEOUT = 2000;
-    export const ICE_RECONNECT_INTERVAL = 2000;
-    export const ICE_RECONNECT_COUNT = 5;
-    export const NETWORK_CHANGE_INTERVAL = 10000;
-    export const STUN_SERVERS: string[];
-    export const FALLBACK_STUN_SERVER = "stun:stun-fb.plivo.com:3478";
-    export const GOOG_STUN_SERVER = "stun:stun.l.google.com:19302";
-    export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
-    export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
-    export const DTMF_TONE_PLAY_RETRY_ATTEMPTS = 4;
-    export const SIP_ERROR_CODE: {
-        486: string;
-        408: string;
-        480: string;
-        603: string;
-        484: string;
-        503: string;
-        501: string;
-        487: string;
-        400: string;
-        401: string;
-        403: string;
-        404: string;
-        405: string;
-        483: string;
-        500: string;
-        502: string;
-    };
-    export const LOCAL_ERROR_CODES: {
-        'No Answer': number;
-        Canceled: number;
-        Rejected: number;
-        Terminated: number;
-        Ignored: number;
-        "call answer fail": number;
-        "Network switch while ringing": number;
-        "invalid-destination-address": number;
-        "call-already-in-progress": number;
-        "incoming-invite-exist": number;
-    };
-    export const DEFAULT_CODECS: string[];
-    export const DTMF_OPTIONS: string[];
-    export const CONSOLE_LOGS_BUFFER_SIZE = 900;
-    export const MAX_AVERAGE_BITRATE = 48000;
-    export const MIN_AVERAGE_BITRATE = 8000;
-    export const MIN_REGISTRATION_REFRESH_TIMER = 60;
-    export const MAX_REGISTRATION_REFRESH_TIMER: number;
-    export const REGION: string[];
-    export const DEBUG_MODES: string[];
-    export const DEFAULT_COMMENTS: {
-        AUDIO_LAG: string;
-        BROKEN_AUDIO: string;
-        CALL_DROPPED: string;
-        CALLERID_ISSUES: string;
-        DIGITS_NOT_CAPTURED: string;
-        ECHO: string;
-        HIGH_CONNECT_TIME: string;
-        LOW_AUDIO_LEVEL: string;
-        ONE_WAY_AUDIO: string;
-        OTHERS: string;
-        ROBOTIC_AUDIO: string;
-    };
-    export const LOGCAT: {
-        INIT: string;
-        LOGIN: string;
-        CALL: string;
-        LOGOUT: string;
-        CRASH: string;
-        CALL_QUALITY: string;
-        NETWORK_CHANGE: string;
-        NIMBUS: string;
-        WS: string;
-    };
-    export type CandidateListType = {
-        ip: string;
-        port: number;
-        candidateType: string;
-        isLocal: boolean;
-    };
-    export type CandidatePairListType = {
-        iceConnectionState: string;
-        localCandidateId: string;
-        remoteCandidateId: string;
-        state: string;
-        timeStamp: string;
-    };
-    export const RINGTONE_URL = "https://cdn.plivo.com/sdk/browser/audio/us-ring.mp3";
-    export const RINGBACK_URL = "https://cdn.plivo.com/sdk/browser/audio/us-ring.mp3?v=ringback";
-    export const CONNECT_TONE_URL = "https://cdn.plivo.com/sdk/browser/audio/connect-tone.mp3";
-    export const SILENT_TONE_URL = "https://cdn.plivo.com/sdk/browser/audio/silent-audio.mp3";
-    export const SELF_VIEW_ID = "plivo_webrtc_selfview";
-    export const REMOTE_VIEW_ID = "plivo_webrtc_remoteview";
-    export const RINGBACK_ELEMENT_ID = "plivo_ringbacktone";
-    export const RINGTONE_ELEMENT_ID = "plivo_ringtone";
-    export const CONNECT_TONE_ELEMENT_ID = "plivo_connect_tone";
-    export const SILENT_TONE_ELEMENT_ID = "plivo_silent_tone";
-    export const AUDIO_DEVICE_ABORT_ERROR_CODE = 20;
-    export const AUDIO_DEVICE_SECURITY_ERROR = "SecurityError";
-    export const DTMF_TONE_FLAG: {
-        0: boolean;
-        1: boolean;
-        2: boolean;
-        3: boolean;
-        4: boolean;
-        5: boolean;
-        6: boolean;
-        7: boolean;
-        8: boolean;
-        9: boolean;
-        '#': boolean;
-        '*': boolean;
-    };
-    export const S3BUCKET_API_URL = "https://stats.plivo.com/v1/browser/bucketurl/";
-    export const STATSSOCKET_URL = "wss://insights.plivo.com/ws";
-    export const STATS_API_URL = "https://stats.plivo.com/v1/browser/validate/";
-    export const SDKVERSION_API_URL = "https://stats.plivo.com/v1/browser/websdkversion/";
-    export const STATS_API_URL_ACCESS_TOKEN = "https://stats.plivo.com/v1/browser/validate/jwt/";
-    export const S3BUCKET_API_URL_JWT = "https://stats.plivo.com/v1/browser/bucketurl/jwt/";
-    export const LOG_COLLECTION = "https://nimbus.plivo.com/collect/logs/";
-    export const LOG_COLLECTION_JWT = "https://nimbus.plivo.com/collect/logs/jwt/";
-    export const STATS_SOURCE = "BrowserSDK";
-    export const STATS_VERSION = "v1";
-    export const GETSTATS_INTERVAL = 5000;
-    export const AUDIO_INTERVAL = 1000;
-    export const GETSTATS_HEARTBEATINTERVAL = 100000;
-    export const STATSSOCKET_RECONNECT_SEC = 10000;
-    export const STATS_ANALYSIS_WAIT_TIME = 5000;
-    export const NETWORK_CHANGE_INTERVAL_IDLE_STATE = 5000;
-    export const NETWORK_CHANGE_INTERVAL_ON_CALL_STATE = 4000;
-    export const MESSAGE_CHECK_TIMEOUT_IDLE_STATE = 2000;
-    export const MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE = 2000;
-    export const IP_ADDRESS_FETCH_RETRY_COUNT = 10;
-    export const WS_RECONNECT_RETRY_COUNT = 2;
-    export const WS_RECONNECT_RETRY_INTERVAL = 15000;
+  export const DOMAIN = 'phone.plivo.com';
+  export const WS_SERVERS: string[];
+  export const DEFAULT_LOG_LEVEL = 'INFO';
+  export const DEFAULT_ENABLE_QUALITY_TRACKING = 'ALL';
+  export const ENABLE_QUALITY_TRACKING_ALLOWED_VALUES: string[];
+  export const LOCALONLY = 'LOCALONLY';
+  export const REMOTEONLY = 'REMOTEONLY';
+  export const AUDIO_CONSTRAINTS: {
+    optional: {
+      googAutoGainControl: boolean;
+    }[];
+  };
+  export const DEFAULT_DTMFOPTIONS: {
+    sendDtmfType: string[];
+  };
+  export const NUMBER_OF_SIMULTANEOUS_INCOMING_CALLS_ALLOWED = 50;
+  export const REGISTER_EXPIRES_SECONDS = 120;
+  export const SESSION_TIMERS_EXPIRES = 300;
+  export const WS_RECOVERY_MAX_INTERVAL = 20;
+  export const WS_RECOVERY_MIN_INTERVAL = 2;
+  export const DEFAULT_MDNS_CANDIDATE = '192.168.0.1';
+  export const ICE_GATHERING_TIMEOUT = 2000;
+  export const ICE_RECONNECT_INTERVAL = 2000;
+  export const ICE_RECONNECT_COUNT = 5;
+  export const NETWORK_CHANGE_INTERVAL = 10000;
+  export const STUN_SERVERS: string[];
+  export const FALLBACK_STUN_SERVER = 'stun:stun-fb.plivo.com:3478';
+  export const GOOG_STUN_SERVER = 'stun:stun.l.google.com:19302';
+  export const SOCKET_SEND_STATS_RETRY_SECONDS_COUNT = 1;
+  export const SOCKET_SEND_STATS_RETRY_ATTEMPTS = 5;
+  export const DTMF_TONE_PLAY_RETRY_ATTEMPTS = 4;
+  export const SIP_ERROR_CODE: {
+    486: string;
+    408: string;
+    480: string;
+    603: string;
+    484: string;
+    503: string;
+    501: string;
+    487: string;
+    400: string;
+    401: string;
+    403: string;
+    404: string;
+    405: string;
+    483: string;
+    500: string;
+    502: string;
+  };
+  export const LOCAL_ERROR_CODES: {
+    'No Answer': number;
+    Canceled: number;
+    Rejected: number;
+    Terminated: number;
+    Ignored: number;
+    'call answer fail': number;
+    'Network switch while ringing': number;
+    'invalid-destination-address': number;
+    'call-already-in-progress': number;
+    'incoming-invite-exist': number;
+  };
+  export const DEFAULT_CODECS: string[];
+  export const DTMF_OPTIONS: string[];
+  export const CONSOLE_LOGS_BUFFER_SIZE = 900;
+  export const MAX_AVERAGE_BITRATE = 48000;
+  export const MIN_AVERAGE_BITRATE = 8000;
+  export const MIN_REGISTRATION_REFRESH_TIMER = 60;
+  export const MAX_REGISTRATION_REFRESH_TIMER: number;
+  export const REGION: string[];
+  export const DEBUG_MODES: string[];
+  export const DEFAULT_COMMENTS: {
+    AUDIO_LAG: string;
+    BROKEN_AUDIO: string;
+    CALL_DROPPED: string;
+    CALLERID_ISSUES: string;
+    DIGITS_NOT_CAPTURED: string;
+    ECHO: string;
+    HIGH_CONNECT_TIME: string;
+    LOW_AUDIO_LEVEL: string;
+    ONE_WAY_AUDIO: string;
+    OTHERS: string;
+    ROBOTIC_AUDIO: string;
+  };
+  export const LOGCAT: {
+    INIT: string;
+    LOGIN: string;
+    CALL: string;
+    LOGOUT: string;
+    CRASH: string;
+    CALL_QUALITY: string;
+    NETWORK_CHANGE: string;
+    NIMBUS: string;
+    WS: string;
+  };
+  export type CandidateListType = {
+    ip: string;
+    port: number;
+    candidateType: string;
+    isLocal: boolean;
+  };
+  export type CandidatePairListType = {
+    iceConnectionState: string;
+    localCandidateId: string;
+    remoteCandidateId: string;
+    state: string;
+    timeStamp: string;
+  };
+  export const RINGTONE_URL =
+    'https://cdn.plivo.com/sdk/browser/audio/us-ring.mp3';
+  export const RINGBACK_URL =
+    'https://cdn.plivo.com/sdk/browser/audio/us-ring.mp3?v=ringback';
+  export const CONNECT_TONE_URL =
+    'https://cdn.plivo.com/sdk/browser/audio/connect-tone.mp3';
+  export const SILENT_TONE_URL =
+    'https://cdn.plivo.com/sdk/browser/audio/silent-audio.mp3';
+  export const SELF_VIEW_ID = 'plivo_webrtc_selfview';
+  export const REMOTE_VIEW_ID = 'plivo_webrtc_remoteview';
+  export const RINGBACK_ELEMENT_ID = 'plivo_ringbacktone';
+  export const RINGTONE_ELEMENT_ID = 'plivo_ringtone';
+  export const CONNECT_TONE_ELEMENT_ID = 'plivo_connect_tone';
+  export const SILENT_TONE_ELEMENT_ID = 'plivo_silent_tone';
+  export const AUDIO_DEVICE_ABORT_ERROR_CODE = 20;
+  export const AUDIO_DEVICE_SECURITY_ERROR = 'SecurityError';
+  export const DTMF_TONE_FLAG: {
+    0: boolean;
+    1: boolean;
+    2: boolean;
+    3: boolean;
+    4: boolean;
+    5: boolean;
+    6: boolean;
+    7: boolean;
+    8: boolean;
+    9: boolean;
+    '#': boolean;
+    '*': boolean;
+  };
+  export const S3BUCKET_API_URL =
+    'https://stats.plivo.com/v1/browser/bucketurl/';
+  export const STATSSOCKET_URL = 'wss://insights.plivo.com/ws';
+  export const STATS_API_URL = 'https://stats.plivo.com/v1/browser/validate/';
+  export const SDKVERSION_API_URL =
+    'https://stats.plivo.com/v1/browser/websdkversion/';
+  export const STATS_API_URL_ACCESS_TOKEN =
+    'https://stats.plivo.com/v1/browser/validate/jwt/';
+  export const S3BUCKET_API_URL_JWT =
+    'https://stats.plivo.com/v1/browser/bucketurl/jwt/';
+  export const LOG_COLLECTION = 'https://nimbus.plivo.com/collect/logs/';
+  export const LOG_COLLECTION_JWT =
+    'https://nimbus.plivo.com/collect/logs/jwt/';
+  export const STATS_SOURCE = 'BrowserSDK';
+  export const STATS_VERSION = 'v1';
+  export const GETSTATS_INTERVAL = 5000;
+  export const AUDIO_INTERVAL = 1000;
+  export const GETSTATS_HEARTBEATINTERVAL = 100000;
+  export const STATSSOCKET_RECONNECT_SEC = 10000;
+  export const STATS_ANALYSIS_WAIT_TIME = 5000;
+  export const NETWORK_CHANGE_INTERVAL_IDLE_STATE = 5000;
+  export const NETWORK_CHANGE_INTERVAL_ON_CALL_STATE = 4000;
+  export const MESSAGE_CHECK_TIMEOUT_IDLE_STATE = 2000;
+  export const MESSAGE_CHECK_TIMEOUT_ON_CALL_STATE = 2000;
+  export const IP_ADDRESS_FETCH_RETRY_COUNT = 10;
+  export const WS_RECONNECT_RETRY_COUNT = 2;
+  export const WS_RECONNECT_RETRY_INTERVAL = 15000;
 }
 
 declare module 'plivo-browser-sdk/stats/rtpStats' {
-    import { Client, Storage } from 'plivo-browser-sdk/client';
-    import { AudioLevel } from 'plivo-browser-sdk/media/audioLevel';
-    export interface LocalCandidate {
-            id?: string;
-            address?: string;
-            port?: string;
-            relatedAddress?: string;
-            relatedPort?: string;
-            candidateType?: string;
-            usernameFragment?: string;
-    }
-    type LocalCandidateMap = {
-            [timestamp: string]: LocalCandidate;
+  import { Client, Storage } from 'plivo-browser-sdk/client';
+  import { AudioLevel } from 'plivo-browser-sdk/media/audioLevel';
+  export interface LocalCandidate {
+    id?: string;
+    address?: string;
+    port?: string;
+    relatedAddress?: string;
+    relatedPort?: string;
+    candidateType?: string;
+    usernameFragment?: string;
+  }
+  type LocalCandidateMap = {
+    [timestamp: string]: LocalCandidate;
+  };
+  export interface RemoteCandidate {
+    id?: string;
+    address?: string;
+    port?: string;
+    candidateType?: string;
+    usernameFragment?: string;
+  }
+  export interface CandidatePair {
+    availableOutgoingBitrate?: string;
+    consentRequestsSent?: number;
+    id?: string;
+    lastPacketReceivedTimestamp?: string;
+    lastPacketSentTimestamp?: string;
+    localCandidateId?: string;
+    nominated?: string;
+    packetsDiscardedOnSend?: string;
+    packetsReceived?: string;
+    packetsSent?: string;
+    remoteCandidateId?: string;
+    requestsReceived?: number;
+    requestsSent?: number;
+    responsesReceived?: number;
+    responsesSent?: number;
+    state?: string;
+    transportId?: string;
+    writable?: boolean;
+  }
+  export interface Transport {
+    id?: string;
+    dtlsRole?: string;
+    dtlsState?: string;
+    iceRole?: string;
+    iceState?: string;
+    packetsReceived?: string;
+    packetsSent?: string;
+    selectedCandidatePairChanges?: number;
+    selectedCandidatePairId?: string;
+  }
+  export interface OutboundRTP {
+    bytesSent?: number;
+    packetsSent?: number;
+    retransmittedBytesSent?: number;
+    retransmittedPacketsSent?: number;
+    transportId?: string;
+  }
+  export interface RemoteInboundRTP {
+    fractionLost?: number;
+    packetsLost?: number;
+    roundTripTime?: string;
+    roundTripTimeMeasurements?: number;
+    totalRoundTripTime?: string;
+    transportId?: string;
+  }
+  export interface InboundRTP {
+    bytesReceived?: number;
+    jitterBufferDelay?: string;
+    jitterBufferEmittedCount?: number;
+    jitterBufferMinimumDelay?: string;
+    jitterBufferTargetDelay?: string;
+    packetsDiscarded?: number;
+    packetsLost?: number;
+    packetsReceived?: number;
+    totalSamplesDuration?: string;
+    totalSamplesReceived?: string;
+    transportId?: string;
+  }
+  export interface RemoteOutboundRTP {
+    bytesSent?: number;
+    packetsSent?: number;
+    reportsSent?: number;
+    totalRoundTripTime?: string;
+    transportId?: string;
+  }
+  export interface StatsDump {
+    msg: string;
+    callUUID: string;
+    xcallUUID: string;
+    source: string;
+    timeStamp: number;
+    version: string;
+    changedCandidatedInfo: LocalCandidateMap;
+    localCandidate: LocalCandidate;
+    remoteCandidate: RemoteCandidate;
+    transport: Transport;
+    candidatePair: CandidatePair;
+    outboundRTP: OutboundRTP;
+    remoteInboundRTP: RemoteInboundRTP;
+    inboundRTP: InboundRTP;
+    remoteOutboundRTP: RemoteOutboundRTP;
+  }
+  export interface StatsLocalStream {
+    ssrc?: number;
+    packetsLost?: number;
+    bytesReceived?: number;
+    packetsReceived?: number;
+    jitter?: number | null;
+    audioLevel?: number;
+    rtt?: number | null;
+    mos?: number | null;
+    fractionLoss?: number;
+    audioInputLevel?: number;
+    audioOutputLevel?: number;
+    bytesSent?: number;
+    packetsSent?: number;
+    googJitterReceived?: number;
+    googRtt?: number;
+    googEchoCancellationReturnLossEnhancement?: number;
+    googEchoCancellationReturnLoss?: number;
+  }
+  export interface StatsRemoteStream {
+    ssrc?: number;
+    packetsLost?: number;
+    bytesReceived?: number;
+    packetsReceived?: number;
+    jitter?: number | null;
+    audioLevel?: number;
+    fractionLoss?: number;
+    audioInputLevel?: number;
+    audioOutputLevel?: number;
+    googJitterReceived?: number;
+    googRtt?: number;
+    jitterBufferDelay?: number;
+    googJitterBufferMs?: number;
+    packetsDiscarded?: number;
+  }
+  export interface StatsObject {
+    msg: string;
+    callstats_key: string;
+    local: StatsLocalStream;
+    remote: StatsRemoteStream;
+    codec: string;
+    xcallUUID: string;
+    callUUID: string;
+    corelationId: string;
+    userName: string;
+    timeStamp: number;
+    domain: string;
+    source: string;
+    version: string;
+    networkType: string;
+    networkEffectiveType: string;
+    networkDownlinkSpeed: number;
+    statsIOUsed: boolean;
+    pdd?: number;
+    mediaSetupTime?: number;
+  }
+  interface RtpStatsStream {
+    codec: string;
+    local: StatsLocalStream;
+    remote: StatsRemoteStream;
+    networkType: string;
+    gotNetworkType?: boolean;
+  }
+  /**
+   * Get RTP stats.
+   * @param {RtpStatsStream} stream - holds local and remote stat details
+   */
+  export const handleWebRTCStats: (stream: RtpStatsStream) => void;
+  /**
+   * Initialize and create timers, media streams for RTP stats.
+   */
+  export class GetRTPStats {
+    /**
+     * Client class reference
+     */
+    clientScope: Client;
+    /**
+     * Represents a WebRTC connection between caller and callee
+     * @private
+     */
+    pc: RTCPeerConnection;
+    rtpsender: RTCStatsReport;
+    rtpreceiver: RTCStatsReport;
+    localCandidateInfo: LocalCandidateMap;
+    /**
+     * Unique identifier generated for a call by server
+     * @private
+     */
+    xcallUUID: string;
+    /**
+     * Identifier generated by JsSIP when a new RTCSession is created for the call
+     * @private
+     */
+    callUUID: string;
+    /**
+     * Identifier generated by JsSIP when a new RTCSession is created for the call
+     * @private
+     */
+    corelationId: string;
+    /**
+     * Username given when logging in
+     * @private
+     */
+    userName: string;
+    /**
+     * Holds rtp stat information which will be used in capturing media metrics
+     * @private
+     */
+    storage: Storage;
+    /**
+     * It is a unique identifer which is not null when callstats permission is present
+     * @private
+     */
+    callstatskey: string;
+    /**
+     * Set to true if user is using callstats.io
+     * @private
+     */
+    statsioused: boolean;
+    /**
+     * Set to true if rtp stats are collected for the first time
+     * @private
+     */
+    baseStatsCollected: boolean;
+    /**
+     * Holds the packet information of the previous stat
+     * @private
+     */
+    packets: {
+      prePacketsReceived?: any;
+      prePacketsSent?: any;
+      preRemotePacketsLoss?: any;
+      preLocalPacketsLoss?: any;
     };
-    export interface RemoteCandidate {
-            id?: string;
-            address?: string;
-            port?: string;
-            candidateType?: string;
-            usernameFragment?: string;
-    }
-    export interface CandidatePair {
-            availableOutgoingBitrate?: string;
-            consentRequestsSent?: number;
-            id?: string;
-            lastPacketReceivedTimestamp?: string;
-            lastPacketSentTimestamp?: string;
-            localCandidateId?: string;
-            nominated?: string;
-            packetsDiscardedOnSend?: string;
-            packetsReceived?: string;
-            packetsSent?: string;
-            remoteCandidateId?: string;
-            requestsReceived?: number;
-            requestsSent?: number;
-            responsesReceived?: number;
-            responsesSent?: number;
-            state?: string;
-            transportId?: string;
-            writable?: boolean;
-    }
-    export interface Transport {
-            id?: string;
-            dtlsRole?: string;
-            dtlsState?: string;
-            iceRole?: string;
-            iceState?: string;
-            packetsReceived?: string;
-            packetsSent?: string;
-            selectedCandidatePairChanges?: number;
-            selectedCandidatePairId?: string;
-    }
-    export interface OutboundRTP {
-            bytesSent?: number;
-            packetsSent?: number;
-            retransmittedBytesSent?: number;
-            retransmittedPacketsSent?: number;
-            transportId?: string;
-    }
-    export interface RemoteInboundRTP {
-            fractionLost?: number;
-            packetsLost?: number;
-            roundTripTime?: string;
-            roundTripTimeMeasurements?: number;
-            totalRoundTripTime?: string;
-            transportId?: string;
-    }
-    export interface InboundRTP {
-            bytesReceived?: number;
-            jitterBufferDelay?: string;
-            jitterBufferEmittedCount?: number;
-            jitterBufferMinimumDelay?: string;
-            jitterBufferTargetDelay?: string;
-            packetsDiscarded?: number;
-            packetsLost?: number;
-            packetsReceived?: number;
-            totalSamplesDuration?: string;
-            totalSamplesReceived?: string;
-            transportId?: string;
-    }
-    export interface RemoteOutboundRTP {
-            bytesSent?: number;
-            packetsSent?: number;
-            reportsSent?: number;
-            totalRoundTripTime?: string;
-            transportId?: string;
-    }
-    export interface StatsDump {
-            msg: string;
-            callUUID: string;
-            xcallUUID: string;
-            source: string;
-            timeStamp: number;
-            version: string;
-            changedCandidatedInfo: LocalCandidateMap;
-            localCandidate: LocalCandidate;
-            remoteCandidate: RemoteCandidate;
-            transport: Transport;
-            candidatePair: CandidatePair;
-            outboundRTP: OutboundRTP;
-            remoteInboundRTP: RemoteInboundRTP;
-            inboundRTP: InboundRTP;
-            remoteOutboundRTP: RemoteOutboundRTP;
-    }
-    export interface StatsLocalStream {
-            ssrc?: number;
-            packetsLost?: number;
-            bytesReceived?: number;
-            packetsReceived?: number;
-            jitter?: number | null;
-            audioLevel?: number;
-            rtt?: number | null;
-            mos?: number | null;
-            fractionLoss?: number;
-            audioInputLevel?: number;
-            audioOutputLevel?: number;
-            bytesSent?: number;
-            packetsSent?: number;
-            googJitterReceived?: number;
-            googRtt?: number;
-            googEchoCancellationReturnLossEnhancement?: number;
-            googEchoCancellationReturnLoss?: number;
-    }
-    export interface StatsRemoteStream {
-            ssrc?: number;
-            packetsLost?: number;
-            bytesReceived?: number;
-            packetsReceived?: number;
-            jitter?: number | null;
-            audioLevel?: number;
-            fractionLoss?: number;
-            audioInputLevel?: number;
-            audioOutputLevel?: number;
-            googJitterReceived?: number;
-            googRtt?: number;
-            jitterBufferDelay?: number;
-            googJitterBufferMs?: number;
-            packetsDiscarded?: number;
-    }
-    export interface StatsObject {
-            msg: string;
-            callstats_key: string;
-            local: StatsLocalStream;
-            remote: StatsRemoteStream;
-            codec: string;
-            xcallUUID: string;
-            callUUID: string;
-            corelationId: string;
-            userName: string;
-            timeStamp: number;
-            domain: string;
-            source: string;
-            version: string;
-            networkType: string;
-            networkEffectiveType: string;
-            networkDownlinkSpeed: number;
-            statsIOUsed: boolean;
-            pdd?: number;
-            mediaSetupTime?: number;
-    }
-    interface RtpStatsStream {
-            codec: string;
-            local: StatsLocalStream;
-            remote: StatsRemoteStream;
-            networkType: string;
-            gotNetworkType?: boolean;
-    }
     /**
-        * Get RTP stats.
-        * @param {RtpStatsStream} stream - holds local and remote stat details
-        */
-    export const handleWebRTCStats: (stream: RtpStatsStream) => void;
+     * Used for capturing local media stream
+     * @private
+     */
+    senderMediaStream: MediaStream | null;
     /**
-        * Initialize and create timers, media streams for RTP stats.
-        */
-    export class GetRTPStats {
-            /**
-                * Client class reference
-                */
-            clientScope: Client;
-            /**
-                * Represents a WebRTC connection between caller and callee
-                * @private
-                */
-            pc: RTCPeerConnection;
-            rtpsender: RTCStatsReport;
-            rtpreceiver: RTCStatsReport;
-            localCandidateInfo: LocalCandidateMap;
-            /**
-                * Unique identifier generated for a call by server
-                * @private
-                */
-            xcallUUID: string;
-            /**
-                * Identifier generated by JsSIP when a new RTCSession is created for the call
-                * @private
-                */
-            callUUID: string;
-            /**
-                * Identifier generated by JsSIP when a new RTCSession is created for the call
-                * @private
-                */
-            corelationId: string;
-            /**
-                * Username given when logging in
-                * @private
-                */
-            userName: string;
-            /**
-                * Holds rtp stat information which will be used in capturing media metrics
-                * @private
-                */
-            storage: Storage;
-            /**
-                * It is a unique identifer which is not null when callstats permission is present
-                * @private
-                */
-            callstatskey: string;
-            /**
-                * Set to true if user is using callstats.io
-                * @private
-                */
-            statsioused: boolean;
-            /**
-                * Set to true if rtp stats are collected for the first time
-                * @private
-                */
-            baseStatsCollected: boolean;
-            /**
-                * Holds the packet information of the previous stat
-                * @private
-                */
-            packets: {
-                    prePacketsReceived?: any;
-                    prePacketsSent?: any;
-                    preRemotePacketsLoss?: any;
-                    preLocalPacketsLoss?: any;
-            };
-            /**
-                * Used for capturing local media stream
-                * @private
-                */
-            senderMediaStream: MediaStream | null;
-            /**
-                * Used for capturing remote media stream
-                * @private
-                */
-            receiverMediaStream: MediaStream;
-            /**
-                * Holds the audio level instance of the sender media stream
-                * @private
-                */
-            localAudioLevelHelper: AudioLevel;
-            /**
-                * Holds the audio level instance of the receiver media stream
-                * @private
-                */
-            remoteAudioLevelHelper: AudioLevel;
-            /**
-                * Describes the audio level for the local stream
-                * @private
-                */
-            audioInputLevel: null | number;
-            /**
-                * Describes the audio level for the remote stream
-                * @private
-                */
-            audioOutputLevel: null | number;
-            /**
-                * Input audio samples collected count
-                * @private
-                */
-            audioInputCount: number;
-            /**
-                * Output audio samples collected count
-                * @private
-                */
-            audioOutputCount: number;
-            /**
-                * Timer for collecting audio levels
-                * @private
-                */
-            audioTimer: ReturnType<typeof setInterval>;
-            /**
-                * Timer for collecting RTP stats
-                * @private
-                */
-            statsTimer: ReturnType<typeof setInterval>;
-            /**
-                * Holds rtp stats and call info
-                * @private
-                */
-            collected: StatsObject;
-            /**
-                * @constructor
-                * @param {Object} that - client reference
-                * @private
-                */
-            constructor(client: Client);
-            sendCallStatsDump: (stream: StatsDump) => Promise<void>;
-            /**
-                * Stop analysing audio levels for local and remote streams.
-                */
-            stop: () => Promise<void>;
-    }
-    export {};
+     * Used for capturing remote media stream
+     * @private
+     */
+    receiverMediaStream: MediaStream;
+    /**
+     * Holds the audio level instance of the sender media stream
+     * @private
+     */
+    localAudioLevelHelper: AudioLevel;
+    /**
+     * Holds the audio level instance of the receiver media stream
+     * @private
+     */
+    remoteAudioLevelHelper: AudioLevel;
+    /**
+     * Describes the audio level for the local stream
+     * @private
+     */
+    audioInputLevel: null | number;
+    /**
+     * Describes the audio level for the remote stream
+     * @private
+     */
+    audioOutputLevel: null | number;
+    /**
+     * Input audio samples collected count
+     * @private
+     */
+    audioInputCount: number;
+    /**
+     * Output audio samples collected count
+     * @private
+     */
+    audioOutputCount: number;
+    /**
+     * Timer for collecting audio levels
+     * @private
+     */
+    audioTimer: ReturnType<typeof setInterval>;
+    /**
+     * Timer for collecting RTP stats
+     * @private
+     */
+    statsTimer: ReturnType<typeof setInterval>;
+    /**
+     * Holds rtp stats and call info
+     * @private
+     */
+    collected: StatsObject;
+    /**
+     * @constructor
+     * @param {Object} that - client reference
+     * @private
+     */
+    constructor(client: Client);
+    sendCallStatsDump: (stream: StatsDump) => Promise<void>;
+    /**
+     * Stop analysing audio levels for local and remote streams.
+     */
+    stop: () => Promise<void>;
+  }
+  export {};
 }
 
 declare module 'plivo-browser-sdk/stats/nonRTPStats' {
-    import { CallSession, SignallingInfo, MediaConnectionInformation } from 'plivo-browser-sdk/managers/callSession';
-    import { ConfiguationOptions } from 'plivo-browser-sdk/client';
-    import { FeedbackObject } from 'plivo-browser-sdk/utils/feedback';
-    export interface AnsweredEvent {
-            msg: string;
-            info: string;
-            clientName: any;
-            userAgent: string;
-            clientVersionMajor: any;
-            clientVersionMinor: any;
-            clientVersionPatch: any;
-            sdkName: string;
-            sdkVersionMajor: number;
-            sdkVersionMinor: number;
-            sdkVersionPatch: number;
-            sdkVersionPre: any;
-            devicePlatform: string;
-            deviceOs: string;
-            setupOptions: ConfiguationOptions;
-            audioDeviceInfo?: DeviceAudioInfo;
-            noiseReduction: NoiseReduction;
-    }
-    export interface DeviceAudioInfo {
-            noOfAudioInput: number;
-            noOfAudioOutput: number;
-            audioInputLables: string;
-            audioOutputLables: string;
-            audioInputGroupIds: string;
-            audioOutputGroupIds: string;
-            audioInputIdSet: string;
-            audioOutputIdSet: string;
-            activeInputAudioDevice: string;
-            activeOutputAudioDevice: string;
-    }
-    export interface RingingEvent {
-            msg: string;
-            userAgent: string;
-            clientVersionMajor: string;
-            clientVersionMinor: string;
-            clientVersionPatch: string;
-            sdkName: string;
-            sdkVersionMajor: number;
-            sdkVersionMinor: number;
-            sdkVersionPatch: number;
-            sdkVersionPre: any;
-            clientName: string;
-            devicePlatform: string;
-            deviceOs: string;
-            setupOptions: ConfiguationOptions;
-            signalling?: any;
-            mediaConnection?: any;
-            audioDeviceInfo?: DeviceAudioInfo;
-            isAudioDeviceToggled?: boolean;
-            isNetworkChanged?: boolean;
-            jsFramework: string[];
-            noiseReduction: NoiseReduction;
-    }
-    export interface SummaryEvent {
-            msg: string;
-            userAgent: string;
-            clientVersionMajor: string;
-            clientVersionMinor: string;
-            clientVersionPatch: string;
-            sdkName: string;
-            sdkVersionMajor: number;
-            sdkVersionMinor: number;
-            sdkVersionPatch: number;
-            sdkVersionPre: any;
-            clientName: string;
-            devicePlatform: string;
-            deviceOs: string;
-            setupOptions: ConfiguationOptions;
-            signalling?: any;
-            mediaConnection?: any;
-            audioDeviceInfo?: DeviceAudioInfo;
-            isAudioDeviceToggled?: boolean;
-            isNetworkChanged?: boolean;
-            jsFramework: string[];
-            noiseReduction: NoiseReduction;
-    }
-    export interface NoiseReduction {
-            enabled: boolean;
-            noiseSuprressionStarted: boolean;
-    }
-    /**
-        * Add call related information to call answered/summary stat.
-        * @param {CallSession} callSession - call information
-        * @param {Any} statMsg - call stats (Answered/RTP/Summary/Feedback/Failure Events)
-        * @param {String} callstatskey - UUID which is not null when callstats permission is present
-        * @param {String} userName
-        * @returns Stat message with call information
-        */
-    export const addCallInfo: (callSession: CallSession, statMsg: any, callstatskey: string, userName: string, timeStamp: number) => object;
-    /**
-        * Send events to plivo stats.
-        * @param {Any} statMsg - call stats (Answered/RTP/Summary/Feedback/Failure Events)
-        * @param {CallSession} session - call session information
-        */
-    export const sendEvents: (statMsg: any, session: CallSession) => void;
-    /**
-        * Report errors to callstats.io.
-        * @param {Any} err - Error(call failures) stat
-        * @param {Any} log - option to log error in browser console
-        */
-    export const AppError: (err: any, log: any) => boolean;
-    /**
-        * Send call answered event to Plivo stats.
-        * @param {DeviceAudioInfo} deviceInfo - input and output audio device information
-        * @param {Boolean} isIncoming - check if it is a incoming call
-        */
-    export const sendCallAnsweredEvent: (deviceInfo: DeviceAudioInfo, isIncoming: boolean) => void;
-    /**
-        * Send call summary event to Plivo stats.
-        * @param {DeviceAudioInfo} deviceInfo - input and output audio device information
-        * @param {SignallingInfo} signallingInfo - holds timestamp for each state of call
-        * @param {MediaConnectionInfo} mediaConnectionInfo - media connection information
-        * @param {CallSession} session - call session information
-        */
-    export const sendCallSummaryEvent: (deviceInfo: DeviceAudioInfo, signallingInfo: SignallingInfo, mediaConnectionInfo: MediaConnectionInformation, session: CallSession) => void;
-    export const sendCallRingingEvent: (deviceInfo: DeviceAudioInfo, signallingInfo: SignallingInfo, mediaConnectionInfo: MediaConnectionInformation, session: CallSession) => void;
-    /**
-            * Send user feedback to plivo stats.
-            * @param {CallSession} callSession - call information
-            * @param {FeedbackObject} feedback - user feedback(contains score, issues, remarks)
-            */
-    export const sendFeedbackEvent: (callSession: CallSession, feedback: FeedbackObject) => void;
-    /**
-            * Get error name based on code.
-            * @param {Number} status_code
-            * @return SIP error message
-            */
-    export const signallingEvent: (status_code: number) => string;
-    /**
-            * Triggered when ice connection failure happens.
-            * @param {CallSession} callSession - call session information
-            * @param {Error} error
-            */
-    export const onIceFailure: (callSession: CallSession, error: Error) => void;
-    /**
-            * Triggered when media connection failure happens.
-            * @param {CallSession} callSession - call session information
-            * @param {Error} error
-            */
-    export const onMediaFailure: (callSession: CallSession, error: Error) => void;
-    /**
-            * Triggered when sdp creation failure happens.
-            * @param {CallSession} callSession - call session information
-            * @param {Error} error
-            */
-    export const onSDPfailure: (callSession: CallSession, error: Error) => void;
-    /**
-            * Triggered when audio is muted or unmuted.
-            * @param {CallSession} callSession - call session information
-            * @param {String} action
-            */
-    export const onToggleMute: (callSession: CallSession, action: string) => void;
+  import {
+    CallSession,
+    SignallingInfo,
+    MediaConnectionInformation,
+  } from 'plivo-browser-sdk/managers/callSession';
+  import { ConfiguationOptions } from 'plivo-browser-sdk/client';
+  import { FeedbackObject } from 'plivo-browser-sdk/utils/feedback';
+  export interface AnsweredEvent {
+    msg: string;
+    info: string;
+    clientName: any;
+    userAgent: string;
+    clientVersionMajor: any;
+    clientVersionMinor: any;
+    clientVersionPatch: any;
+    sdkName: string;
+    sdkVersionMajor: number;
+    sdkVersionMinor: number;
+    sdkVersionPatch: number;
+    sdkVersionPre: any;
+    devicePlatform: string;
+    deviceOs: string;
+    setupOptions: ConfiguationOptions;
+    audioDeviceInfo?: DeviceAudioInfo;
+    noiseReduction: NoiseReduction;
+  }
+  export interface DeviceAudioInfo {
+    noOfAudioInput: number;
+    noOfAudioOutput: number;
+    audioInputLables: string;
+    audioOutputLables: string;
+    audioInputGroupIds: string;
+    audioOutputGroupIds: string;
+    audioInputIdSet: string;
+    audioOutputIdSet: string;
+    activeInputAudioDevice: string;
+    activeOutputAudioDevice: string;
+    activeInputDeviceGroupId: string;
+    activeOutputDeviceGroupId: string;
+  }
+  export interface RingingEvent {
+    msg: string;
+    userAgent: string;
+    clientVersionMajor: string;
+    clientVersionMinor: string;
+    clientVersionPatch: string;
+    sdkName: string;
+    sdkVersionMajor: number;
+    sdkVersionMinor: number;
+    sdkVersionPatch: number;
+    sdkVersionPre: any;
+    clientName: string;
+    devicePlatform: string;
+    deviceOs: string;
+    setupOptions: ConfiguationOptions;
+    signalling?: any;
+    mediaConnection?: any;
+    audioDeviceInfo?: DeviceAudioInfo;
+    isAudioDeviceToggled?: boolean;
+    isNetworkChanged?: boolean;
+    jsFramework: string[];
+    isAudioDeviceMismatch?: boolean;
+    noiseReduction: NoiseReduction;
+  }
+  export interface SummaryEvent {
+    msg: string;
+    userAgent: string;
+    clientVersionMajor: string;
+    clientVersionMinor: string;
+    clientVersionPatch: string;
+    sdkName: string;
+    sdkVersionMajor: number;
+    sdkVersionMinor: number;
+    sdkVersionPatch: number;
+    sdkVersionPre: any;
+    clientName: string;
+    devicePlatform: string;
+    deviceOs: string;
+    setupOptions: ConfiguationOptions;
+    signalling?: any;
+    mediaConnection?: any;
+    audioDeviceInfo?: DeviceAudioInfo;
+    isAudioDeviceToggled?: boolean;
+    isNetworkChanged?: boolean;
+    jsFramework: string[];
+    isAudioDeviceMismatch?: boolean;
+    noiseReduction: NoiseReduction;
+  }
+  export interface NoiseReduction {
+    enabled: boolean;
+    noiseSuprressionStarted: boolean;
+  }
+  /**
+   * Add call related information to call answered/summary stat.
+   * @param {CallSession} callSession - call information
+   * @param {Any} statMsg - call stats (Answered/RTP/Summary/Feedback/Failure Events)
+   * @param {String} callstatskey - UUID which is not null when callstats permission is present
+   * @param {String} userName
+   * @returns Stat message with call information
+   */
+  export const addCallInfo: (
+    callSession: CallSession,
+    statMsg: any,
+    callstatskey: string,
+    userName: string,
+    timeStamp: number,
+  ) => object;
+  /**
+   * Send events to plivo stats.
+   * @param {Any} statMsg - call stats (Answered/RTP/Summary/Feedback/Failure Events)
+   * @param {CallSession} session - call session information
+   */
+  export const sendEvents: (statMsg: any, session: CallSession) => void;
+  /**
+   * Report errors to callstats.io.
+   * @param {Any} err - Error(call failures) stat
+   * @param {Any} log - option to log error in browser console
+   */
+  export const AppError: (err: any, log: any) => boolean;
+  /**
+   * Send call answered event to Plivo stats.
+   * @param {DeviceAudioInfo} deviceInfo - input and output audio device information
+   * @param {Boolean} isIncoming - check if it is a incoming call
+   */
+  export const sendCallAnsweredEvent: (
+    deviceInfo: DeviceAudioInfo,
+    isIncoming: boolean,
+  ) => void;
+  /**
+   * Send call summary event to Plivo stats.
+   * @param {DeviceAudioInfo} deviceInfo - input and output audio device information
+   * @param {SignallingInfo} signallingInfo - holds timestamp for each state of call
+   * @param {MediaConnectionInfo} mediaConnectionInfo - media connection information
+   * @param {CallSession} session - call session information
+   */
+  export const sendCallSummaryEvent: (
+    deviceInfo: DeviceAudioInfo,
+    signallingInfo: SignallingInfo,
+    mediaConnectionInfo: MediaConnectionInformation,
+    session: CallSession,
+  ) => void;
+  export const sendCallRingingEvent: (
+    deviceInfo: DeviceAudioInfo,
+    signallingInfo: SignallingInfo,
+    mediaConnectionInfo: MediaConnectionInformation,
+    session: CallSession,
+  ) => void;
+  /**
+   * Send user feedback to plivo stats.
+   * @param {CallSession} callSession - call information
+   * @param {FeedbackObject} feedback - user feedback(contains score, issues, remarks)
+   */
+  export const sendFeedbackEvent: (
+    callSession: CallSession,
+    feedback: FeedbackObject,
+  ) => void;
+  /**
+   * Get error name based on code.
+   * @param {Number} status_code
+   * @return SIP error message
+   */
+  export const signallingEvent: (status_code: number) => string;
+  /**
+   * Triggered when ice connection failure happens.
+   * @param {CallSession} callSession - call session information
+   * @param {Error} error
+   */
+  export const onIceFailure: (callSession: CallSession, error: Error) => void;
+  /**
+   * Triggered when media connection failure happens.
+   * @param {CallSession} callSession - call session information
+   * @param {Error} error
+   */
+  export const onMediaFailure: (callSession: CallSession, error: Error) => void;
+  /**
+   * Triggered when sdp creation failure happens.
+   * @param {CallSession} callSession - call session information
+   * @param {Error} error
+   */
+  export const onSDPfailure: (callSession: CallSession, error: Error) => void;
+  /**
+   * Triggered when audio is muted or unmuted.
+   * @param {CallSession} callSession - call session information
+   * @param {String} action
+   */
+  export const onToggleMute: (callSession: CallSession, action: string) => void;
 }
 
 declare module 'plivo-browser-sdk/media/audioLevel' {
+  /**
+   * Analyze the audio level for a stream(local/remote).
+   */
+  export class AudioLevel {
     /**
-        * Analyze the audio level for a stream(local/remote).
-        */
-    export class AudioLevel {
-            /**
-                * Audio volume in decibels
-                * @private
-                */
-            volumeLevel: number;
-            /**
-                * Audio frequency segments
-                * @private
-                */
-            fftBins: null | Float32Array;
-            /**
-                * Analyze the audio levels from a media stream
-                * @private
-                */
-            analyser: null | AnalyserNode;
-            /**
-                * It is used for checking if audio level analysis stopped
-                * @private
-                */
-            stopped: boolean;
-            /**
-                * Holds media obtained through microphone or peer connection
-                * @private
-                */
-            sourceNode: MediaStreamAudioSourceNode;
-            /**
-                * Get audio level in decibels.
-                */
-            getAudioLevel: () => number;
-            /**
-                * Stop analysing audio levels.
-                */
-            stop: () => void;
-            /**
-                * @constructor
-                * @param {MediaStream} stream - instance of MediaStream
-                * @private
-                */
-            constructor(stream: MediaStream);
-    }
+     * Audio volume in decibels
+     * @private
+     */
+    volumeLevel: number;
+    /**
+     * Audio frequency segments
+     * @private
+     */
+    fftBins: null | Float32Array;
+    /**
+     * Analyze the audio levels from a media stream
+     * @private
+     */
+    analyser: null | AnalyserNode;
+    /**
+     * It is used for checking if audio level analysis stopped
+     * @private
+     */
+    stopped: boolean;
+    /**
+     * Holds media obtained through microphone or peer connection
+     * @private
+     */
+    sourceNode: MediaStreamAudioSourceNode;
+    /**
+     * Get audio level in decibels.
+     */
+    getAudioLevel: () => number;
+    /**
+     * Stop analysing audio levels.
+     */
+    stop: () => void;
+    /**
+     * @constructor
+     * @param {MediaStream} stream - instance of MediaStream
+     * @private
+     */
+    constructor(stream: MediaStream);
+  }
 }
 
 declare module 'plivo-browser-sdk/utils/feedback' {
-    export interface FeedbackObject {
-        overall: number;
-        comment: string;
-    }
-    /**
-      * Check feedback information.
-      * @param {String} callUUID - specify the CallUUID for which feedback needs to be sent
-      * @param {String} starRating - Rate the call from 1 to 5
-      * @param {String} note - Send any remarks
-      * @param {Array<String>} issues - Provide suspected issues
-      * @param {String} userName
-      * @param {Boolean} isLoggedIn - Loggedin status
-      */
-    export const validateFeedback: (callUUID: string, starRating: string, note: string, issues: string[], userName: string, isLoggedIn: boolean) => Promise<FeedbackObject>;
+  export interface FeedbackObject {
+    overall: number;
+    comment: string;
+  }
+  /**
+   * Check feedback information.
+   * @param {String} callUUID - specify the CallUUID for which feedback needs to be sent
+   * @param {String} starRating - Rate the call from 1 to 5
+   * @param {String} note - Send any remarks
+   * @param {Array<String>} issues - Provide suspected issues
+   * @param {String} userName
+   * @param {Boolean} isLoggedIn - Loggedin status
+   */
+  export const validateFeedback: (
+    callUUID: string,
+    starRating: string,
+    note: string,
+    issues: string[],
+    userName: string,
+    isLoggedIn: boolean,
+  ) => Promise<FeedbackObject>;
 }
-
