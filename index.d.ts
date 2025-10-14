@@ -1477,9 +1477,6 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             candidateType?: string;
             usernameFragment?: string;
     }
-    type LocalCandidateMap = {
-            [timestamp: string]: LocalCandidate;
-    };
     export interface RemoteCandidate {
             id?: string;
             address?: string;
@@ -1579,6 +1576,9 @@ declare module 'plivo-browser-sdk/stats/rtpStats' {
             candidateType?: string;
             usernameFragment?: string;
     }
+    type LocalCandidateMap = {
+            [timestamp: string]: LocalCandidate;
+    };
     export interface RemoteCandidate {
             id?: string;
             address?: string;
