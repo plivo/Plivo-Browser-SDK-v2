@@ -845,13 +845,17 @@ export const inputDevices = ((): InputDevices => ({
     if (Plivo.audioConstraints && Plivo.audioConstraints.deviceId) {
       if (
         typeof Plivo.audioConstraints.deviceId === "object" &&
-        Plivo.audioConstraints.deviceId !== null &&
-        "exact" in Plivo.audioConstraints.deviceId
+        Plivo.audioConstraints.deviceId !== null
       ) {
         if ("exact" in Plivo.audioConstraints.deviceId) {
           return Plivo.audioConstraints.deviceId.exact;
         } else if ("ideal" in Plivo.audioConstraints.deviceId) {
           return Plivo.audioConstraints.deviceId.ideal;
+        } else {
+          Plivo.log.error(
+            "Invalid audio constraints",
+            Plivo.audioConstraints.deviceId
+          );
         }
       } else {
         return Plivo.audioConstraints.deviceId;
