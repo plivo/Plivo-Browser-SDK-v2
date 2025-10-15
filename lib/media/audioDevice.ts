@@ -406,13 +406,13 @@ const updateAudioContraints = function (state, deviceId, label) {
           }
         });
       });
-      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
+      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = { exact: deviceId };
       delete (Plivo.audioConstraints as any).optional;
       updateGroupIdDeviceIdMap(availableAudioDevices);
     } else if (typeof Plivo.audioConstraints === 'boolean') {
-      Plivo.audioConstraints = { deviceId };
+      Plivo.audioConstraints = { deviceId: { exact: deviceId } };
     } else {
-      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = deviceId;
+      (Plivo.audioConstraints as MediaTrackConstraints).deviceId = { exact: deviceId };
     }
     return {
       audio: Plivo.audioConstraints,
@@ -532,7 +532,7 @@ export const matchDevices = function (
   activeOutputDevice,
 ): boolean {
   const checkDeviceLabelName = (inputDeviceLabel, outputDeviceLable) => {
-    const match = inputDeviceLabel.match(/\(([^)]+)\)/);
+    const match = inputDeviceLabel?.match(/\(([^)]+)\)/);
     return match && outputDeviceLable.includes(match[1]);
   };
 
@@ -863,7 +863,23 @@ export const inputDevices = ((): InputDevices => ({
       return '';
     }
     if (Plivo.audioConstraints && Plivo.audioConstraints.deviceId) {
-      return Plivo.audioConstraints.deviceId;
+      if (
+        typeof Plivo.audioConstraints.deviceId === "object" &&
+        Plivo.audioConstraints.deviceId !== null
+      ) {
+        if ("exact" in Plivo.audioConstraints.deviceId) {
+          return Plivo.audioConstraints.deviceId.exact;
+        } else if ("ideal" in Plivo.audioConstraints.deviceId) {
+          return Plivo.audioConstraints.deviceId.ideal;
+        } else {
+          Plivo.log.error(
+            "Invalid audio constraints",
+            Plivo.audioConstraints.deviceId
+          );
+        }
+      } else {
+        return Plivo.audioConstraints.deviceId;
+      }
     }
     return '';
   },

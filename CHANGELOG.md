@@ -5,6 +5,12 @@ All notable GA release changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## v2.2.21 (unreleased)
+
+**Bug Fixes**
+- Fixed: Enhanced device ID constraints to use exact matching for more reliable device selection.
+- Fixed: Added null-safe operator for device label matching to prevent potential errors.
+
 ## v2.2.20 (released@ 25-08-2025)
 
 **Bug Fixes**
