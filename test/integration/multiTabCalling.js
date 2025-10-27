@@ -176,6 +176,74 @@ describe('plivoWebSdk', function () {
     });
 
     // eslint-disable-next-line no-undef
+    it('incoming call should be accepted from primary tab', (done) => {
+      console.log('incoming call should be accepted from primary tab');
+      if (bail) {
+        done(new Error('bailing'));
+      }
+      reset();
+
+      Client4.call(primary_user, {
+        'X-Ph-Random': 'true',
+      });
+
+      waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
+        Client1.answer();
+        waitUntilExecuted([events['client1-onCallAnswered']], true, () => {
+          if (Client1.getCurrentSession() !== null) {
+            Client1.hangup();
+            Client4.hangup();
+            waitUntilExecuted([events['client1-onCallTerminated']], true, done, 500);
+          } else {
+            done(new Error('Session not found on primary tab'));
+          }
+        }, 500);
+      }, 500);
+
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error('Call acceptance from primary tab failed'));
+      }, TIMEOUT);
+    });
+
+    // eslint-disable-next-line no-undef
+    it('incoming call should be accepted from secondary tab', (done) => {
+      console.log('incoming call should be accepted from secondary tab');
+      if (bail) {
+        done(new Error('bailing'));
+      }
+      reset();
+
+      Client2.login(primary_user, primary_pass);
+      waitUntilExecuted([events['client2-onWebsocketConnected']], true, () => {
+        Client4.call(primary_user, {
+          'X-Ph-Random': 'true',
+        });
+
+        waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
+          Client1.redirect(Client2.getContactUri());
+          waitUntilExecuted([events['client2-onIncomingCall']], true, () => {
+            Client2.answer();
+            waitUntilExecuted([events['client2-onCallAnswered']], true, () => {
+              if (Client1.getCurrentSession() === null && Client2.getCurrentSession() !== null) {
+                Client2.hangup();
+                Client4.hangup();
+                waitUntilExecuted([events['client2-onCallTerminated']], true, done, 500);
+              } else {
+                done(new Error('Session state incorrect - expected null on primary, active on secondary'));
+              }
+            }, 500);
+          }, 500);
+        }, 500);
+      }, 1000);
+
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error('Call acceptance from secondary tab failed'));
+      }, TIMEOUT);
+    });
+
+    // eslint-disable-next-line no-undef
     it('incoming call should only come on registered client', (done) => {
       console.log('incoming call should only come on registered client');
       if (bail) {
@@ -185,9 +253,8 @@ describe('plivoWebSdk', function () {
         waitUntilExecuted([events['client2-onIncomingCall'], events['client3-onIncomingCall']], false, done, 1000);
       }, 500);
 
-      Client2.login(primary_user, primary_pass);
       Client3.login(primary_user, primary_pass);
-      waitUntilExecuted([events['client2-onWebsocketConnected'], events['client3-onWebsocketConnected']], true, () => {
+      waitUntilExecuted([events['client3-onWebsocketConnected']], true, () => {
         Client4.call(primary_user, {
           'X-Ph-Random': 'true',
         });
