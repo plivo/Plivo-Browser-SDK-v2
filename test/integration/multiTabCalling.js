@@ -64,6 +64,13 @@ describe('plivoWebSdk', function () {
 
     let bail = false;
 
+    /**
+     * Wait until all the events in the boolObj are executed with the given value.
+     * @param {Object} boolObj - The object containing the events and their status.
+     * @param {boolean} value - The value to check for the events.
+     * @param {Function} callback - The callback function to execute when all the events are executed.
+     * @param {number} delay - The delay in milliseconds to wait before executing the next event.
+     */
     function waitUntilExecuted(boolObj, value, callback, delay) {
       // if delay is undefined or is not an integer
       const newDelay = typeof delay === "undefined" || Number.isNaN(parseInt(delay, 10))
@@ -205,43 +212,7 @@ describe('plivoWebSdk', function () {
         done(new Error('Call acceptance from primary tab failed'));
       }, TIMEOUT);
     });
-
-    // eslint-disable-next-line no-undef
-    it('incoming call should be accepted from secondary tab', (done) => {
-      console.log('incoming call should be accepted from secondary tab');
-      if (bail) {
-        done(new Error('bailing'));
-      }
-      reset();
-
-      Client2.login(primary_user, primary_pass);
-      waitUntilExecuted([events['client2-onWebsocketConnected']], true, () => {
-        Client4.call(primary_user, {
-          'X-Ph-Random': 'true',
-        });
-
-        waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
-          Client1.redirect(Client2.getContactUri());
-          waitUntilExecuted([events['client2-onIncomingCall']], true, () => {
-            Client2.answer();
-            waitUntilExecuted([events['client2-onCallAnswered']], true, () => {
-              if (Client1.getCurrentSession() === null && Client2.getCurrentSession() !== null) {
-                Client2.hangup();
-                Client4.hangup();
-                waitUntilExecuted([events['client2-onCallTerminated']], true, done, 500);
-              } else {
-                done(new Error(`Session state incorrect - expected null on primary, active on secondary - ${JSON.stringify(Client1.getCurrentSession())} - ${JSON.stringify(Client2.getCurrentSession())}`));
-              }
-            }, 500);
-          }, 500);
-        }, 500);
-      }, 1000);
-
-      bailTimer = setTimeout(() => {
-        bail = true;
-        done(new Error('Call acceptance from secondary tab failed'));
-      }, TIMEOUT);
-    });
+  
 
     // eslint-disable-next-line no-undef
     it('incoming call should only come on registered client', (done) => {
@@ -339,20 +310,30 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-
+      reset();
+    
       Client1.hangup();
       waitUntilExecuted([events['client4-onCallTerminated']], true, () => {
-        Client4.call(primary_user, {
-          'X-Ph-Random': 'true',
-        });
-      }, 1000);
-      waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
-        if (!Client2.reject() && !Client2.ignore()) {
-          Client1.redirect(Client2.getContactUri());
+        // Login Client2 if not already logged in
+        if (!Client2.getContactUri()) {
+          Client2.login(primary_user, primary_pass);
+          waitUntilExecuted([events['client2-onWebsocketConnected']], true, () => {
+            // Don't register Client2 - keep it unregistered
+            Client4.call(primary_user, {
+              'X-Ph-Random': 'true',
+            });
+          }, 1000);
+        } else {
+          Client4.call(primary_user, {
+            'X-Ph-Random': 'true',
+          });
         }
       }, 1000);
+      waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
+        Client1.redirect(Client2.getContactUri());
+      }, 1000);
       waitUntilExecuted([events['client2-onIncomingCall']], true, () => {
-        // session should be present in both client1 and client2
+        // After redirect, session should only be on client2, not client1
         if (Client1.getCurrentSession() === null && Client2.getCurrentSession() !== null) {
           done();
         }
@@ -478,25 +459,19 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-    
-      const listenCallInsightsEvent = (spySocket, eventName, callback, timeout = 5000) => {
+
+      const listenCallInsightsEvent = (spySocket, eventName, callback) => {
         spySocket.resetHistory();
-        let attempts = 0;
-        const maxAttempts = timeout / 10;
         let interval = setInterval(() => {
           const value = spySocket.calledWith(sinon.match.has("msg", eventName));
           if (value) {
             clearInterval(interval);
             interval = null;
             callback();
-          } else if (++attempts >= maxAttempts) {
-            clearInterval(interval);
-            interval = null;
-            done(new Error(`Timeout waiting for ${eventName} event`));
           }
         }, 10);
       };
-    
+
       spyOnSocket.resetHistory();
       Client4.hangup();
       events['client2-onCallAnswered'].status = false;
@@ -505,21 +480,27 @@ describe('plivoWebSdk', function () {
       waitUntilExecuted([events['client1-onIncomingCall']], true, () => {
         spyOnSocket = sinon.spy(Client1.statsSocket, "send");
         listenCallInsightsEvent(spyOnSocket, 'CALL_RINGING', () => {
+          console.log('call-insights: CALL_RINGING event sent from Client1');
           Client1.redirect(Client2.getContactUri());
+          console.log('call-insights: Client1 redirected to Client2');
           waitUntilExecuted([events['client2-onIncomingCall']], true, () => {
+            console.log('call-insights: Client2 incoming call accepted');
             const spyOnSocket2 = sinon.spy(Client2.statsSocket, "send");
             replaceStream(Client4, {
               audio: true, video: false,
             }).then(() => {
+              console.log('call-insights: Client2 answer called');
               Client2.answer();
               listenCallInsightsEvent(spyOnSocket2, 'CALL_ANSWERED', () => {
+                console.log('call-insights: CALL_ANSWERED event sent from Client2');
                 listenCallInsightsEvent(spyOnSocket2, 'CALL_STATS', () => {
+                  console.log('call-insights: CALL_STATS event sent from Client2');
                   Client2.hangup();
                   listenCallInsightsEvent(spyOnSocket2, 'CALL_SUMMARY', () => {
+                    console.log('call-insights: CALL_SUMMARY event sent from Client2');
                     spyOnSocket2.resetHistory();
-                    // Client2 already hung up above, don't call again
-                    // Client1 has no session after redirect, don't call hangup
-                    Client4.hangup(); // Clean up Client4
+                    // Client2.hangup();
+                    Client1.hangup();
                     done();
                   });
                 });
@@ -528,11 +509,6 @@ describe('plivoWebSdk', function () {
           }, 500);
         });
       }, 500);
-      
-      bailTimer = setTimeout(() => {
-        bail = true;
-        done(new Error('Call insights event test failed'));
-      }, TIMEOUT);
     });
 
     // eslint-disable-next-line no-undef

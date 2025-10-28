@@ -405,13 +405,18 @@ describe("plivoWebSdk JWT", function () {
       extraHeaders['X-Plivo-Jwt'] = plivo_jwt_without_outbound_access;
 
       if (Client1.isLoggedIn) {
+        console.log('Client1 is already logged in, calling Client1.call(secondary_user, extraHeaders);');
         Client1.call(secondary_user, extraHeaders);
       } else {
+        console.log('Client1 is not logged in, waiting for onLogin event');
         Client1.on("onLogin", () => {
+          console.log('Client1 is logged in, calling Client1.call(secondary_user, extraHeaders);');
           Client1.call(secondary_user, extraHeaders);
         });
       }
+      console.log('waiting for onPermissionDenied event');
       waitUntilOutgoingCall(events.onPermissionDenied, done, 500);
+      console.log('onPermissionDenied event executed');
 
       bailTimer = setTimeout(() => {
         bail = false;
