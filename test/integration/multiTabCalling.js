@@ -230,7 +230,7 @@ describe('plivoWebSdk', function () {
                 Client4.hangup();
                 waitUntilExecuted([events['client2-onCallTerminated']], true, done, 500);
               } else {
-                done(new Error('Session state incorrect - expected null on primary, active on secondary'));
+                done(new Error(`Session state incorrect - expected null on primary, active on secondary - ${JSON.stringify(Client1.getCurrentSession())} - ${JSON.stringify(Client2.getCurrentSession())}`));
               }
             }, 500);
           }, 500);
@@ -478,19 +478,25 @@ describe('plivoWebSdk', function () {
       if (bail) {
         done(new Error('bailing'));
       }
-
-      const listenCallInsightsEvent = (spySocket, eventName, callback) => {
+    
+      const listenCallInsightsEvent = (spySocket, eventName, callback, timeout = 5000) => {
         spySocket.resetHistory();
+        let attempts = 0;
+        const maxAttempts = timeout / 10;
         let interval = setInterval(() => {
           const value = spySocket.calledWith(sinon.match.has("msg", eventName));
           if (value) {
             clearInterval(interval);
             interval = null;
             callback();
+          } else if (++attempts >= maxAttempts) {
+            clearInterval(interval);
+            interval = null;
+            done(new Error(`Timeout waiting for ${eventName} event`));
           }
         }, 10);
       };
-
+    
       spyOnSocket.resetHistory();
       Client4.hangup();
       events['client2-onCallAnswered'].status = false;
@@ -511,8 +517,9 @@ describe('plivoWebSdk', function () {
                   Client2.hangup();
                   listenCallInsightsEvent(spyOnSocket2, 'CALL_SUMMARY', () => {
                     spyOnSocket2.resetHistory();
-                    Client2.hangup();
-                    Client1.hangup();
+                    // Client2 already hung up above, don't call again
+                    // Client1 has no session after redirect, don't call hangup
+                    Client4.hangup(); // Clean up Client4
                     done();
                   });
                 });
@@ -521,6 +528,11 @@ describe('plivoWebSdk', function () {
           }, 500);
         });
       }, 500);
+      
+      bailTimer = setTimeout(() => {
+        bail = true;
+        done(new Error('Call insights event test failed'));
+      }, TIMEOUT);
     });
 
     // eslint-disable-next-line no-undef
