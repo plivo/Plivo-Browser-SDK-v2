@@ -145,9 +145,11 @@ export const reconnectSocket = (client: Client) => {
       Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Renegotiate Ice :: ${negotiationStarted}`);
     } else {
       Plivo.log.debug(`${LOGCAT.NETWORK_CHANGE} | Closing previous websocket connection. Starting a new one`);
-      (client.phone as any)._transport.disconnect(true);
-      (client.phone as any)._transport.connect();
-      socketReconnectionRetry(client);
+      if (client.phone) {
+        (client.phone as any)._transport.disconnect(true);
+        (client.phone as any)._transport.connect();
+        socketReconnectionRetry(client);
+      }
     }
     restartStatSocket(client);
   }

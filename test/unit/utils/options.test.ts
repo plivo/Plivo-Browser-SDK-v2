@@ -28,6 +28,7 @@ describe('ValidateOptions', () => {
       registrationRefreshTimer: 120,
       stopAutoRegisterOnConnect: false,
       usePlivoStunServer: false,
+      noiseReductionFilePath: "",
       dtmfOptions: {
         sendDtmfType: ['INBAND','OUTBAND']
       }

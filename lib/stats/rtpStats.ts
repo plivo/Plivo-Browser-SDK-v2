@@ -21,6 +21,114 @@ export interface LocalCandidate {
   usernameFragment?: string;
 }
 
+export interface RemoteCandidate {
+  id?: string;
+  address?: string;
+  port?: string;
+  candidateType?: string;
+  usernameFragment?: string;
+}
+
+export interface CandidatePair {
+  availableOutgoingBitrate?: string;
+  consentRequestsSent?: number;
+  id?: string;
+  lastPacketReceivedTimestamp?: string;
+  lastPacketSentTimestamp?: string;
+  localCandidateId?: string;
+  nominated?: string;
+  packetsDiscardedOnSend?: string;
+  packetsReceived?: string;
+  packetsSent?: string;
+  remoteCandidateId?: string;
+  requestsReceived?: number;
+  requestsSent?: number;
+  responsesReceived?: number;
+  responsesSent?: number;
+  state?: string;
+  transportId?: string;
+  writable?: boolean;
+}
+
+export interface Transport{
+  id?: string;
+  dtlsRole?: string;
+  dtlsState?: string;
+  iceRole?: string;
+  iceState?: string;
+  packetsReceived?: string;
+  packetsSent?: string;
+  selectedCandidatePairChanges?: number;
+  selectedCandidatePairId?: string;
+}
+
+export interface OutboundRTP {
+  bytesSent?: number;
+  packetsSent?: number;
+  retransmittedBytesSent?: number;
+  retransmittedPacketsSent?: number;
+  transportId?: string;
+}
+
+export interface RemoteInboundRTP {
+  fractionLost?: number;
+  packetsLost?: number;
+  roundTripTime?: string;
+  roundTripTimeMeasurements?: number;
+  totalRoundTripTime?: string;
+  transportId?: string;
+}
+
+export interface InboundRTP {
+  bytesReceived?: number;
+  jitterBufferDelay?: string;
+  jitterBufferEmittedCount?: number;
+  jitterBufferMinimumDelay?: string;
+  jitterBufferTargetDelay?: string;
+  packetsDiscarded?: number;
+  packetsLost?: number;
+  packetsReceived?: number;
+  totalSamplesDuration?: string;
+  totalSamplesReceived?: string;
+  transportId?: string
+}
+
+export interface RemoteOutboundRTP {
+  bytesSent?: number;
+  packetsSent?: number;
+  reportsSent?: number;
+  totalRoundTripTime?: string;
+  transportId?: string;
+}
+
+export interface StatsDump {
+  msg: string;
+  callUUID: string;
+  xcallUUID: string;
+  source: string;
+  timeStamp: number,
+  version: string,
+  changedCandidatedInfo: LocalCandidateMap,
+  localCandidate: LocalCandidate;
+  remoteCandidate: RemoteCandidate;
+  transport: Transport;
+  candidatePair: CandidatePair;
+  outboundRTP: OutboundRTP;
+  remoteInboundRTP: RemoteInboundRTP;
+  inboundRTP: InboundRTP;
+  remoteOutboundRTP: RemoteOutboundRTP;
+}
+
+export interface LocalCandidate {
+  id?: string;
+  address?: string;
+  port?: string;
+  relatedAddress?: string;
+  relatedPort?: string;
+  candidateType?: string;
+  usernameFragment?: string;
+}
+
 type LocalCandidateMap = {
   [timestamp: string]: LocalCandidate;
 };

@@ -86,6 +86,7 @@ export interface ConfiguationOptions {
   stopAutoRegisterOnConnect: boolean,
   dtmfOptions?: DtmfOptions;
   captureSDKCrashOnly: boolean;
+  noiseReductionFilePath?: string;
 }
 
 export interface BrowserDetails {
@@ -318,6 +319,12 @@ export class Client extends EventEmitter {
    * @private
    */
   isAccessTokenGenerator: boolean | null;
+
+  /**
+   * boolean that tells which type of login method is called
+   * @private
+   */
+  accessTokenGeneratorTimer: null | ReturnType<typeof setTimeout>;
 
   /**
    * boolean that tells if user logged in through access token
@@ -614,6 +621,12 @@ export class Client extends EventEmitter {
   stopAutoRegisterOnConnect: boolean;
 
   /**
+   * Holds the path of the noise reduction file(processor.js) provided by the application
+   * @private
+   */
+  noiseReductionFilePath: string | undefined;
+
+  /**
    * Determines which js framework sdk is running with
    * @private
    */
@@ -867,6 +880,43 @@ export class Client extends EventEmitter {
     sendConsoleLogs,
   );
 
+  clearOnLogout(): void {
+    // Store.getInstance().clear();
+    // if logout is called explicitly, make all the related flags to default
+    if (this.isAccessToken) {
+      this.isAccessToken = false;
+      this.isOutgoingGrant = false;
+      this.isIncomingGrant = false;
+      this.accessToken = null;
+    }
+    if (this.isAccessTokenGenerator && this.accessTokenGeneratorTimer != null) {
+      clearTimeout(this.accessTokenGeneratorTimer);
+      this.accessTokenGeneratorTimer = null;
+    }
+    if (this._currentSession && !this._currentSession.session.isEnded()) {
+      this._currentSession.addConnectionStage(
+        `logout()@${new Date().getTime()}`,
+      );
+      Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Terminating an active call, before logging out`);
+      this._currentSession.session.terminate();
+    }
+    this.isLogoutCalled = true;
+    this.noiseSuppresion.clearNoiseSupression();
+    this.connectionInfo = {
+      state: ConnectionState.DISCONNECTED,
+      reason: "Logout",
+    };
+    if (this.phone && this.phone.isRegistered()) {
+      this.phone.stop();
+      this.phone = null;
+    }
+    if (this.statsSocket) {
+      this.statsSocket.disconnect();
+      this.statsSocket = null;
+    }
+    Plivo.log.send(this);
+  }
+
   /**
    * @constructor
    * @param options - (Optional) client configuration parameters
@@ -927,6 +977,9 @@ export class Client extends EventEmitter {
     this.ringToneBackFlag = true;
     this.connectToneFlag = true;
     this.isLoggedIn = false;
+    this.reconnectInterval = null;
+    this.noiseReductionFilePath = options.noiseReductionFilePath;
+    this.reconnectTryCount = 0;
     this.phone = null;
     this._currentSession = null;
     this.callSession = null;
@@ -1076,6 +1129,7 @@ export class Client extends EventEmitter {
       return true;
     }
 
+    this.isLoginCalled = true;
     const account = new Account(this, username, " ", accessToken, this.options.registrationRefreshTimer ?? C.REGISTER_EXPIRES_SECONDS);
     const readyForLogin = () => {
       account.setupUserAccount();
@@ -1127,7 +1181,7 @@ export class Client extends EventEmitter {
         const twentyFourHours = Math.floor((new Date()).getTime() + (3600 * 1000 * 24));
         const expiry = (parsedToken.exp != null) ? parsedToken.exp * 1000 : twentyFourHours;
         const timeout = (expiry - currentTimestamp) - (60 * 1000);
-        setTimeout(() => {
+        this.accessTokenGeneratorTimer = setTimeout(() => {
           this.loginWithAccessTokenGenerator(accessTokenObject);
         }, Number(timeout));
       }
@@ -1152,8 +1206,6 @@ export class Client extends EventEmitter {
 
   private _initJWTParams = (accessToken: string): boolean => {
     try {
-      this.isLoginCalled = true;
-
       const parsedToken = this.parseJwtToken(accessToken);
       if (parsedToken && parsedToken.per && parsedToken.per.voice) {
         this.isOutgoingGrant = parsedToken.per.voice.outgoing_allow;
@@ -1179,8 +1231,15 @@ export class Client extends EventEmitter {
   // private methods
   private _loginWithAccessToken = (accessToken: string): boolean => {
     try {
+      if (this.phone && (this.isConnecting() || (this.phone as any).isRegistering())) {
+        Plivo.log.warn(
+          `${C.LOGCAT.LOGIN} | Already ${this.isConnecting() ? 'connecting' : 'registering'}`,
+        );
+        return true;
+      }
       if (this._initJWTParams(accessToken) && this.userName) {
-        Plivo.log.info(C.LOGCAT.LOGIN, ` | Login initiated with AccessToken : ${accessToken}`);
+        Plivo.log.info(C.LOGCAT.LOGIN, ' | Login initiated with AccessToken : ', accessToken);
+        this.loggerUtil.setUserName(this.userName);
         return this.tokenLogin(this.userName, accessToken);
       }
       Plivo.log.info(C.LOGCAT.LOGIN, 'Login failed : Invalid AccessToken');

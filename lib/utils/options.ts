@@ -36,6 +36,7 @@ const _options: ConfiguationOptions = {
   usePlivoStunServer: false,
   stopAutoRegisterOnConnect: false,
   registrationRefreshTimer: C.REGISTER_EXPIRES_SECONDS,
+  noiseReductionFilePath: "",
   captureSDKCrashOnly: false,
 };
 
@@ -301,6 +302,11 @@ const validateOptions = function (
         case 'disableRtpTimeOut':
           if (isBoolean(key, options[key])) {
             _options.disableRtpTimeOut = options[key];
+          }
+          break;
+        case 'noiseReductionFilePath':
+          if (typeof options[key] === 'string') {
+            _options.noiseReductionFilePath = options[key];
           }
           break;
         case 'allowMultipleIncomingCalls':

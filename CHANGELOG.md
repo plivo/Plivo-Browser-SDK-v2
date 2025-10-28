@@ -1,9 +1,109 @@
- 
+
 # Changelog
 All notable GA release changes to this project will be documented in this file.
  
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+
+## v2.2.20 (released@ 25-08-2025)
+
+**Bug Fixes**
+* Fixed: Fixing crash issue due to sinkid during audio device change.
+
+## v2.2.19 (released@ 14-07-2025)
+
+**Feature**
+* Added a mechanism to check if the input and output devices are same/different based on the device group id and device label name for better debugging.
+
+**Bug Fixes**
+* Fixed: Suppress the `onIncomingCall` event if the incoming call is not in an active state.
+* Fixed: Browser UI responsiveness issue when rejecting incoming calls immediately upon receipt.
+* Fixed: Incorrect I/O device data sent to call-insights when input device is changed during idle state.
+* Fixed: Output Audio playing through the built-in speakers even when the default output device is changed
+
+## v2.2.19-rc.3 (released@ 25-06-2025)
+
+**Bug Fixes**
+* Fixed: Suppress the `onIncomingCall` event if the incoming call is not in an active state.
+
+## v2.2.19-rc.2 (released@ 23-05-2025)
+
+**Bug Fixes**
+* Fixed: Browser UI responsiveness issue when rejecting incoming calls immediately upon receipt.
+
+## v2.2.19-rc.1 (released@ 28-03-2025)
+
+**Feature**
+* Added a mechanism to check if the input and output devices are same/different based on the device group id and device label name for better debugging.
+
+**Bug Fixes**
+* Fixed: Incorrect I/O device data sent to call-insights when input device is changed during idle state.
+* Fixed: Output Audio playing through the built-in speakers even when the default output device is changed 
+
+## v2.2.18 (released@ 12-03-2025)
+
+**Feature**
+* Introduced a mechanism to fetch the noise reduction model (script) from the local file system instead of Plivo CDN:
+  
+  - The file path can be provided using the `noiseReductionFilePath` flag during initialization
+  - If no file path is provided, the SDK will fetch the model from Plivo CDN by default
+
+**Bug Fixes**
+* Fixed: Added logging to verify whether the device change event is trusted.
+* Fixed: Updated the URL for fetching the RNNoise processor.js file.
+* Fixed: Create and send a copy of the connectionInfo object in the onConnectionChange event.
+
+## v2.2.18-rc.3 (released@ 26-02-2025)
+
+**Feature**
+* Introduced a mechanism to fetch the noise reduction model (script) from the local file system instead of Plivo CDN:
+  
+  - The file path can be provided using the `noiseReductionFilePath` flag during initialization
+  - If no file path is provided, the SDK will fetch the model from Plivo CDN by default
+
+## v2.2.18-rc.2 (released@ 20-02-2025)
+
+**Bug Fixes**
+* Fixed: Added logging to verify whether the device change event is trusted.
+* Fixed: Updated the URL for fetching the RNNoise processor.js file.
+
+## v2.2.18-rc.1 (released@ 12-02-2025)
+
+**Bug Fixes**
+* Fixed: Create and send a copy of the connectionInfo object in the onConnectionChange event.
+
+## v2.2.17 (released@ 23-01-2025)
+
+**Bug Fixes**
+* Fixed: Remote Audio Fails to Play Through the Default Device After Bluetooth Disconnection.
+
+## v2.2.16 (released@ 16-01-2025)
+
+**Feature**
+* Added support for JSON Web Token (JWT) login with new methods: `loginWithAccessToken` and `loginWithAccessTokenGenerator`.
+
+## v2.2.15 (released@ 03-10-2024)
+
+**Feature**
+* Sending complete dump of getStats() API to call insights through newly introduced event named `CALL_STATS_DUMP`.
+
+**Bug Fixes**
+* Resolved the error when the logout is called just after the call is termintated.
+
+## v2.2.14 (released@ 19-09-2024)
+
+**Feature**
+* A new event named `onCallConnected` has been introduced, which is triggered when the PSTN callee starts ringing.
+
+## v2.2.13 (released@ 22-08-2024)
+
+**Bug Fixes**
+* Removed unnecessary dependency.
+
+## v2.2.12 (released@ 24-07-2024)
+
+**Bug Fixes**
+* Renamed `DOMError` to `DOMException` in the underlying JSSIP library to support latest Typescript versions.
 
 ## v2.2.15-beta.0 (released@ 20-09-2024)
 
