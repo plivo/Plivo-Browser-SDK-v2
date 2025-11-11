@@ -60,6 +60,7 @@ const processAudioLevel = function (
   stream: string,
   isLocalMuted: boolean,
 ): void {
+  if (isLocalMuted && type === "local_audio") return;
   const client: Client = this;
   const audioObj = client.storage ? client.storage[type] : [];
   // check at every 3rd collection
@@ -91,7 +92,6 @@ const processAudioLevel = function (
           JSON.stringify(audioObj),
         );
       }
-      if (!(isLocalMuted && type === 'local_audio')) {
         emitMetrics.call(
           client,
           'audio',
@@ -102,7 +102,6 @@ const processAudioLevel = function (
           type,
           stream,
         );
-      }
     } else if (client.storage && client.storage.warning[type]) {
       client.storage.warning[type] = false;
       emitMetrics.call(
