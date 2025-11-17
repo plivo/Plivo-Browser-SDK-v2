@@ -598,6 +598,7 @@ export const hangupClearance = function (session: CallSession) {
     updateAudioDeviceFlags();
     resetMuteOnHangup();
     client.noiseSuppresion.stopNoiseSuppresion();
+    session.session.terminate();
   } catch (err) {
     Plivo.log.info(`${LOGCAT.CALL} | error while hangup clearance : ${err.message}`);
   }
