@@ -21,10 +21,6 @@ export interface LocalCandidate {
   usernameFragment?: string;
 }
 
-type LocalCandidateMap = {
-  [timestamp: string]: LocalCandidate;
-};
-
 export interface RemoteCandidate {
   id?: string;
   address?: string;
@@ -54,7 +50,7 @@ export interface CandidatePair {
   writable?: boolean;
 }
 
-export interface Transport{
+export interface Transport {
   id?: string;
   dtlsRole?: string;
   dtlsState?: string;
@@ -66,13 +62,6 @@ export interface Transport{
   selectedCandidatePairId?: string;
 }
 
-export interface OutboundRTP {
-  bytesSent?: number;
-  packetsSent?: number;
-  retransmittedBytesSent?: number;
-  retransmittedPacketsSent?: number;
-  transportId?: string;
-}
 
 export interface RemoteInboundRTP {
   fractionLost?: number;
@@ -94,25 +83,18 @@ export interface InboundRTP {
   packetsReceived?: number;
   totalSamplesDuration?: string;
   totalSamplesReceived?: string;
-  transportId?: string
-}
-
-export interface RemoteOutboundRTP {
-  bytesSent?: number;
-  packetsSent?: number;
-  reportsSent?: number;
-  totalRoundTripTime?: string;
   transportId?: string;
 }
+
 
 export interface StatsDump {
   msg: string;
   callUUID: string;
   xcallUUID: string;
   source: string;
-  timeStamp: number,
-  version: string,
-  changedCandidatedInfo: LocalCandidateMap,
+  timeStamp: number;
+  version: string;
+  changedCandidatedInfo: LocalCandidateMap;
   localCandidate: LocalCandidate;
   remoteCandidate: RemoteCandidate;
   transport: Transport;
@@ -122,6 +104,30 @@ export interface StatsDump {
   inboundRTP: InboundRTP;
   remoteOutboundRTP: RemoteOutboundRTP;
 }
+
+
+type LocalCandidateMap = {
+  [timestamp: string]: LocalCandidate;
+};
+
+
+export interface OutboundRTP {
+  bytesSent?: number;
+  packetsSent?: number;
+  retransmittedBytesSent?: number;
+  retransmittedPacketsSent?: number;
+  transportId?: string;
+}
+
+
+export interface RemoteOutboundRTP {
+  bytesSent?: number;
+  packetsSent?: number;
+  reportsSent?: number;
+  totalRoundTripTime?: string;
+  transportId?: string;
+}
+
 
 export interface StatsLocalStream {
   ssrc?: number;
@@ -198,7 +204,10 @@ const Plivo: PlivoObject = { log: Logger };
  * @param {Number} newVal - latest stat value
  * @returns Sum of two numbers
  */
-const getSum = function (oldVal: number | null, newVal: number | null): number | null {
+const getSum = function (
+  oldVal: number | null,
+  newVal: number | null,
+): number | null {
   if ((oldVal == null || isNaN(oldVal)) && (newVal == null || isNaN(newVal))) {
     return null;
   }
@@ -219,22 +228,31 @@ const startAudioTimer = function (): void {
   getStatsRef.audioTimer = setInterval(() => {
     // Check if the stream is active or not.
     // If stream is not active, fetch the current active stream and assign to audio helper
-    if (getStatsRef.senderMediaStream && getStatsRef.senderMediaStream.active === false) {
-      getStatsRef.senderMediaStream.getTracks().forEach((track) => track.stop());
+    if (
+      getStatsRef.senderMediaStream &&
+      getStatsRef.senderMediaStream.active === false
+    ) {
+      getStatsRef.senderMediaStream.getTracks().forEach(track => track.stop());
       getStatsRef.senderMediaStream = null;
       if (navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false,
-        }).then((stream) => stream).then((stream) => {
-          getStatsRef.senderMediaStream = stream;
-          getStatsRef.localAudioLevelHelper = new AudioLevel(getStatsRef.senderMediaStream);
-        }).catch((err) => {
-          this.clientScope.emit('onMediaPermission', {
-            status: 'failure',
-            error: err.message,
+        navigator.mediaDevices
+          .getUserMedia({
+            audio: true,
+            video: false,
+          })
+          .then(stream => stream)
+          .then(stream => {
+            getStatsRef.senderMediaStream = stream;
+            getStatsRef.localAudioLevelHelper = new AudioLevel(
+              getStatsRef.senderMediaStream,
+            );
+          })
+          .catch(err => {
+            this.clientScope.emit('onMediaPermission', {
+              status: 'failure',
+              error: err.message,
+            });
           });
-        });
       }
     }
 
@@ -292,9 +310,7 @@ const handleStat = function (
  * @param {Number} defaultVal - use default value when value is not a number
  * @param {Boolean} useDefault - decide the usage of default value
  */
-const handleNull = function (
-  value?: number,
-): number | null {
+const handleNull = function (value?: number): number | null {
   if (value == null || isNaN(value)) {
     return null;
   }
@@ -384,9 +400,9 @@ const processMos = function (
   const getStatsRef: GetRTPStats = this;
   const mosObj: number[] = getStatsRef.storage[type];
   if (
-    (handleNull(jitter) == null)
-    || (handleNull(fractionLoss) == null)
-    || Number(rtt || 0) === 0
+    handleNull(jitter) == null ||
+    handleNull(fractionLoss) == null ||
+    Number(rtt || 0) === 0
   ) {
     getStatsRef.collected.local.mos = null as unknown as undefined;
     return;
@@ -397,7 +413,7 @@ const processMos = function (
   }
   if (mosObj.length === 2) {
     mosCal.call(getStatsRef, mosObj, type, rtt, jitter, fractionLoss);
-    const totMosObj = mosObj.filter((item) => item < 3);
+    const totMosObj = mosObj.filter(item => item < 3);
     if (totMosObj.length >= 2) {
       getStatsRef.storage.warning[type] = true;
     } else if (getStatsRef.storage.warning[type]) {
@@ -419,14 +435,18 @@ const calculateStats = function (stream: RtpStatsStream): void {
     const packetsLostLocal = handleStat(stream.local.packetsLost as number);
     const packetsLostRemote = handleStat(stream.remote.packetsLost as number);
     const packetsSent = handleStat(stream.local.packetsSent as number);
-    const packetsReceived = handleStat(stream.remote.packetsReceived as number) + packetsLostRemote;
+    const packetsReceived =
+      handleStat(stream.remote.packetsReceived as number) + packetsLostRemote;
 
     if (packetsLostLocal === 0 && packetsSent === 0) {
       getStatsRef.collected.local.fractionLoss = 0;
     } else if (packetsSent === 0) {
       getStatsRef.collected.local.fractionLoss = 1.0;
     } else {
-      getStatsRef.collected.local.fractionLoss = handleStat(packetsLostLocal / packetsSent, 'float');
+      getStatsRef.collected.local.fractionLoss = handleStat(
+        packetsLostLocal / packetsSent,
+        'float',
+      );
     }
 
     if (packetsLostRemote === 0 && packetsReceived === 0) {
@@ -434,7 +454,10 @@ const calculateStats = function (stream: RtpStatsStream): void {
     } else if (packetsReceived === 0) {
       getStatsRef.collected.remote.fractionLoss = 1.0;
     } else {
-      getStatsRef.collected.remote.fractionLoss = handleStat(packetsLostRemote / packetsReceived, 'float');
+      getStatsRef.collected.remote.fractionLoss = handleStat(
+        packetsLostRemote / packetsReceived,
+        'float',
+      );
     }
 
     basePackets.call(getStatsRef, stream);
@@ -442,32 +465,42 @@ const calculateStats = function (stream: RtpStatsStream): void {
     return;
   }
   // Calculate local packet Loss
-  const localPacketsLost = handleStat(stream.local.packetsLost as number)
-    - getStatsRef.packets.preLocalPacketsLoss;
-  const localPacketsSent = handleStat(stream.local.packetsSent as number)
-    - getStatsRef.packets.prePacketsSent;
+  const localPacketsLost =
+    handleStat(stream.local.packetsLost as number) -
+    getStatsRef.packets.preLocalPacketsLoss;
+  const localPacketsSent =
+    handleStat(stream.local.packetsSent as number) -
+    getStatsRef.packets.prePacketsSent;
 
   if (localPacketsLost === 0 && localPacketsSent === 0) {
     getStatsRef.collected.local.fractionLoss = 0;
   } else if (localPacketsSent === 0) {
     getStatsRef.collected.local.fractionLoss = 1.0;
   } else {
-    getStatsRef.collected.local.fractionLoss = handleStat(localPacketsLost / localPacketsSent, 'float');
+    getStatsRef.collected.local.fractionLoss = handleStat(
+      localPacketsLost / localPacketsSent,
+      'float',
+    );
   }
 
   // Calculate remote packet Loss
-  const remotePacketsLost = handleStat(stream.remote.packetsLost as number)
-    - getStatsRef.packets.preRemotePacketsLoss;
-  const remotePacketsReceived = handleStat(stream.remote.packetsReceived as number)
-    - getStatsRef.packets.prePacketsReceived
-    + remotePacketsLost;
+  const remotePacketsLost =
+    handleStat(stream.remote.packetsLost as number) -
+    getStatsRef.packets.preRemotePacketsLoss;
+  const remotePacketsReceived =
+    handleStat(stream.remote.packetsReceived as number) -
+    getStatsRef.packets.prePacketsReceived +
+    remotePacketsLost;
 
   if (remotePacketsLost === 0 && remotePacketsReceived === 0) {
     getStatsRef.collected.remote.fractionLoss = 0;
   } else if (remotePacketsReceived === 0) {
     getStatsRef.collected.remote.fractionLoss = 1.0;
   } else {
-    getStatsRef.collected.remote.fractionLoss = handleStat(remotePacketsLost / remotePacketsReceived, 'float');
+    getStatsRef.collected.remote.fractionLoss = handleStat(
+      remotePacketsLost / remotePacketsReceived,
+      'float',
+    );
   }
 
   // Calculate Mean Opinion Score
@@ -495,17 +528,14 @@ const calculateStats = function (stream: RtpStatsStream): void {
 const sendStats = function (statMsg: StatsObject): void {
   const client: Client = this;
   if (
-    client.statsSocket
-    && client.callstatskey
-    && client._currentSession
-    && client.rtp_enabled
-    && (
-      (
-        this.options.enableQualityTracking === C.DEFAULT_ENABLE_QUALITY_TRACKING
-        && this.options.enableTracking
-      )
-      || (this.options.enableQualityTracking === C.REMOTEONLY)
-    )
+    client.statsSocket &&
+    client.callstatskey &&
+    client._currentSession &&
+    client.rtp_enabled &&
+    ((this.options.enableQualityTracking ===
+      C.DEFAULT_ENABLE_QUALITY_TRACKING &&
+      this.options.enableTracking) ||
+      this.options.enableQualityTracking === C.REMOTEONLY)
   ) {
     client.statsSocket.send(statMsg, client);
     if ((window as any)._PlivoDevLogging) {
@@ -513,16 +543,13 @@ const sendStats = function (statMsg: StatsObject): void {
     }
   }
   if (
-    client._currentSession
-    && client._currentSession.session
-    && client.browserDetails.browser === 'chrome'
-    && (
-      (
-        this.options.enableQualityTracking === C.DEFAULT_ENABLE_QUALITY_TRACKING
-        && this.options.enableTracking
-      )
-      || this.options.enableQualityTracking === C.LOCALONLY
-    )
+    client._currentSession &&
+    client._currentSession.session &&
+    client.browserDetails.browser === 'chrome' &&
+    ((this.options.enableQualityTracking ===
+      C.DEFAULT_ENABLE_QUALITY_TRACKING &&
+      this.options.enableTracking) ||
+      this.options.enableQualityTracking === C.LOCALONLY)
   ) {
     processStreams.call(
       client,
@@ -534,11 +561,7 @@ const sendStats = function (statMsg: StatsObject): void {
 
 const sendStatsDump = function (stream: StatsDump): void {
   const client: Client = this;
-  if (
-    client.statsSocket
-    && client.callstatskey
-    && client.rtp_enabled
-  ) {
+  if (client.statsSocket && client.callstatskey && client.rtp_enabled) {
     Plivo.log.debug(`${C.LOGCAT.CALL} | Sending CALL_STATS_DUMP Event`);
     client.statsSocket.send(stream, client);
   }
@@ -548,10 +571,11 @@ const sendStatsDump = function (stream: StatsDump): void {
  * calculate media setup time
  * @param {Client} client
  */
-const calculateMediaSetupTime = (
-  client: Client,
-): number => (client.timeTakenForStats.mediaSetup
-  ? client.timeTakenForStats.mediaSetup.end! - client.timeTakenForStats.mediaSetup.init : 0);
+const calculateMediaSetupTime = (client: Client): number =>
+  client.timeTakenForStats.mediaSetup
+    ? client.timeTakenForStats.mediaSetup.end! -
+      client.timeTakenForStats.mediaSetup.init
+    : 0;
 
 /**
  * Prepare and send CALL_STATS event to Plivo stats.
@@ -582,8 +606,8 @@ const processStats = function (stream: RtpStatsStream): void {
       : -1,
     statsIOUsed: getStatsRef.statsioused,
     pdd: getStatsRef.clientScope.timeTakenForStats.pdd
-      ? getStatsRef.clientScope.timeTakenForStats.pdd.end!
-          - getStatsRef.clientScope.timeTakenForStats.pdd.init
+      ? getStatsRef.clientScope.timeTakenForStats.pdd.end! -
+        getStatsRef.clientScope.timeTakenForStats.pdd.init
       : 0,
     mediaSetupTime: calculateMediaSetupTime(getStatsRef.clientScope),
   };
@@ -600,14 +624,45 @@ const processStats = function (stream: RtpStatsStream): void {
     Number(-100),
     true,
   );
-  getStatsRef.collected.remote.jitterBufferDelay = handleStat((stream.remote as any).jitterBufferDelay, 'int', null, true);
-  getStatsRef.collected.local.googEchoCancellationReturnLoss = handleStat(stream.local.googEchoCancellationReturnLoss!, 'int', null, true);
-  getStatsRef.collected.local.googEchoCancellationReturnLossEnhancement = handleStat(stream.local.googEchoCancellationReturnLossEnhancement!, 'int', null, true);
-  getStatsRef.collected.remote.googJitterBufferMs = handleStat(stream.remote.googJitterBufferMs!, 'int', null, true);
-  getStatsRef.collected.remote.packetsDiscarded = handleStat(stream.remote.packetsDiscarded!, 'int', null, true);
-  if (getStatsRef.clientScope.browserDetails.browser === 'chrome'
-    || this.clientScope.browserDetails.browser === 'edge') {
-    getStatsRef.collected.local.rtt = handleStat(stream.local.googRtt as number, 'float');
+  getStatsRef.collected.remote.jitterBufferDelay = handleStat(
+    (stream.remote as any).jitterBufferDelay,
+    'int',
+    null,
+    true,
+  );
+  getStatsRef.collected.local.googEchoCancellationReturnLoss = handleStat(
+    stream.local.googEchoCancellationReturnLoss!,
+    'int',
+    null,
+    true,
+  );
+  getStatsRef.collected.local.googEchoCancellationReturnLossEnhancement =
+    handleStat(
+      stream.local.googEchoCancellationReturnLossEnhancement!,
+      'int',
+      null,
+      true,
+    );
+  getStatsRef.collected.remote.googJitterBufferMs = handleStat(
+    stream.remote.googJitterBufferMs!,
+    'int',
+    null,
+    true,
+  );
+  getStatsRef.collected.remote.packetsDiscarded = handleStat(
+    stream.remote.packetsDiscarded!,
+    'int',
+    null,
+    true,
+  );
+  if (
+    getStatsRef.clientScope.browserDetails.browser === 'chrome' ||
+    this.clientScope.browserDetails.browser === 'edge'
+  ) {
+    getStatsRef.collected.local.rtt = handleStat(
+      stream.local.googRtt as number,
+      'float',
+    );
     getStatsRef.collected.local.jitter = handleStat(
       stream.local.jitter as number,
       'float',
@@ -617,10 +672,13 @@ const processStats = function (stream: RtpStatsStream): void {
       'float',
     );
   } else if (
-    getStatsRef.clientScope.browserDetails.browser === 'firefox'
-    || getStatsRef.clientScope.browserDetails.browser === 'safari'
+    getStatsRef.clientScope.browserDetails.browser === 'firefox' ||
+    getStatsRef.clientScope.browserDetails.browser === 'safari'
   ) {
-    getStatsRef.collected.local.rtt = handleStat(stream.local.rtt as number, 'float');
+    getStatsRef.collected.local.rtt = handleStat(
+      stream.local.rtt as number,
+      'float',
+    );
     getStatsRef.collected.local.jitter = handleStat(
       stream.local.jitter as number,
       'float',
@@ -639,7 +697,9 @@ const processStats = function (stream: RtpStatsStream): void {
   getStatsRef.collected.remote.bytesReceived = handleStat(
     stream.remote.bytesReceived as number,
   );
-  getStatsRef.collected.local.bytesSent = handleStat(stream.local.bytesSent as number);
+  getStatsRef.collected.local.bytesSent = handleStat(
+    stream.local.bytesSent as number,
+  );
   getStatsRef.collected.remote.packetsLost = handleStat(
     stream.remote.packetsLost as number,
   );
@@ -659,13 +719,13 @@ const getCodecName = function (): string {
   try {
     // the format of codec information in the sdp message
     // a=rtpmap:0 PCMU/8000
-    const codec = this.pc.remoteDescription.sdp.match(/rtpmap:.*/)[0].split(' ')[1].split('/')[0];
+    const codec = this.pc.remoteDescription.sdp
+      .match(/rtpmap:.*/)[0]
+      .split(' ')[1]
+      .split('/')[0];
     return codec;
   } catch (e) {
-    Plivo.log.debug(
-      'Error fetching codec from remote description message',
-      e,
-    );
+    Plivo.log.debug('Error fetching codec from remote description message', e);
     return '';
   }
 };
@@ -676,18 +736,22 @@ const getCodecName = function (): string {
  * @returns Converted stream
  */
 const handleSafariChanges = function (stream: RtpStatsStream): RtpStatsStream {
-  stream.local.rtt = stream.local.rtt == null ? null : Number(stream.local.rtt) * 1000;
-  stream.local.jitter = stream.local.jitter == null ? null : Number(stream.local.jitter) * 1000;
-  stream.remote.jitter = stream.remote.jitter == null ? null : Number(stream.remote.jitter)
-  * 1000;
+  stream.local.rtt =
+    stream.local.rtt == null ? null : Number(stream.local.rtt) * 1000;
+  stream.local.jitter =
+    stream.local.jitter == null ? null : Number(stream.local.jitter) * 1000;
+  stream.remote.jitter =
+    stream.remote.jitter == null ? null : Number(stream.remote.jitter) * 1000;
   return stream;
 };
 
-const checkIfIdPresent = function (candidateInfo: LocalCandidateMap, id: string)
-  : Promise<boolean> {
-  return new Promise((resolve) => {
+const checkIfIdPresent = function (
+  candidateInfo: LocalCandidateMap,
+  id: string,
+): Promise<boolean> {
+  return new Promise(resolve => {
     let idPresent: boolean = false;
-    Object.keys(candidateInfo).forEach((timestamp) => {
+    Object.keys(candidateInfo).forEach(timestamp => {
       const localCandidate = candidateInfo[timestamp];
       if (localCandidate.id === id) {
         idPresent = true;
@@ -710,46 +774,56 @@ export const handleWebRTCStats = function (stream: RtpStatsStream): void {
       .then((senderResults: any[]) => {
         Array.from(senderResults.values()).forEach((stats: any) => {
           if (stats.type === 'outbound-rtp') {
-            stream.local.rtt = stats.rtt == null || isNaN(stats.rtt)
-              ? stream.local.rtt
-              : stats.rtt;
-            stream.local.jitter = stats.jitter == null || isNaN(stats.jitter)
-              ? stream.local.jitter
-              : stats.jitter;
-            stream.local.packetsSent = stats.packetsSent == null || isNaN(stats.packetsSent)
-              ? stream.local.packetsSent
-              : stats.packetsSent;
-            stream.local.packetsLost = stats.packetsLost == null || isNaN(stats.packetsLost)
-              ? stream.local.packetsLost
-              : stats.packetsLost;
-            stream.local.bytesSent = stats.bytesSent == null || isNaN(stats.bytesSent)
-              ? stream.local.bytesSent
-              : stats.bytesSent;
-            stream.local.ssrc = stats.ssrc == null || isNaN(stats.ssrc)
-              ? stream.local.ssrc
-              : stats.ssrc;
+            stream.local.rtt =
+              stats.rtt == null || isNaN(stats.rtt)
+                ? stream.local.rtt
+                : stats.rtt;
+            stream.local.jitter =
+              stats.jitter == null || isNaN(stats.jitter)
+                ? stream.local.jitter
+                : stats.jitter;
+            stream.local.packetsSent =
+              stats.packetsSent == null || isNaN(stats.packetsSent)
+                ? stream.local.packetsSent
+                : stats.packetsSent;
+            stream.local.packetsLost =
+              stats.packetsLost == null || isNaN(stats.packetsLost)
+                ? stream.local.packetsLost
+                : stats.packetsLost;
+            stream.local.bytesSent =
+              stats.bytesSent == null || isNaN(stats.bytesSent)
+                ? stream.local.bytesSent
+                : stats.bytesSent;
+            stream.local.ssrc =
+              stats.ssrc == null || isNaN(stats.ssrc)
+                ? stream.local.ssrc
+                : stats.ssrc;
           }
           if (stats.type === 'remote-inbound-rtp') {
             const outboundRTCP = stats;
-            stream.local.googRtt = outboundRTCP.roundTripTime == null
-            || isNaN(outboundRTCP.roundTripTime)
-              ? stream.local.googRtt
-              : Math.round(outboundRTCP.roundTripTime * 1000);
-            stream.local.rtt = outboundRTCP.roundTripTime == null
-            || isNaN(outboundRTCP.roundTripTime)
-              ? stream.local.rtt
-              : outboundRTCP.roundTripTime;
-            stream.local.jitter = outboundRTCP.jitter == null || isNaN(outboundRTCP.jitter)
-              ? stream.local.jitter
-              : outboundRTCP.jitter;
-            stream.local.packetsLost = outboundRTCP.packetsLost == null
-            || isNaN(outboundRTCP.packetsLost)
-              ? stream.local.packetsLost
-              : outboundRTCP.packetsLost;
+            stream.local.googRtt =
+              outboundRTCP.roundTripTime == null ||
+              isNaN(outboundRTCP.roundTripTime)
+                ? stream.local.googRtt
+                : Math.round(outboundRTCP.roundTripTime * 1000);
+            stream.local.rtt =
+              outboundRTCP.roundTripTime == null ||
+              isNaN(outboundRTCP.roundTripTime)
+                ? stream.local.rtt
+                : outboundRTCP.roundTripTime;
+            stream.local.jitter =
+              outboundRTCP.jitter == null || isNaN(outboundRTCP.jitter)
+                ? stream.local.jitter
+                : outboundRTCP.jitter;
+            stream.local.packetsLost =
+              outboundRTCP.packetsLost == null ||
+              isNaN(outboundRTCP.packetsLost)
+                ? stream.local.packetsLost
+                : outboundRTCP.packetsLost;
           }
           if (
-            stats.type === 'candidate-pair'
-          && (stream.local.rtt == null || isNaN(stream.local.rtt))
+            stats.type === 'candidate-pair' &&
+            (stream.local.rtt == null || isNaN(stream.local.rtt))
           ) {
             stream.local.rtt = stats.currentRoundTripTime;
           }
@@ -773,22 +847,34 @@ export const handleWebRTCStats = function (stream: RtpStatsStream): void {
                     (idPresent: boolean) => {
                       // Handle the result here
                       if (idPresent === false) {
-                        Plivo.log.debug(`${C.LOGCAT.CALL} | Local Candidate Info Change`);
+                        Plivo.log.debug(
+                          `${C.LOGCAT.CALL} | Local Candidate Info Change`,
+                        );
                         this.localCandidateInfo[stats.timestamp] = lc;
                       }
                     },
                   );
                 } catch (error) {
                   // Handle any errors that may occur during the execution of checkIfIdPresent
-                  Plivo.log.debug(`${C.LOGCAT.CALL} | Error in getStats LocalStreams API during Local Candidate Info Check `, error.message);
+                  Plivo.log.debug(
+                    `${C.LOGCAT.CALL} | Error in getStats LocalStreams API during Local Candidate Info Check `,
+                    error.message,
+                  );
                 }
               }
             }
           }
-          if (stats.type === 'media-source' && this.clientScope.browserDetails.browser === 'chrome') {
-            stream.local.googEchoCancellationReturnLoss = Math.floor(stats.echoReturnLoss);
+          if (
+            stats.type === 'media-source' &&
+            this.clientScope.browserDetails.browser === 'chrome'
+          ) {
+            stream.local.googEchoCancellationReturnLoss = Math.floor(
+              stats.echoReturnLoss,
+            );
             // eslint-disable-next-line max-len
-            stream.local.googEchoCancellationReturnLossEnhancement = Math.floor(stats.echoReturnLossEnhancement);
+            stream.local.googEchoCancellationReturnLossEnhancement = Math.floor(
+              stats.echoReturnLossEnhancement,
+            );
           }
         });
 
@@ -805,27 +891,36 @@ export const handleWebRTCStats = function (stream: RtpStatsStream): void {
               }
               if (stats.type === 'inbound-rtp') {
                 stream.remote = stats;
-                stream.local.audioInputLevel = this.audioInputLevel / this.audioInputCount;
-                stream.remote.audioOutputLevel = this.audioOutputLevel / this.audioOutputCount;
-                stream.remote.jitterBufferDelay = Math.floor((stats.jitterBufferDelay
-                  + jitterBufferDelay) / 10000);
+                stream.local.audioInputLevel =
+                  this.audioInputLevel / this.audioInputCount;
+                stream.remote.audioOutputLevel =
+                  this.audioOutputLevel / this.audioOutputCount;
+                stream.remote.jitterBufferDelay = Math.floor(
+                  (stats.jitterBufferDelay + jitterBufferDelay) / 10000,
+                );
 
-                stream.remote.googJitterBufferMs = Math.floor((stats.jitterBufferDelay
-                  / stats.jitterBufferEmittedCount) * 1000);
+                stream.remote.googJitterBufferMs = Math.floor(
+                  (stats.jitterBufferDelay / stats.jitterBufferEmittedCount) *
+                    1000,
+                );
 
                 clearAudioSamples.call(this);
                 if (this.clientScope.browserDetails.browser === 'safari') {
                   stream = handleSafariChanges(stream);
                 }
 
-                if (this.clientScope.browserDetails.browser === 'chrome'
-                 || this.clientScope.browserDetails.browser === 'edge') {
-                  stream.remote.jitter = stats.jitter == null ? null : Math.floor(
-                    stats.jitter * 1000,
-                  );
-                  stream.local.jitter = stream.local.jitter == null ? null : Math.floor(
-                    stream.local.jitter * 1000,
-                  );
+                if (
+                  this.clientScope.browserDetails.browser === 'chrome' ||
+                  this.clientScope.browserDetails.browser === 'edge'
+                ) {
+                  stream.remote.jitter =
+                    stats.jitter == null
+                      ? null
+                      : Math.floor(stats.jitter * 1000);
+                  stream.local.jitter =
+                    stream.local.jitter == null
+                      ? null
+                      : Math.floor(stream.local.jitter * 1000);
                 }
 
                 processStats.call(this, stream);
@@ -833,11 +928,17 @@ export const handleWebRTCStats = function (stream: RtpStatsStream): void {
             });
           })
           .catch((e: any) => {
-            Plivo.log.debug(`${C.LOGCAT.CALL} | Error in getStats RemoteStreams API `, e.message);
+            Plivo.log.debug(
+              `${C.LOGCAT.CALL} | Error in getStats RemoteStreams API `,
+              e.message,
+            );
           });
       })
       .catch((e: any) => {
-        Plivo.log.debug(`${C.LOGCAT.CALL} | Error in getStats LocalStreams API `, e.message);
+        Plivo.log.debug(
+          `${C.LOGCAT.CALL} | Error in getStats LocalStreams API `,
+          e.message,
+        );
       });
   }
 };
@@ -854,10 +955,12 @@ const startStatsTimer = function (): void {
       remote: {},
       networkType: '',
     };
-    if (getStatsRef.clientScope.browserDetails.browser === 'chrome'
-        || getStatsRef.clientScope.browserDetails.browser === 'edge'
-        || getStatsRef.clientScope.browserDetails.browser === 'firefox'
-        || getStatsRef.clientScope.browserDetails.browser === 'safari') {
+    if (
+      getStatsRef.clientScope.browserDetails.browser === 'chrome' ||
+      getStatsRef.clientScope.browserDetails.browser === 'edge' ||
+      getStatsRef.clientScope.browserDetails.browser === 'firefox' ||
+      getStatsRef.clientScope.browserDetails.browser === 'safari'
+    ) {
       handleWebRTCStats.call(getStatsRef, stream);
     } else {
       Plivo.log.error(
@@ -1021,10 +1124,12 @@ export class GetRTPStats {
    */
   constructor(client: Client) {
     this.clientScope = client;
-    this.pc = (client._currentSession as CallSession).session.connection as RTCPeerConnection;
+    this.pc = (client._currentSession as CallSession).session
+      .connection as RTCPeerConnection;
     this.xcallUUID = (client._currentSession as CallSession).callUUID as string;
     this.callUUID = (client._currentSession as CallSession).sipCallID as string;
-    this.corelationId = (client._currentSession as CallSession).sipCallID as string;
+    this.corelationId = (client._currentSession as CallSession)
+      .sipCallID as string;
     this.userName = client.userName as string;
     this.storage = client.storage as Storage;
     this.callstatskey = client.callstatskey as string;
@@ -1041,7 +1146,9 @@ export class GetRTPStats {
     this.baseStatsCollected = false;
     this.packets = {};
     this.senderMediaStream = new MediaStream();
-    this.senderMediaStream.addTrack(this.pc.getSenders()[0].track as MediaStreamTrack);
+    this.senderMediaStream.addTrack(
+      this.pc.getSenders()[0].track as MediaStreamTrack,
+    );
     this.receiverMediaStream = new MediaStream();
     this.receiverMediaStream.addTrack(this.pc.getReceivers()[0].track);
     this.localAudioLevelHelper = new AudioLevel(this.senderMediaStream);
@@ -1054,7 +1161,9 @@ export class GetRTPStats {
     startStatsTimer.call(this);
   }
 
-  public sendCallStatsDump = function sendCallStatsDump(stream: StatsDump): Promise<void> {
+  public sendCallStatsDump = function sendCallStatsDump(
+    stream: StatsDump,
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const senders = this.rtpsender;
       if (senders) {
@@ -1075,7 +1184,8 @@ export class GetRTPStats {
                 stream.remoteCandidate.address = stats.address;
                 stream.remoteCandidate.port = stats.port;
                 stream.remoteCandidate.candidateType = stats.candidateType;
-                stream.remoteCandidate.usernameFragment = stats.usernameFragment;
+                stream.remoteCandidate.usernameFragment =
+                  stats.usernameFragment;
               }
               if (stats.type === 'transport') {
                 stream.transport.id = stats.id;
@@ -1085,25 +1195,34 @@ export class GetRTPStats {
                 stream.transport.iceState = stats.iceState;
                 stream.transport.packetsReceived = stats.packetsReceived;
                 stream.transport.packetsSent = stats.packetsSent;
-                stream.transport.selectedCandidatePairChanges = stats.selectedCandidatePairChanges;
-                stream.transport.selectedCandidatePairId = stats.selectedCandidatePairId;
+                stream.transport.selectedCandidatePairChanges =
+                  stats.selectedCandidatePairChanges;
+                stream.transport.selectedCandidatePairId =
+                  stats.selectedCandidatePairId;
               }
               if (stats.type === 'candidate-pair') {
                 stream.candidatePair.id = stats.id;
-                stream.candidatePair.availableOutgoingBitrate = stats.availableOutgoingBitrate;
-                stream.candidatePair.consentRequestsSent = stats.consentRequestsSent;
+                stream.candidatePair.availableOutgoingBitrate =
+                  stats.availableOutgoingBitrate;
+                stream.candidatePair.consentRequestsSent =
+                  stats.consentRequestsSent;
                 // eslint-disable-next-line max-len
-                stream.candidatePair.lastPacketReceivedTimestamp = stats.lastPacketReceivedTimestamp;
-                stream.candidatePair.lastPacketSentTimestamp = stats.lastPacketSentTimestamp;
+                stream.candidatePair.lastPacketReceivedTimestamp =
+                  stats.lastPacketReceivedTimestamp;
+                stream.candidatePair.lastPacketSentTimestamp =
+                  stats.lastPacketSentTimestamp;
                 stream.candidatePair.localCandidateId = stats.localCandidateId;
-                stream.candidatePair.remoteCandidateId = stats.remoteCandidateId;
+                stream.candidatePair.remoteCandidateId =
+                  stats.remoteCandidateId;
                 stream.candidatePair.nominated = stats.nominated;
-                stream.candidatePair.packetsDiscardedOnSend = stats.packetsDiscardedOnSend;
+                stream.candidatePair.packetsDiscardedOnSend =
+                  stats.packetsDiscardedOnSend;
                 stream.candidatePair.packetsReceived = stats.packetsReceived;
                 stream.candidatePair.packetsSent = stats.packetsSent;
                 stream.candidatePair.requestsReceived = stats.requestsReceived;
                 stream.candidatePair.requestsSent = stats.requestsSent;
-                stream.candidatePair.responsesReceived = stats.responsesReceived;
+                stream.candidatePair.responsesReceived =
+                  stats.responsesReceived;
                 stream.candidatePair.responsesSent = stats.responsesSent;
                 stream.candidatePair.state = stats.state;
                 stream.candidatePair.transportId = stats.transportId;
@@ -1113,23 +1232,30 @@ export class GetRTPStats {
               if (stats.type === 'outbound-rtp') {
                 stream.outboundRTP.bytesSent = stats.bytesSent;
                 stream.outboundRTP.packetsSent = stats.packetsSent;
-                stream.outboundRTP.retransmittedBytesSent = stats.retransmittedBytesSent;
-                stream.outboundRTP.retransmittedPacketsSent = stats.retransmittedBytesSent;
+                stream.outboundRTP.retransmittedBytesSent =
+                  stats.retransmittedBytesSent;
+                stream.outboundRTP.retransmittedPacketsSent =
+                  stats.retransmittedBytesSent;
                 stream.outboundRTP.transportId = stats.transportId;
               }
               if (stats.type === 'remote-inbound-rtp') {
                 stream.remoteInboundRTP.fractionLost = stats.fractionLost;
                 stream.remoteInboundRTP.packetsLost = stats.packetsLost;
                 stream.remoteInboundRTP.roundTripTime = stats.roundTripTime;
-                stream.remoteInboundRTP.roundTripTimeMeasurements = stats.roundTripTimeMeasurements;
-                stream.remoteInboundRTP.totalRoundTripTime = stats.totalRoundTripTime;
+                stream.remoteInboundRTP.roundTripTimeMeasurements =
+                  stats.roundTripTimeMeasurements;
+                stream.remoteInboundRTP.totalRoundTripTime =
+                  stats.totalRoundTripTime;
                 stream.remoteInboundRTP.transportId = stats.transportId;
               }
             });
             stream.changedCandidatedInfo = this.localCandidateInfo;
           })
           .catch((e: any) => {
-            Plivo.log.debug(`${C.LOGCAT.CALL} | Error during CALL_STATS_DUMP event creation `, e.message);
+            Plivo.log.debug(
+              `${C.LOGCAT.CALL} | Error during CALL_STATS_DUMP event creation `,
+              e.message,
+            );
           });
       }
       const receivers = this.rtpreceiver;
@@ -1140,21 +1266,27 @@ export class GetRTPStats {
               if (stats.type === 'inbound-rtp') {
                 stream.inboundRTP.bytesReceived = stats.bytesReceived;
                 stream.inboundRTP.jitterBufferDelay = stats.jitterBufferDelay;
-                stream.inboundRTP.jitterBufferEmittedCount = stats.jitterBufferEmittedCount;
-                stream.inboundRTP.jitterBufferMinimumDelay = stats.jitterBufferMinimumDelay;
-                stream.inboundRTP.jitterBufferTargetDelay = stats.jitterBufferTargetDelay;
+                stream.inboundRTP.jitterBufferEmittedCount =
+                  stats.jitterBufferEmittedCount;
+                stream.inboundRTP.jitterBufferMinimumDelay =
+                  stats.jitterBufferMinimumDelay;
+                stream.inboundRTP.jitterBufferTargetDelay =
+                  stats.jitterBufferTargetDelay;
                 stream.inboundRTP.packetsDiscarded = stats.packetsDiscarded;
                 stream.inboundRTP.packetsLost = stats.packetsLost;
                 stream.inboundRTP.packetsReceived = stats.packetsReceived;
-                stream.inboundRTP.totalSamplesDuration = stats.totalSamplesDuration;
-                stream.inboundRTP.totalSamplesReceived = stats.totalSamplesDuration;
+                stream.inboundRTP.totalSamplesDuration =
+                  stats.totalSamplesDuration;
+                stream.inboundRTP.totalSamplesReceived =
+                  stats.totalSamplesDuration;
                 stream.inboundRTP.transportId = stats.transportId;
               }
               if (stats.type === 'remote-outbound-rtp') {
                 stream.remoteOutboundRTP.bytesSent = stats.bytesSent;
                 stream.remoteOutboundRTP.packetsSent = stats.packetsSent;
                 stream.remoteOutboundRTP.reportsSent = stats.reportsSent;
-                stream.remoteOutboundRTP.totalRoundTripTime = stats.totalRoundTripTime;
+                stream.remoteOutboundRTP.totalRoundTripTime =
+                  stats.totalRoundTripTime;
                 stream.remoteOutboundRTP.transportId = stats.transportId;
               }
             });
@@ -1162,7 +1294,10 @@ export class GetRTPStats {
             sendStatsDump.call(this.clientScope, stream);
           })
           .catch((e: any) => {
-            Plivo.log.debug(`${C.LOGCAT.CALL} | Error during CALL_STATS_DUMP event creation `, e.message);
+            Plivo.log.debug(
+              `${C.LOGCAT.CALL} | Error during CALL_STATS_DUMP event creation `,
+              e.message,
+            );
             reject(new Error('Error in getStats LocalStreams API'));
           });
       }

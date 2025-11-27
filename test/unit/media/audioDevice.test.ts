@@ -302,6 +302,8 @@ describe('AudioDevice', () => {
       audioOutputLables: 'Default - MacBook Pro Speakers (Built-in) ,',
       noOfAudioInput: 1,
       noOfAudioOutput: 1,
+      activeInputDeviceGroupId: 'default',
+      activeOutputDeviceGroupId: 'default'
     };
     expect(AudioDevice.getAudioDevicesInfo.call(context)).resolves.toStrictEqual(expected);
   });

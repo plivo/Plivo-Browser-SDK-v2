@@ -30,6 +30,16 @@ describe('Document', () => {
           applicationLog: null,
         },
       },
+      audio: {
+        microphoneDevices: {
+          set: () => {},
+          get: () => {}
+        },
+        speakerDevices: {
+          set: () => {},
+          get: () => {}
+        }
+      }
     };
     (window as any).navigator.mediaDevices = {
       enumerateDevices: () => Promise.resolve([]),

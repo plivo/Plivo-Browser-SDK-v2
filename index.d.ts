@@ -53,6 +53,7 @@ declare module 'plivo-browser-sdk/client' {
             stopAutoRegisterOnConnect: boolean;
             dtmfOptions?: DtmfOptions;
             captureSDKCrashOnly: boolean;
+            noiseReductionFilePath?: string;
     }
     export interface BrowserDetails {
             browser: string;
@@ -248,6 +249,11 @@ declare module 'plivo-browser-sdk/client' {
                 * @private
                 */
             isAccessTokenGenerator: boolean | null;
+            /**
+                * boolean that tells which type of login method is called
+                * @private
+                */
+            accessTokenGeneratorTimer: null | ReturnType<typeof setTimeout>;
             /**
                 * boolean that tells if user logged in through access token
                 * @private
@@ -501,10 +507,25 @@ declare module 'plivo-browser-sdk/client' {
             */
             stopAutoRegisterOnConnect: boolean;
             /**
+                * Holds the path of the noise reduction file(processor.js) provided by the application
+                * @private
+                */
+            noiseReductionFilePath: string | undefined;
+            /**
                 * Determines which js framework sdk is running with
                 * @private
                 */
             jsFramework: string[];
+            /**
+                * Holds the interval at which the client reconnects to the server
+                * @private
+                */
+            reconnectInterval: null | ReturnType<typeof setInterval>;
+            /**
+                * Holds the number of times the client has tried to reconnect to the server
+                * @private
+                */
+            reconnectTryCount: number;
             /**
                 * Get current version of the SDK
                 */
@@ -874,6 +895,11 @@ declare module 'plivo-browser-sdk/managers/callSession' {
                 */
             extraHeaders: ExtraHeaders;
             /**
+                * Holds the state of input and output device mismatch
+                * @private
+                */
+            isAudioDeviceMismatch: boolean;
+            /**
                 * Holds the WebRTC media session
                 * @private
                 */
@@ -1169,6 +1195,7 @@ declare module 'plivo-browser-sdk/media/audioDevice' {
         * Return if the app consuming Browser SDK is electron app or not.
         */
     export const isElectronApp: () => boolean;
+    export const matchDevices: (activeInputDeviceGroupId: any, activeOutputDeviceGroupId: any, activeInputDevice: any, activeOutputDevice: any) => boolean;
     /**
         * Get input and output audio device information to send to plivo stats.
         * @returns Fulfills with audio device information or reject with error
@@ -1441,6 +1468,105 @@ declare module 'plivo-browser-sdk/constants' {
 declare module 'plivo-browser-sdk/stats/rtpStats' {
     import { Client, Storage } from 'plivo-browser-sdk/client';
     import { AudioLevel } from 'plivo-browser-sdk/media/audioLevel';
+    export interface LocalCandidate {
+            id?: string;
+            address?: string;
+            port?: string;
+            relatedAddress?: string;
+            relatedPort?: string;
+            candidateType?: string;
+            usernameFragment?: string;
+    }
+    export interface RemoteCandidate {
+            id?: string;
+            address?: string;
+            port?: string;
+            candidateType?: string;
+            usernameFragment?: string;
+    }
+    export interface CandidatePair {
+            availableOutgoingBitrate?: string;
+            consentRequestsSent?: number;
+            id?: string;
+            lastPacketReceivedTimestamp?: string;
+            lastPacketSentTimestamp?: string;
+            localCandidateId?: string;
+            nominated?: string;
+            packetsDiscardedOnSend?: string;
+            packetsReceived?: string;
+            packetsSent?: string;
+            remoteCandidateId?: string;
+            requestsReceived?: number;
+            requestsSent?: number;
+            responsesReceived?: number;
+            responsesSent?: number;
+            state?: string;
+            transportId?: string;
+            writable?: boolean;
+    }
+    export interface Transport {
+            id?: string;
+            dtlsRole?: string;
+            dtlsState?: string;
+            iceRole?: string;
+            iceState?: string;
+            packetsReceived?: string;
+            packetsSent?: string;
+            selectedCandidatePairChanges?: number;
+            selectedCandidatePairId?: string;
+    }
+    export interface OutboundRTP {
+            bytesSent?: number;
+            packetsSent?: number;
+            retransmittedBytesSent?: number;
+            retransmittedPacketsSent?: number;
+            transportId?: string;
+    }
+    export interface RemoteInboundRTP {
+            fractionLost?: number;
+            packetsLost?: number;
+            roundTripTime?: string;
+            roundTripTimeMeasurements?: number;
+            totalRoundTripTime?: string;
+            transportId?: string;
+    }
+    export interface InboundRTP {
+            bytesReceived?: number;
+            jitterBufferDelay?: string;
+            jitterBufferEmittedCount?: number;
+            jitterBufferMinimumDelay?: string;
+            jitterBufferTargetDelay?: string;
+            packetsDiscarded?: number;
+            packetsLost?: number;
+            packetsReceived?: number;
+            totalSamplesDuration?: string;
+            totalSamplesReceived?: string;
+            transportId?: string;
+    }
+    export interface RemoteOutboundRTP {
+            bytesSent?: number;
+            packetsSent?: number;
+            reportsSent?: number;
+            totalRoundTripTime?: string;
+            transportId?: string;
+    }
+    export interface StatsDump {
+            msg: string;
+            callUUID: string;
+            xcallUUID: string;
+            source: string;
+            timeStamp: number;
+            version: string;
+            changedCandidatedInfo: LocalCandidateMap;
+            localCandidate: LocalCandidate;
+            remoteCandidate: RemoteCandidate;
+            transport: Transport;
+            candidatePair: CandidatePair;
+            outboundRTP: OutboundRTP;
+            remoteInboundRTP: RemoteInboundRTP;
+            inboundRTP: InboundRTP;
+            remoteOutboundRTP: RemoteOutboundRTP;
+    }
     export interface LocalCandidate {
             id?: string;
             address?: string;
@@ -1781,6 +1907,8 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             audioOutputIdSet: string;
             activeInputAudioDevice: string;
             activeOutputAudioDevice: string;
+            activeInputDeviceGroupId: string;
+            activeOutputDeviceGroupId: string;
     }
     export interface RingingEvent {
             msg: string;
@@ -1803,6 +1931,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
             jsFramework: string[];
+            isAudioDeviceMismatch?: boolean;
             noiseReduction: NoiseReduction;
     }
     export interface SummaryEvent {
@@ -1826,6 +1955,7 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             isAudioDeviceToggled?: boolean;
             isNetworkChanged?: boolean;
             jsFramework: string[];
+            isAudioDeviceMismatch?: boolean;
             noiseReduction: NoiseReduction;
     }
     export interface NoiseReduction {

@@ -32,10 +32,14 @@ describe('NonRTPStats', () => {
     deviceInfo = {
       activeInputAudioDevice: 'Default - MacBook Pro Speakers (Built-in)',
       activeOutputAudioDevice: 'Default - MacBook Pro Speakers (Built-in)',
-      audioInputGroupIds: 'f327844e976aff304ae49488035945128ad7610b78b1f1e39c3f460a9a6ac1ef ,f327844e976aff304ae49488035945128ad7610b78b1f1e39c3f460a9a6ac1ef ,',
-      audioInputLables: 'Default - MacBook Pro Microphone (Built-in) ,MacBook Pro Microphone (Built-in) ,',
-      audioOutputGroupIds: 'f327844e976aff304ae49488035945128ad7610b78b1f1e39c3f460a9a6ac1ef ,f327844e976aff304ae49488035945128ad7610b78b1f1e39c3f460a9a6ac1ef ,',
-      audioOutputLables: 'Default - MacBook Pro Speakers (Built-in) ,MacBook Pro Speakers (Built-in) ,',
+      audioInputGroupIds:
+        'f327844e976aff304ae49488035945128ad7610b78b1f1e39c3f460a9a6ac1ef ,f327844e976aff304ae49488035945128ad7610b78b1f1e39c3f460a9a6ac1ef ,',
+      audioInputLables:
+        'Default - MacBook Pro Microphone (Built-in) ,MacBook Pro Microphone (Built-in) ,',
+      audioOutputGroupIds:
+        'f327844e976aff304ae49488035945128ad7610b78b1f1e39c3f460a9a6ac1ef ,f327844e976aff304ae49488035945128ad7610b78b1f1e39c3f460a9a6ac1ef ,',
+      audioOutputLables:
+        'Default - MacBook Pro Speakers (Built-in) ,MacBook Pro Speakers (Built-in) ,',
     };
     signallingInfo = {
       answer_time: 1598624425593,
@@ -71,7 +75,7 @@ describe('NonRTPStats', () => {
     (window as any).WebSocket = WebSocket;
     delete (window as any).HTMLElement;
     const sdkVersionParse = getSDKVersion();
-    let noiseSuppresion = new NoiseSuppression(context)
+    let noiseSuppresion = new NoiseSuppression(context);
     context.noiseSuppresion = noiseSuppresion;
     updateSDKVersions(sdkVersionParse);
   });
@@ -96,8 +100,11 @@ describe('NonRTPStats', () => {
     const message = context.statsSocket.ws.message;
     message.timeStamp = 1599026892574;
     const testOs = process.env.USERAGENT_OS;
-    console.log("OS AGENT", testOs)
-    if (message.userAgent !== `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`) {
+    console.log('OS AGENT', testOs);
+    if (
+      message.userAgent !==
+      `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`
+    ) {
       message.userAgent = `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`;
     }
     expect(message).toEqual(nonRTPStatsResponse.ANSWER_EVENT);
@@ -112,7 +119,10 @@ describe('NonRTPStats', () => {
     const message = context.statsSocket.ws.message;
     message.timeStamp = 1599026892574;
     const testOs = process.env.USERAGENT_OS;
-    if (message.userAgent !== `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`) {
+    if (
+      message.userAgent !==
+      `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`
+    ) {
       message.userAgent = `Mozilla/5.0 (${testOs}) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/16.4.0`;
     }
     expect(message).toStrictEqual(nonRTPStatsResponse.ANSWER_EVENT);
@@ -135,20 +145,40 @@ describe('NonRTPStats', () => {
 
   it('should send call summary event', () => {
     const sendFn = jest.spyOn(context.statsSocket.ws, 'send');
-    nonRTPStats.sendCallSummaryEvent.call(context, deviceInfo, signallingInfo, mediaConnectionInfo, context._currentSession);
+    nonRTPStats.sendCallSummaryEvent.call(
+      context,
+      deviceInfo,
+      signallingInfo,
+      mediaConnectionInfo,
+      context._currentSession,
+    );
     expect(sendFn).toHaveBeenCalledTimes(1);
   });
 
   it('should not send call summary event when callstatskey is missing', () => {
     const sendFn = jest.spyOn(context.statsSocket.ws, 'send');
     context.callstatskey = null;
-    nonRTPStats.sendCallSummaryEvent.call(context, deviceInfo, signallingInfo, mediaConnectionInfo, context._currentSession);
+    nonRTPStats.sendCallSummaryEvent.call(
+      context,
+      deviceInfo,
+      signallingInfo,
+      mediaConnectionInfo,
+      context._currentSession,
+    );
     expect(sendFn).toHaveBeenCalledTimes(0);
     expect(context.statsSocket.ws.message).toMatch('');
   });
 
   it('should add callinfo to stats', () => {
-    expect(nonRTPStats.addCallInfo(callSession, {} as any, callInfoObj.callstats_key, callInfoObj.userName, 1599026892574)).toStrictEqual(callInfoObj);
+    expect(
+      nonRTPStats.addCallInfo(
+        callSession,
+        {} as any,
+        callInfoObj.callstats_key,
+        callInfoObj.userName,
+        1599026892574,
+      ),
+    ).toStrictEqual(callInfoObj);
   });
 
   it('should send user feedback to stats socket', () => {
@@ -157,17 +187,22 @@ describe('NonRTPStats', () => {
       comment: 'audio_lag Good',
     };
     const expectedMsg = {
-      msg: 'FEEDBACK', info: feedback, sdkVersion: pkg.version, ...callInfoObj,
+      msg: 'FEEDBACK',
+      info: feedback,
+      sdkVersion: pkg.version,
+      ...callInfoObj,
     };
     const sendFn = jest.spyOn(context.statsSocket.ws, 'send');
     nonRTPStats.sendFeedbackEvent.call(context, callSession, feedback);
-    expect(sendFn).toBeCalledTimes(1)
+    expect(sendFn).toBeCalledTimes(1);
     // expect(context.statsSocket.ws.message).toStrictEqual(expectedMsg);
   });
 
   it('should get error reason based on error code', () => {
     expect(nonRTPStats.signallingEvent(404)).toBe('Call authorization failed');
-    expect(nonRTPStats.signallingEvent(501)).toBe('Incompatible client configuration');
+    expect(nonRTPStats.signallingEvent(501)).toBe(
+      'Incompatible client configuration',
+    );
     expect(nonRTPStats.signallingEvent(487)).toBe('Call cancelled by caller');
     expect(nonRTPStats.signallingEvent(484)).toBe('Invalid destination format');
     expect(nonRTPStats.signallingEvent(500)).toBe('Internal Server Error');
@@ -207,7 +242,11 @@ describe('NonRTPStats', () => {
 
   it('should send app error', () => {
     const reportErrorFn = jest.spyOn(context.callStats, 'reportError');
-    const err = { name: 'hangup', message: 'hangup initialized', method: 'hangup()' };
+    const err = {
+      name: 'hangup',
+      message: 'hangup initialized',
+      method: 'hangup()',
+    };
     nonRTPStats.AppError.call(context, err, true);
     expect(reportErrorFn).toHaveBeenCalledTimes(1);
   });
@@ -216,17 +255,22 @@ describe('NonRTPStats', () => {
     const reportErrorFn = jest.spyOn(context.callStats, 'reportError');
     context.userName = null;
     context.callStats = null;
-    const err = { name: 'hangup', message: 'hangup initialized', method: 'hangup()' };
+    const err = {
+      name: 'hangup',
+      message: 'hangup initialized',
+      method: 'hangup()',
+    };
     nonRTPStats.AppError.call(context, err, true);
     expect(reportErrorFn).toHaveBeenCalledTimes(0);
   });
 });
 
-const updateSDKVersions = (sdkVersionParse) => {
+const updateSDKVersions = sdkVersionParse => {
   nonRTPStatsResponse.ANSWER_EVENT.sdkVersionMajor = sdkVersionParse.major;
   nonRTPStatsResponse.ANSWER_EVENT.sdkVersionMinor = sdkVersionParse.minor;
   nonRTPStatsResponse.ANSWER_EVENT.sdkVersionPatch = sdkVersionParse.patch;
-  nonRTPStatsResponse.ANSWER_EVENT.sdkVersionPre = getSdkVersionPre(sdkVersionParse) === '' ? 'beta.0' : getSdkVersionPre(sdkVersionParse);
+  nonRTPStatsResponse.ANSWER_EVENT.sdkVersionPre =
+    getSdkVersionPre(sdkVersionParse);
   nonRTPStatsResponse.SUMMARY_EVENT.sdkVersionMajor = sdkVersionParse.major;
   nonRTPStatsResponse.SUMMARY_EVENT.sdkVersionMinor = sdkVersionParse.minor;
   nonRTPStatsResponse.SUMMARY_EVENT.sdkVersionPatch = sdkVersionParse.patch;

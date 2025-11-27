@@ -173,7 +173,7 @@ export class StatsSocket {
    * Send messages to the socket.
    * @param {Object} message - call stats(Answered/RTP/Summary/Feedback/Failure Events)
    */
-  send = (message: {[key:string]: any}, client: Client): boolean => {
+  send = (message: { [key: string]: any }, client: Client): boolean => {
     if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
       this.messageBuffer.push(JSON.stringify(message));
     }
@@ -184,14 +184,17 @@ export class StatsSocket {
           const item = this.messageBuffer.shift();
           this.ws.send(item as string);
           Plivo.log.debug('stats send success');
-          if ((client.callSession == null) && (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK')) {
-            // destroying stats socket since call has ended
-            this.disconnect();
-            client.statsSocket = null;
-            client.networkChangeInCurrentSession = false;
-            client.deviceToggledInCurrentSession = false;
-          }
         }
+      }
+      if (
+        client.callSession == null &&
+        (message.msg === 'CALL_SUMMARY' || message.msg === 'FEEDBACK')
+      ) {
+        // destroying stats socket since call has ended
+        this.disconnect();
+        client.statsSocket = null;
+        client.networkChangeInCurrentSession = false;
+        client.deviceToggledInCurrentSession = false;
       }
       if (retryAttempts !== C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
         retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
@@ -207,25 +210,30 @@ export class StatsSocket {
       if (retryAttempts === C.SOCKET_SEND_STATS_RETRY_ATTEMPTS) {
         retryAttempts = C.SOCKET_SEND_STATS_RETRY_ATTEMPTS;
         retrySecondsCount = C.SOCKET_SEND_STATS_RETRY_SECONDS_COUNT;
-        Plivo.log.error(`${C.LOGCAT.CALL} | Error in sending call summary event due to retry exhaustion`);
+        Plivo.log.error(
+          `${C.LOGCAT.CALL} | Error in sending call summary event due to retry exhaustion`,
+        );
         // return false;
       }
     }
+    // if (!this.isConnecting && !this.isConnected()) {
     setTimeout(() => {
       retrySecondsCount += 1;
       retryAttempts -= 1;
       this.send(message, client);
     }, retrySecondsCount * 900);
-
-    Plivo.log.warn(`${C.LOGCAT.CALL} | statsSocket is not open, retrying to connect`);
+    Plivo.log.warn(
+      `${C.LOGCAT.CALL} | statsSocket is not open, retrying to connect`,
+    );
     this.reconnect();
+    // }
     return false;
   };
 
   /**
    * Reconnect to the socket
    */
-  reconnect = ():void => {
+  reconnect = (): void => {
     if (navigator.onLine && !this.isConnecting) {
       this.ws = null;
       this.connect();
