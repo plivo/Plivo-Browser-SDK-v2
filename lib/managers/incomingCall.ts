@@ -217,11 +217,21 @@ const onAccepted = (incomingCall: CallSession) => (): void => {
   incomingCall.onAccepted(cs);
   const inboundConnection = incomingCall.session.connection || null;
   if (inboundConnection) {
-    inboundConnection.oniceconnectionstatechange = () => onIceConnectionChange.call(
-      cs, inboundConnection, incomingCall,
-    );
+    inboundConnection.ontrack = (evt: RTCTrackEvent) => {
+      Plivo.log.debug("Incoming remote Audio stream received");
+      if (evt.streams[0]) {
+        cs.remoteView.srcObject = evt.streams[0];
+        cs.remoteView
+          .play()
+          .catch((e) => Plivo.log.error("Autoplay blocked:", e));
+      }
+    };
+    inboundConnection.oniceconnectionstatechange = () =>
+      onIceConnectionChange.call(cs, inboundConnection, incomingCall);
     inboundConnection.onconnectionstatechange = () => {
-      Plivo.log.debug(`${LOGCAT.CALL} | onconnectionstatechange is ${inboundConnection.connectionState}`);
+      Plivo.log.debug(
+        `${LOGCAT.CALL} | onconnectionstatechange is ${inboundConnection.connectionState} in incoming call`
+      );
       if (inboundConnection.connectionState === "connected") {
         cs.timeTakenForStats.mediaSetup.end = new Date().getTime();
       }
@@ -242,6 +252,7 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
     Plivo.log.error(`${LOGCAT.CALL} | Incoming call: remote stream does not exist`);
   }
   cs.remoteView.srcObject = remoteStream;
+  cs.remoteView.play().catch(e => Plivo.log.error('Autoplay blocked:', e));
   addCallstatsIOFabric.call(
     cs,
     incomingCall,
