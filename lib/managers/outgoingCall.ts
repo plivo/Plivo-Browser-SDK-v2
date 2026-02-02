@@ -240,7 +240,13 @@ const OnProgress = (evt: SessionProgressEvent): void => {
     cs._currentSession.setState(cs._currentSession.STATE.RINGING);
     cs.callUUID = callUUID;
     Plivo.log.info(`${LOGCAT.CALL} | Outgoing call Ringing, CallUUID: ${cs.callUUID}`);
-    cs.emit('onCallRemoteRinging', cs._currentSession.getCallInfo("local"));
+    const callInfo = cs._currentSession.getCallInfo("local");
+    cs.emit('onCallRemoteRinging', callInfo);
+
+    // Multi-tab mode: broadcast call ringing to all tabs
+    if (cs.multiTabConfig?.enabled && cs.tabManager?.isLeader()) {
+      cs.tabManager.broadcastCallRinging(callUUID, callInfo);
+    }
     addCloseProtectionListeners.call(cs);
     addMidAttribute.call(cs, evt);
     addCallstatsIOFabric.call(
@@ -320,6 +326,15 @@ const onConfirmed = (): void => {
     if (!cs.connectToneView.paused) {
       stopAudio(CONNECT_TONE_ELEMENT_ID);
     }
+
+    // Multi-tab mode: broadcast call answered to all tabs
+    if (cs.multiTabConfig?.enabled && cs.tabManager?.isLeader()) {
+      cs.tabManager.broadcastCallAnswered(
+        cs._currentSession.callUUID || '',
+        cs.tabManager.getTabId(),
+        cs._currentSession.getCallInfo("local"),
+      );
+    }
   }
 };
 
@@ -359,7 +374,14 @@ const onFailed = (evt: SessionFailedEvent): void => {
     reasonInfo = extractReason(evt);
   }
   Plivo.log.info(`${LOGCAT.CALL} | Outgoing call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
-  cs.emit('onCallFailed', evt.cause, cs._currentSession.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
+  const callInfo = cs._currentSession.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause);
+  cs.emit('onCallFailed', evt.cause, callInfo);
+
+  // Multi-tab mode: broadcast call failed to all tabs
+  if (cs.multiTabConfig?.enabled && cs.tabManager?.isLeader()) {
+    cs.tabManager.broadcastCallFailed(cs._currentSession.callUUID || '', evt.cause, callInfo);
+  }
+
   cs._currentSession.onFailed(cs, evt);
 
   // //  logout if logged in by token and token get expired
@@ -385,6 +407,17 @@ const onEnded = (evt: SessionEndedEvent): void => {
     Plivo.log.info(`${LOGCAT.CALL} | Outgoing call - ${evt.cause} - ${evt.originator}`);
     Plivo.log.debug(`Outgoing call ended - ${cs._currentSession.callUUID}`);
     Plivo.log.info('Outgoing call ended');
+
+    // Multi-tab mode: broadcast call ended to all tabs (do this before onEnded clears the session)
+    if (cs.multiTabConfig?.enabled && cs.tabManager?.isLeader()) {
+      cs.tabManager.broadcastCallEnded(
+        cs._currentSession.callUUID || '',
+        evt.originator,
+        evt.cause,
+        cs._currentSession.getCallInfo(evt.originator),
+      );
+    }
+
     cs._currentSession.onEnded(cs, evt);
     // reset back pingpong to idle state timeouts
     resetPingPong({

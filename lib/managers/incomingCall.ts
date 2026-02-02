@@ -149,13 +149,25 @@ const onProgress = (incomingCall: CallSession) => (): void => {
     Plivo.log.debug(`${LOGCAT.CALL} | Emitting onIncomingCall`);
     if (getCurrentIncomingCall(incomingCall.callUUID ?? "", cs)) {
       isIncomingCallRinging = true;
+      const callInfo = incomingCall.getCallInfo("local");
       cs.emit(
         'onIncomingCall',
         callerId,
         incomingCall.extraHeaders,
-        incomingCall.getCallInfo("local"),
+        callInfo,
         callerName,
       );
+
+      // Multi-tab mode: broadcast incoming call to all tabs
+      if (cs.multiTabConfig?.enabled && cs.tabManager?.isLeader()) {
+        cs.tabManager.broadcastIncomingCall(
+          callerId,
+          callerName,
+          incomingCall.callUUID || '',
+          incomingCall.extraHeaders,
+          callInfo,
+        );
+      }
     } else {
       Plivo.log.error(`${LOGCAT.CALL} |Cannot emit onIncomingCall for callUUID: ${incomingCall.callUUID}. Incoming call does not exists`);
     }
@@ -248,6 +260,15 @@ const onConfirmed = (incomingCall: CallSession) => (): void => {
     incomingCall.src,
     incomingCall.callUUID,
   );
+
+  // Multi-tab mode: broadcast call answered to all tabs
+  if (cs.multiTabConfig?.enabled && cs.tabManager?.isLeader()) {
+    cs.tabManager.broadcastCallAnswered(
+      incomingCall.callUUID || '',
+      cs.tabManager.getTabId(),
+      incomingCall.getCallInfo("local"),
+    );
+  }
 };
 
 /**
@@ -267,7 +288,22 @@ const handleFailureCauses = (evt: SessionFailedEvent, incomingCall: CallSession)
     incomingCall.setState(incomingCall.STATE.CANCELED);
     Plivo.log.info(`${LOGCAT.CALL} | Incoming call Canceled - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}}`);
     if (isIncomingCallRinging) {
-      cs.emit('onIncomingCallCanceled', incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause));
+      const callInfo = incomingCall.getCallInfo(evt.originator, reasonInfo.protocol, reasonInfo.text, reasonInfo.cause);
+      cs.emit('onIncomingCallCanceled', callInfo);
+
+      // Multi-tab mode: broadcast incoming call canceled to all tabs
+      if (cs.multiTabConfig?.enabled && cs.tabManager?.isLeader()) {
+        const callerUri = incomingCall.session.remote_identity.uri.toString();
+        const callerName = incomingCall.session.remote_identity.display_name || '';
+        const callerId = `${callerUri.substring(4, callerUri.indexOf('@'))}@${DOMAIN}`;
+        cs.tabManager.broadcastIncomingCallCanceled(
+          callerId,
+          callerName,
+          incomingCall.callUUID || '',
+          incomingCall.extraHeaders,
+          callInfo,
+        );
+      }
     }
   } else {
     Plivo.log.info(`${LOGCAT.CALL} | Incoming call failed - ${(reasonInfo.text === "" || reasonInfo.text === "none") ? evt.cause : reasonInfo.text}`);
@@ -314,6 +350,17 @@ const onEnded = (incomingCall: CallSession) => (evt: SessionEndedEvent): void =>
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call - ${evt.cause} - ${evt.originator}`);
   Plivo.log.debug(`Incoming call ended - ${incomingCall.callUUID}`);
   Plivo.log.info(`${LOGCAT.CALL} | Incoming call Hangup`);
+
+  // Multi-tab mode: broadcast call ended to all tabs (do this before onEnded clears the session)
+  if (cs.multiTabConfig?.enabled && cs.tabManager?.isLeader()) {
+    cs.tabManager.broadcastCallEnded(
+      incomingCall.callUUID || '',
+      evt.originator,
+      evt.cause,
+      incomingCall.getCallInfo(evt.originator),
+    );
+  }
+
   incomingCall.onEnded(cs, evt);
   // reset back pingpong to idle state timeouts
   resetPingPong({

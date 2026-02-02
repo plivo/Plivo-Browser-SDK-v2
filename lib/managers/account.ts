@@ -361,6 +361,11 @@ class Account {
     };
     Plivo.log.debug(`${C.LOGCAT.WS} |  websocket connected: ${this.cs.connectionInfo.reason}`);
     this.cs.emit('onConnectionChange', { ...this.cs.connectionInfo });
+
+    // Multi-tab mode: broadcast connection change to all tabs
+    if (this.cs.multiTabConfig?.enabled && this.cs.tabManager?.isLeader()) {
+      this.cs.tabManager.broadcastConnectionChange(this.cs.connectionInfo.state, this.cs.connectionInfo.reason);
+    }
     if (this.cs.isAccessToken && res.response.headers['X-Plivo-Jwt']) {
       const expiryTimeInEpoch = res.response.headers['X-Plivo-Jwt'][0].raw.split(";")[0].split("=")[1];
       this.cs.setExpiryTimeInEpoch(expiryTimeInEpoch * 1000);
@@ -418,6 +423,11 @@ class Account {
       this.cs.noiseSuppresion = new NoiseSuppression(this.cs);
       this.cs.emit('onLogin');
       Plivo.log.info(`${C.LOGCAT.LOGIN} | User logged in successfully`);
+
+      // Multi-tab mode: broadcast login success to all tabs
+      if (this.cs.multiTabConfig?.enabled && this.cs.tabManager?.isLeader()) {
+        this.cs.tabManager.broadcastLoginSuccess(this.credentials.userName);
+      }
       // in firefox and safari web socket re-establishes automatically after network change
       startPingPong({
         client: this.cs,
@@ -458,6 +468,12 @@ class Account {
     }
     Plivo.log.debug(`${C.LOGCAT.WS} |  websocket disconnected with reason : ${this.cs.connectionInfo.reason}`);
     this.cs.emit('onConnectionChange', { ...this.cs.connectionInfo });
+
+    // Multi-tab mode: broadcast connection change to all tabs
+    if (this.cs.multiTabConfig?.enabled && this.cs.tabManager?.isLeader()) {
+      this.cs.tabManager.broadcastConnectionChange(this.cs.connectionInfo.state, this.cs.connectionInfo.reason);
+    }
+
     if (!this.cs.isLogoutCalled) {
       return;
     }
@@ -498,15 +514,23 @@ class Account {
     this.cs.userName = null;
     this.cs.password = null;
     const errorCode = error?.response?.headers['X-Plivo-Jwt-Error-Code'] ? parseInt(error?.response?.headers['X-Plivo-Jwt-Error-Code'][0]?.raw, 10) : 401;
+    let errorReason: string;
     if (error.cause && errorCode === 401) {
       Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: `, error.cause, error.response);
+      errorReason = error.cause;
       this.cs.emit('onLoginFailed', error.cause);
     } else {
       clearInterval(this.cs.networkChangeInterval as any);
       this.cs.networkChangeInterval = null;
       const errorString = this.cs.isAccessTokenGenerator ? "RELOGIN_FAILED_INVALID_TOKEN" : this.cs.getErrorStringByErrorCodes(errorCode);
       Plivo.log.info(`${C.LOGCAT.LOGIN} | Login failed with error: ${errorString}`);
+      errorReason = errorString;
       this.cs.emit('onLoginFailed', errorString);
+    }
+
+    // Multi-tab mode: broadcast login failed to all tabs
+    if (this.cs.multiTabConfig?.enabled && this.cs.tabManager?.isLeader()) {
+      this.cs.tabManager.broadcastLoginFailed(errorReason);
     }
   };
 

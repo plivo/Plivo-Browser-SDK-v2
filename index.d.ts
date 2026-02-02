@@ -21,6 +21,7 @@ declare module 'plivo-browser-sdk/client' {
     import { OutputDevices, InputDevices, RingToneDevices } from 'plivo-browser-sdk/media/audioDevice';
     import { NoiseSuppression } from 'plivo-browser-sdk/rnnoise/NoiseSuppression';
     import { LoggerUtil } from 'plivo-browser-sdk/utils/loggerUtil';
+    import { TabManager, MultiTabConfig } from 'plivo-browser-sdk/managers/multiTab';
     export interface PlivoObject {
             log: typeof Logger;
             sendEvents?: (obj: any, session: CallSession) => void;
@@ -51,6 +52,13 @@ declare module 'plivo-browser-sdk/client' {
             usePlivoStunServer?: boolean;
             dtmfOptions?: DtmfOptions;
             noiseReductionFilePath?: string;
+            /**
+                * Multi-tab configuration options
+                * When enabled, multiple tabs can share a single SIP registration
+                * Only one tab (leader) maintains the SIP connection
+                * All tabs receive incoming calls and can answer/make calls
+                */
+            multiTab?: Partial<MultiTabConfig>;
     }
     export interface BrowserDetails {
             browser: string;
@@ -490,6 +498,16 @@ declare module 'plivo-browser-sdk/client' {
                 * Get current version of the SDK
                 */
             version: string;
+            /**
+                * Multi-tab manager for coordinating across browser tabs
+                * @private
+                */
+            tabManager: TabManager | null;
+            /**
+                * Multi-tab configuration
+                * @private
+                */
+            multiTabConfig: MultiTabConfig;
             /**
                 * Register using user credentials.
                 * @param {String} userName
@@ -1204,6 +1222,15 @@ declare module 'plivo-browser-sdk/utils/loggerUtil' {
     }
 }
 
+declare module 'plivo-browser-sdk/managers/multiTab' {
+    /**
+      * Multi-tab handling module
+      */
+    export { InterTabChannel } from 'plivo-browser-sdk/managers/multiTab/InterTabChannel';
+    export { TabManager } from 'plivo-browser-sdk/managers/multiTab/TabManager';
+    export * from 'plivo-browser-sdk/managers/multiTab/types';
+}
+
 declare module 'plivo-browser-sdk/constants' {
     export const DOMAIN = "phone.plivo.com";
     export const WS_SERVERS: string[];
@@ -1826,6 +1853,407 @@ declare module 'plivo-browser-sdk/stats/nonRTPStats' {
             * @param {String} action
             */
     export const onToggleMute: (callSession: CallSession, action: string) => void;
+}
+
+declare module 'plivo-browser-sdk/managers/multiTab/InterTabChannel' {
+    /**
+        * InterTabChannel - Handles BroadcastChannel communication between tabs
+        * with localStorage fallback for older browsers
+        */
+    import { TabMessage, TabMessageType } from 'plivo-browser-sdk/managers/multiTab/types';
+    type MessageHandler = (message: TabMessage) => void;
+    /**
+        * InterTabChannel class for cross-tab communication
+        */
+    export class InterTabChannel {
+            constructor(channelName?: string);
+            /**
+                * Post a message to all other tabs
+                */
+            postMessage(type: TabMessageType, payload?: any): void;
+            /**
+                * Subscribe to a specific message type
+                */
+            on(type: TabMessageType, handler: MessageHandler): void;
+            /**
+                * Subscribe to all messages
+                */
+            onAny(handler: MessageHandler): void;
+            /**
+                * Unsubscribe from a specific message type
+                */
+            off(type: TabMessageType, handler: MessageHandler): void;
+            /**
+                * Unsubscribe from all messages
+                */
+            offAny(handler: MessageHandler): void;
+            /**
+                * Remove all handlers for a specific message type
+                */
+            removeAllListeners(type?: TabMessageType): void;
+            /**
+                * Get the current tab's ID
+                */
+            getTabId(): string;
+            /**
+                * Get the tab priority (based on creation time - lower timestamp = higher priority)
+                */
+            getTabPriority(): number;
+            /**
+                * Check if BroadcastChannel is being used
+                */
+            isUsingBroadcastChannel(): boolean;
+            /**
+                * Close the channel and cleanup
+                */
+            close(): void;
+    }
+    export default InterTabChannel;
+}
+
+declare module 'plivo-browser-sdk/managers/multiTab/TabManager' {
+    /**
+        * TabManager - Manages multi-tab coordination including leader election
+        */
+    import { EventEmitter } from 'events';
+    import { TabState, MultiTabConfig, LoginRequestPayload, LoginSuccessPayload, LoginFailedPayload, IncomingCallPayload, AnswerCallPayload, RejectCallPayload, IgnoreCallPayload, HangupCallPayload, MakeCallPayload, CallRingingPayload, CallAnsweredPayload, CallEndedPayload, CallFailedPayload, SendDtmfPayload, ConnectionChangePayload } from 'plivo-browser-sdk/managers/multiTab/types';
+    import { ExtraHeaders } from 'plivo-browser-sdk/client';
+    import { CallInfo } from 'plivo-browser-sdk/managers/callSession';
+    /**
+        * Events emitted by TabManager
+        */
+    export interface TabManagerEvents {
+            'becameLeader': () => void;
+            'lostLeadership': () => void;
+            'leaderChanged': (leaderId: string) => void;
+            'loginRequest': (payload: LoginRequestPayload, tabId: string) => void;
+            'loginSuccess': (payload: LoginSuccessPayload) => void;
+            'loginFailed': (payload: LoginFailedPayload) => void;
+            'logoutRequest': (tabId: string) => void;
+            'logoutComplete': () => void;
+            'incomingCall': (payload: IncomingCallPayload) => void;
+            'incomingCallCanceled': (payload: IncomingCallPayload) => void;
+            'answerCallRequest': (payload: AnswerCallPayload) => void;
+            'rejectCallRequest': (payload: RejectCallPayload) => void;
+            'ignoreCallRequest': (payload: IgnoreCallPayload) => void;
+            'hangupCallRequest': (payload: HangupCallPayload) => void;
+            'makeCallRequest': (payload: MakeCallPayload) => void;
+            'callRinging': (payload: CallRingingPayload) => void;
+            'callAnswered': (payload: CallAnsweredPayload) => void;
+            'callEnded': (payload: CallEndedPayload) => void;
+            'callFailed': (payload: CallFailedPayload) => void;
+            'muteRequest': () => void;
+            'unmuteRequest': () => void;
+            'dtmfRequest': (payload: SendDtmfPayload) => void;
+            'connectionChange': (payload: ConnectionChangePayload) => void;
+    }
+    export class TabManager extends EventEmitter {
+            constructor(config?: Partial<MultiTabConfig>);
+            /**
+                * Initialize the tab manager and start leader election
+                */
+            initialize(): Promise<void>;
+            /**
+                * Check if this tab is the leader
+                */
+            isLeader(): boolean;
+            /**
+                * Get the current tab ID
+                */
+            getTabId(): string;
+            /**
+                * Get the leader tab ID
+                */
+            getLeaderId(): string | null;
+            /**
+                * Get current tab state
+                */
+            getState(): TabState;
+            /**
+                * Check if user is logged in (synced across tabs)
+                */
+            isLoggedIn(): boolean;
+            /**
+                * Request login (follower -> leader)
+                */
+            requestLogin(username: string, password?: string, accessToken?: string): void;
+            /**
+                * Broadcast login success (leader -> all)
+                */
+            broadcastLoginSuccess(username: string): void;
+            /**
+                * Broadcast login failed (leader -> all)
+                */
+            broadcastLoginFailed(reason: string): void;
+            /**
+                * Request logout (follower -> leader)
+                */
+            requestLogout(): void;
+            /**
+                * Broadcast logout complete (leader -> all)
+                */
+            broadcastLogoutComplete(): void;
+            /**
+                * Broadcast incoming call (leader -> all)
+                */
+            broadcastIncomingCall(callerId: string, callerName: string, callUUID: string, extraHeaders: ExtraHeaders, callInfo: CallInfo): void;
+            /**
+                * Broadcast incoming call canceled (leader -> all)
+                */
+            broadcastIncomingCallCanceled(callerId: string, callerName: string, callUUID: string, extraHeaders: ExtraHeaders, callInfo: CallInfo): void;
+            /**
+                * Request to answer a call (follower -> leader)
+                */
+            requestAnswerCall(callUUID: string, actionOnOtherIncomingCalls?: string): void;
+            /**
+                * Request to reject a call (follower -> leader)
+                */
+            requestRejectCall(callUUID: string): void;
+            /**
+                * Request to ignore a call (follower -> leader)
+                */
+            requestIgnoreCall(callUUID: string): void;
+            /**
+                * Request to hangup call (follower -> leader)
+                */
+            requestHangupCall(callUUID?: string): void;
+            /**
+                * Request to make a call (follower -> leader)
+                */
+            requestMakeCall(phoneNumber: string, extraHeaders: ExtraHeaders): void;
+            /**
+                * Broadcast call ringing (leader -> all)
+                */
+            broadcastCallRinging(callUUID: string, callInfo: CallInfo): void;
+            /**
+                * Broadcast call answered (leader -> all)
+                */
+            broadcastCallAnswered(callUUID: string, answeringTabId: string, callInfo: CallInfo): void;
+            /**
+                * Broadcast call ended (leader -> all)
+                */
+            broadcastCallEnded(callUUID: string, originator: string, reason: string, callInfo: CallInfo): void;
+            /**
+                * Broadcast call failed (leader -> all)
+                */
+            broadcastCallFailed(callUUID: string, reason: string, callInfo?: CallInfo): void;
+            /**
+                * Request mute (follower -> leader)
+                */
+            requestMute(): void;
+            /**
+                * Request unmute (follower -> leader)
+                */
+            requestUnmute(): void;
+            /**
+                * Request send DTMF (follower -> leader)
+                */
+            requestSendDtmf(digit: string | number): void;
+            /**
+                * Broadcast connection change (leader -> all)
+                */
+            broadcastConnectionChange(state: string, reason: string): void;
+            /**
+                * Update local state (for leader tab)
+                */
+            updateState(updates: Partial<TabState>): void;
+            /**
+                * Cleanup resources
+                */
+            cleanup(): void;
+    }
+    export default TabManager;
+}
+
+declare module 'plivo-browser-sdk/managers/multiTab/types' {
+    /**
+        * Multi-tab communication types and interfaces
+        */
+    import { ExtraHeaders } from 'plivo-browser-sdk/client';
+    import { CallInfo } from 'plivo-browser-sdk/managers/callSession';
+    /**
+        * Message types for inter-tab communication
+        */
+    export enum TabMessageType {
+            LEADER_CLAIM = "LEADER_CLAIM",
+            LEADER_HEARTBEAT = "LEADER_HEARTBEAT",
+            LEADER_ACK = "LEADER_ACK",
+            LEADER_LEAVING = "LEADER_LEAVING",
+            REQUEST_LEADER_STATUS = "REQUEST_LEADER_STATUS",
+            LOGIN_REQUEST = "LOGIN_REQUEST",
+            LOGIN_SUCCESS = "LOGIN_SUCCESS",
+            LOGIN_FAILED = "LOGIN_FAILED",
+            LOGOUT_REQUEST = "LOGOUT_REQUEST",
+            LOGOUT_COMPLETE = "LOGOUT_COMPLETE",
+            INCOMING_CALL = "INCOMING_CALL",
+            INCOMING_CALL_CANCELED = "INCOMING_CALL_CANCELED",
+            ANSWER_CALL = "ANSWER_CALL",
+            REJECT_CALL = "REJECT_CALL",
+            IGNORE_CALL = "IGNORE_CALL",
+            HANGUP_CALL = "HANGUP_CALL",
+            MAKE_CALL = "MAKE_CALL",
+            CALL_RINGING = "CALL_RINGING",
+            CALL_ANSWERED = "CALL_ANSWERED",
+            CALL_ENDED = "CALL_ENDED",
+            CALL_FAILED = "CALL_FAILED",
+            MUTE_CALL = "MUTE_CALL",
+            UNMUTE_CALL = "UNMUTE_CALL",
+            SEND_DTMF = "SEND_DTMF",
+            TAB_REGISTER = "TAB_REGISTER",
+            TAB_UNREGISTER = "TAB_UNREGISTER",
+            CONNECTION_CHANGE = "CONNECTION_CHANGE"
+    }
+    /**
+        * Base message interface
+        */
+    export interface TabMessage {
+            type: TabMessageType;
+            tabId: string;
+            timestamp: number;
+            payload?: any;
+    }
+    /**
+        * Leader claim message payload
+        */
+    export interface LeaderClaimPayload {
+            priority: number;
+    }
+    /**
+        * Login request payload (sent from follower to leader)
+        */
+    export interface LoginRequestPayload {
+            username: string;
+            password?: string;
+            accessToken?: string;
+            isAccessToken: boolean;
+    }
+    /**
+        * Login success payload (broadcast from leader)
+        */
+    export interface LoginSuccessPayload {
+            username: string;
+    }
+    /**
+        * Login failed payload
+        */
+    export interface LoginFailedPayload {
+            reason: string;
+    }
+    /**
+        * Incoming call payload (broadcast from leader to all tabs)
+        */
+    export interface IncomingCallPayload {
+            callerId: string;
+            callerName: string;
+            callUUID: string;
+            extraHeaders: ExtraHeaders;
+            callInfo: CallInfo;
+    }
+    /**
+        * Answer call payload (sent from any tab to leader)
+        */
+    export interface AnswerCallPayload {
+            callUUID: string;
+            requestingTabId: string;
+            actionOnOtherIncomingCalls?: string;
+    }
+    /**
+        * Reject call payload
+        */
+    export interface RejectCallPayload {
+            callUUID: string;
+    }
+    /**
+        * Ignore call payload
+        */
+    export interface IgnoreCallPayload {
+            callUUID: string;
+    }
+    /**
+        * Hangup call payload
+        */
+    export interface HangupCallPayload {
+            callUUID?: string;
+    }
+    /**
+        * Make call payload (sent from any tab to leader)
+        */
+    export interface MakeCallPayload {
+            phoneNumber: string;
+            extraHeaders: ExtraHeaders;
+            requestingTabId: string;
+    }
+    /**
+        * Call ringing payload (broadcast from leader)
+        */
+    export interface CallRingingPayload {
+            callUUID: string;
+            callInfo: CallInfo;
+    }
+    /**
+        * Call answered payload (broadcast from leader)
+        */
+    export interface CallAnsweredPayload {
+            callUUID: string;
+            answeringTabId: string;
+            callInfo: CallInfo;
+    }
+    /**
+        * Call ended payload
+        */
+    export interface CallEndedPayload {
+            callUUID: string;
+            originator: string;
+            reason: string;
+            callInfo: CallInfo;
+    }
+    /**
+        * Call failed payload
+        */
+    export interface CallFailedPayload {
+            callUUID: string;
+            reason: string;
+            callInfo?: CallInfo;
+    }
+    /**
+        * DTMF payload
+        */
+    export interface SendDtmfPayload {
+            digit: string | number;
+    }
+    /**
+        * Connection change payload
+        */
+    export interface ConnectionChangePayload {
+            state: string;
+            reason: string;
+    }
+    /**
+        * Tab state
+        */
+    export interface TabState {
+            tabId: string;
+            isLeader: boolean;
+            leaderId: string | null;
+            lastLeaderHeartbeat: number;
+            isLoggedIn: boolean;
+            username: string | null;
+            hasActiveCall: boolean;
+            activeCallUUID: string | null;
+    }
+    /**
+        * Multi-tab configuration
+        */
+    export interface MultiTabConfig {
+            enabled: boolean;
+            heartbeatInterval: number;
+            leaderTimeout: number;
+            channelName: string;
+    }
+    /**
+        * Default multi-tab configuration
+        */
+    export const DEFAULT_MULTI_TAB_CONFIG: MultiTabConfig;
 }
 
 declare module 'plivo-browser-sdk/media/audioLevel' {

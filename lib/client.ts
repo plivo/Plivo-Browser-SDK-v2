@@ -37,6 +37,23 @@ import { NoiseSuppression } from './rnnoise/NoiseSuppression';
 import { ConnectionState } from './utils/networkManager';
 import { LOCAL_ERROR_CODES, LOGCAT } from './constants';
 import { LoggerUtil } from './utils/loggerUtil';
+import {
+  TabManager,
+  MultiTabConfig,
+  DEFAULT_MULTI_TAB_CONFIG,
+  LoginRequestPayload,
+  MakeCallPayload,
+  AnswerCallPayload,
+  RejectCallPayload,
+  IgnoreCallPayload,
+  HangupCallPayload,
+  SendDtmfPayload,
+  IncomingCallPayload,
+  CallAnsweredPayload,
+  CallEndedPayload,
+  CallFailedPayload,
+  CallRingingPayload,
+} from './managers/multiTab';
 
 export interface PlivoObject {
   log: typeof Logger;
@@ -77,6 +94,13 @@ export interface ConfiguationOptions {
   usePlivoStunServer?: boolean
   dtmfOptions?: DtmfOptions;
   noiseReductionFilePath?: string;
+  /**
+   * Multi-tab configuration options
+   * When enabled, multiple tabs can share a single SIP registration
+   * Only one tab (leader) maintains the SIP connection
+   * All tabs receive incoming calls and can answer/make calls
+   */
+  multiTab?: Partial<MultiTabConfig>;
 }
 
 export interface BrowserDetails {
@@ -597,6 +621,18 @@ export class Client extends EventEmitter {
   public version: string;
 
   /**
+   * Multi-tab manager for coordinating across browser tabs
+   * @private
+   */
+  tabManager: TabManager | null;
+
+  /**
+   * Multi-tab configuration
+   * @private
+   */
+  multiTabConfig: MultiTabConfig;
+
+  /**
    * Register using user credentials.
    * @param {String} userName
    * @param {String} password
@@ -970,6 +1006,219 @@ export class Client extends EventEmitter {
       `${C.LOGCAT.INIT} | PlivoWebSdk initialized in ${Plivo.log.level()} mode, version: PLIVO_LIB_VERSION , browser: ${this.browserDetails.browser}-${this.browserDetails.version}`,
     );
     this.jsFramework = detectFramework();
+
+    // Initialize multi-tab configuration
+    this.multiTabConfig = {
+      ...DEFAULT_MULTI_TAB_CONFIG,
+      ...(options.multiTab || {}),
+    };
+    this.tabManager = null;
+
+    // Initialize multi-tab manager if enabled
+    if (this.multiTabConfig.enabled) {
+      this.initializeMultiTab();
+    }
+  }
+
+  /**
+   * Initialize multi-tab manager and set up event handlers
+   * @private
+   */
+  private initializeMultiTab(): void {
+    Plivo.log.info(`${C.LOGCAT.INIT} | Initializing multi-tab support`);
+
+    this.tabManager = new TabManager(this.multiTabConfig);
+
+    // Set up event handlers for multi-tab coordination
+    this.setupMultiTabEventHandlers();
+
+    // Initialize the tab manager (starts leader election)
+    this.tabManager.initialize().then(() => {
+      if (this.tabManager?.isLeader()) {
+        Plivo.log.info(`${C.LOGCAT.INIT} | This tab is the leader`);
+      } else {
+        Plivo.log.info(`${C.LOGCAT.INIT} | This tab is a follower, leader: ${this.tabManager?.getLeaderId()}`);
+      }
+    });
+  }
+
+  /**
+   * Set up event handlers for multi-tab coordination
+   * @private
+   */
+  private setupMultiTabEventHandlers(): void {
+    if (!this.tabManager) return;
+
+    // Leader events
+    this.tabManager.on('becameLeader', () => {
+      Plivo.log.info(`${C.LOGCAT.INIT} | Became leader tab`);
+      // If we have credentials stored, perform login
+      if (this.userName && this.password && !this.isLoggedIn) {
+        this._performLogin(this.userName, this.password, null);
+      } else if (this.userName && this.accessToken && !this.isLoggedIn) {
+        this._performLogin(this.userName, null, this.accessToken);
+      }
+    });
+
+    this.tabManager.on('lostLeadership', () => {
+      Plivo.log.info(`${C.LOGCAT.INIT} | Lost leadership`);
+    });
+
+    // Login events (for leader to handle requests from followers)
+    this.tabManager.on('loginRequest', (payload: LoginRequestPayload, tabId: string) => {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Received login request from tab ${tabId}`);
+      // Store credentials and perform login
+      this.userName = payload.username;
+      if (payload.isAccessToken && payload.accessToken) {
+        this._performLogin(payload.username, null, payload.accessToken);
+      } else if (payload.password) {
+        this._performLogin(payload.username, payload.password, null);
+      }
+    });
+
+    // Login success event (for followers)
+    this.tabManager.on('loginSuccess', (payload) => {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Received login success from leader`);
+      this.userName = payload.username;
+      this.isLoggedIn = true;
+      this.emit('onLogin');
+    });
+
+    // Login failed event (for followers)
+    this.tabManager.on('loginFailed', (payload) => {
+      Plivo.log.debug(`${C.LOGCAT.LOGIN} | Received login failed from leader`);
+      this.isLoggedIn = false;
+      this.emit('onLoginFailed', payload.reason);
+    });
+
+    // Logout events
+    this.tabManager.on('logoutRequest', (tabId: string) => {
+      Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Received logout request from tab ${tabId}`);
+      this._logout();
+    });
+
+    this.tabManager.on('logoutComplete', () => {
+      Plivo.log.debug(`${C.LOGCAT.LOGOUT} | Received logout complete from leader`);
+      this.isLoggedIn = false;
+      this.userName = null;
+      this.password = null;
+      this.emit('onLogout');
+    });
+
+    // Call events for followers (receiving broadcasts from leader)
+    this.tabManager.on('incomingCall', (payload: IncomingCallPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received incoming call broadcast: ${payload.callUUID}`);
+      this.emit('onIncomingCall', payload.callerId, payload.extraHeaders, payload.callInfo, payload.callerName);
+    });
+
+    this.tabManager.on('incomingCallCanceled', (payload: IncomingCallPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received incoming call canceled broadcast: ${payload.callUUID}`);
+      this.emit('onIncomingCallCanceled', payload.callInfo);
+    });
+
+    this.tabManager.on('callRinging', (payload: CallRingingPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received call ringing broadcast: ${payload.callUUID}`);
+      this.emit('onCallRemoteRinging', payload.callInfo);
+    });
+
+    this.tabManager.on('callAnswered', (payload: CallAnsweredPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received call answered broadcast: ${payload.callUUID}`);
+      this.emit('onCallAnswered', payload.callInfo);
+    });
+
+    this.tabManager.on('callEnded', (payload: CallEndedPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received call ended broadcast: ${payload.callUUID}`);
+      this.emit('onCallTerminated', { originator: payload.originator, reason: payload.reason }, payload.callInfo);
+    });
+
+    this.tabManager.on('callFailed', (payload: CallFailedPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received call failed broadcast: ${payload.callUUID}`);
+      this.emit('onCallFailed', payload.reason, payload.callInfo);
+    });
+
+    // Call action requests (for leader to handle requests from followers)
+    this.tabManager.on('answerCallRequest', (payload: AnswerCallPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received answer call request for ${payload.callUUID}`);
+      this._answer(payload.callUUID, payload.actionOnOtherIncomingCalls || '');
+    });
+
+    this.tabManager.on('rejectCallRequest', (payload: RejectCallPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received reject call request for ${payload.callUUID}`);
+      this._reject(payload.callUUID);
+    });
+
+    this.tabManager.on('ignoreCallRequest', (payload: IgnoreCallPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received ignore call request for ${payload.callUUID}`);
+      this._ignore(payload.callUUID);
+    });
+
+    this.tabManager.on('hangupCallRequest', (payload: HangupCallPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received hangup call request`);
+      this._hangup();
+    });
+
+    this.tabManager.on('makeCallRequest', (payload: MakeCallPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received make call request to ${payload.phoneNumber}`);
+      this._call(payload.phoneNumber, payload.extraHeaders);
+    });
+
+    // Media control requests (for leader)
+    this.tabManager.on('muteRequest', () => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received mute request`);
+      this._mute();
+    });
+
+    this.tabManager.on('unmuteRequest', () => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received unmute request`);
+      this._unmute();
+    });
+
+    this.tabManager.on('dtmfRequest', (payload: SendDtmfPayload) => {
+      Plivo.log.debug(`${C.LOGCAT.CALL} | Received DTMF request: ${payload.digit}`);
+      this._sendDtmf(payload.digit);
+    });
+
+    // Connection change events (for followers)
+    this.tabManager.on('connectionChange', (payload) => {
+      Plivo.log.debug(`${C.LOGCAT.WS} | Received connection change: ${payload.state}`);
+      this.connectionInfo = { state: payload.state, reason: payload.reason };
+      this.emit('onConnectionChange', { ...this.connectionInfo });
+    });
+  }
+
+  /**
+   * Internal method to perform actual login (used by leader)
+   * @private
+   */
+  private _performLogin(username: string, password: string | null, accessToken: string | null): boolean {
+    if (accessToken) {
+      this.accessToken = accessToken;
+      this.isAccessToken = true;
+      return this.tokenLogin(username, accessToken);
+    } else if (password) {
+      this.password = password;
+      this.isAccessToken = false;
+      this.isLoginCalled = true;
+      const account = new Account(this, username, password, null,
+        this.options.registrationRefreshTimer ?? C.REGISTER_EXPIRES_SECONDS);
+      const readyForLogin = () => {
+        account.setupUserAccount();
+        if (this.browserDetails.browser === 'safari') {
+          documentUtil.playAudio(C.SILENT_TONE_ELEMENT_ID);
+        }
+      };
+      const isValid = account.validate(() => {
+        readyForLogin();
+      });
+      if (typeof isValid === 'boolean') {
+        if (!isValid) {
+          return false;
+        }
+        readyForLogin();
+      }
+      return true;
+    }
+    return false;
   }
 
   private getUsernameFromToken = (parsedToken: string | any): string => {
@@ -1181,6 +1430,17 @@ export class Client extends EventEmitter {
     Plivo.log.info(
       `${C.LOGCAT.LOGIN} | Login initiated with Endpoint - ${username}`,
     );
+
+    // Multi-tab mode: if not leader, send login request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.LOGIN} | Multi-tab mode: sending login request to leader`);
+      // Store credentials locally for potential future use (if we become leader)
+      this.userName = username;
+      this.password = password;
+      this.tabManager.requestLogin(username, password);
+      return true;
+    }
+
     if (this.phone && (this.isConnecting() || (this.phone as any).isRegistering())) {
       Plivo.log.warn(
         `${C.LOGCAT.LOGIN} | Already ${this.isConnecting() ? 'connecting' : 'registering'}`,
@@ -1226,8 +1486,22 @@ export class Client extends EventEmitter {
       Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Cannot execute logout: no active login session.', this.userName);
       return false;
     }
+
+    // Multi-tab mode: if not leader, send logout request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.LOGOUT} | Multi-tab mode: sending logout request to leader`);
+      this.tabManager.requestLogout();
+      return true;
+    }
+
     Plivo.log.debug(C.LOGCAT.LOGOUT, ' | Logout initiated!', this.userName);
     this.clearOnLogout();
+
+    // Multi-tab mode: broadcast logout to all tabs
+    if (this.multiTabConfig.enabled && this.tabManager && this.tabManager.isLeader()) {
+      this.tabManager.broadcastLogoutComplete();
+    }
+
     return true;
   };
 
@@ -1235,6 +1509,17 @@ export class Client extends EventEmitter {
     this.timeTakenForStats.pdd = {
       init: new Date().getTime(),
     };
+
+    // Multi-tab mode: if not leader, send make call request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Multi-tab mode: sending make call request to leader`);
+      if (!this.tabManager.isLoggedIn()) {
+        Plivo.log.warn(`${C.LOGCAT.LOGIN} | Must be logged in before to make a call`);
+        return false;
+      }
+      this.tabManager.requestMakeCall(phoneNumber, extraHeaders);
+      return true;
+    }
 
     if (!this.isLoggedIn && (this.phone === null
       || (this.phone
@@ -1289,6 +1574,13 @@ export class Client extends EventEmitter {
   };
 
   private _answer = (callUUID: string, actionOnOtherIncomingCalls: string): boolean => {
+    // Multi-tab mode: if not leader, send answer request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Multi-tab mode: sending answer call request to leader`);
+      this.tabManager.requestAnswerCall(callUUID, actionOnOtherIncomingCalls);
+      return true;
+    }
+
     const incomingCall = IncomingCall.getCurrentIncomingCall(callUUID, this);
     const isValid = IncomingCall.checkIncomingCallAction(
       actionOnOtherIncomingCalls,
@@ -1338,6 +1630,13 @@ export class Client extends EventEmitter {
   };
 
   private _hangup = (): boolean => {
+    // Multi-tab mode: if not leader, send hangup request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Multi-tab mode: sending hangup call request to leader`);
+      this.tabManager.requestHangupCall();
+      return true;
+    }
+
     if (this._currentSession) {
       this.loggerUtil.setSipCallID(this._currentSession.sipCallID ?? "");
       Plivo.log.debug(`hangup - ${this._currentSession.callUUID}`);
@@ -1395,6 +1694,13 @@ export class Client extends EventEmitter {
   };
 
   private _reject = (callUUID: string): boolean => {
+    // Multi-tab mode: if not leader, send reject request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Multi-tab mode: sending reject call request to leader`);
+      this.tabManager.requestRejectCall(callUUID);
+      return true;
+    }
+
     const incomingCall = IncomingCall.getCurrentIncomingCall(callUUID, this);
     if (!incomingCall) {
       Plivo.log.warn(`${LOGCAT.CALL} | No call session exists to reject()`);
@@ -1453,6 +1759,13 @@ export class Client extends EventEmitter {
   };
 
   private _ignore = (callUUID: string): boolean => {
+    // Multi-tab mode: if not leader, send ignore request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Multi-tab mode: sending ignore call request to leader`);
+      this.tabManager.requestIgnoreCall(callUUID);
+      return true;
+    }
+
     const incomingCall = IncomingCall.getCurrentIncomingCall(callUUID, this);
     if (incomingCall) {
       this.loggerUtil.setSipCallID(incomingCall.sipCallID ?? "");
@@ -1479,6 +1792,14 @@ export class Client extends EventEmitter {
     if (!navigator.onLine) {
       return Plivo.log.warn(`${C.LOGCAT.CALL} | Unable to send DTMF: No internet connection`);
     }
+
+    // Multi-tab mode: if not leader, send DTMF request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Multi-tab mode: sending DTMF request to leader`);
+      this.tabManager.requestSendDtmf(digit);
+      return;
+    }
+
     const dtmfFlags = C.DTMF_TONE_FLAG as any;
     if (typeof digit === 'undefined' || digit == null) {
       return Plivo.log.warn(`${C.LOGCAT.CALL} | DTMF digit can not be null`);
@@ -1528,6 +1849,13 @@ export class Client extends EventEmitter {
   };
 
   private _mute = (): boolean => {
+    // Multi-tab mode: if not leader, send mute request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Multi-tab mode: sending mute request to leader`);
+      this.tabManager.requestMute();
+      return true;
+    }
+
     if (this._currentSession) {
       Plivo.log.debug(`${C.LOGCAT.CALL} | mute method is called`);
       try {
@@ -1570,6 +1898,13 @@ export class Client extends EventEmitter {
   };
 
   private _unmute = (): boolean => {
+    // Multi-tab mode: if not leader, send unmute request to leader
+    if (this.multiTabConfig.enabled && this.tabManager && !this.tabManager.isLeader()) {
+      Plivo.log.info(`${C.LOGCAT.CALL} | Multi-tab mode: sending unmute request to leader`);
+      this.tabManager.requestUnmute();
+      return true;
+    }
+
     if (this._currentSession) {
       Plivo.log.debug(`${C.LOGCAT.CALL} | unmute method is called`);
       this.shouldMuteCall = false;
